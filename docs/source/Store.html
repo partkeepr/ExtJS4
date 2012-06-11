@@ -114,8 +114,8 @@
  *
  * ## Filtering and Sorting
  *
- * Stores can be sorted and filtered - in both cases either remotely or locally. The {@link #sorters} and {@link #cfg-
- * filters} are held inside {@link Ext.util.MixedCollection MixedCollection} instances to make them easy to manage.
+ * Stores can be sorted and filtered - in both cases either remotely or locally. The {@link #sorters} and
+ * {@link #cfg-filters} are held inside {@link Ext.util.MixedCollection MixedCollection} instances to make them easy to manage.
  * Usually it is sufficient to either just specify sorters and filters in the Store configuration or call {@link #sort}
  * or {@link #filter}:
  *
@@ -349,8 +349,8 @@ Ext.define('Ext.data.Store', {
      * {@link #trailingBufferZone}.
      *
      * By defult, only 5 pages of data are cached in the page cache, with pages &quot;scrolling&quot; out of the buffer
-     * as the view moves down through the dataset. This can be increased by changing the {@link #purgePageSize}
-     * value. Setting this value to zero means that no pages are *ever* scrolled out of the page cache, and
+     * as the view moves down through the dataset.
+     * Setting this value to zero means that no pages are *ever* scrolled out of the page cache, and
      * that eventually the whole dataset may become present in the page cache. This is sometimes desirable
      * as long as datasets do not reach astronomical proportions.
      *
@@ -371,7 +371,7 @@ Ext.define('Ext.data.Store', {
      *
      * The number of pages *additional to the required buffered range* to keep in the prefetch cache before purging least recently used records.
      *
-     * For example, if the height of the view area and the configured {@link trailingBufferZone} and {@link #leadingBufferZone} require that there
+     * For example, if the height of the view area and the configured {@link #trailingBufferZone} and {@link #leadingBufferZone} require that there
      * are three pages in the cache, then a `purgePageCount` of 5 ensures that up to 8 pages can be in the page cache any any one time.
      *
      * A value of 0 indicates to never purge the prefetched data.
@@ -497,7 +497,11 @@ Ext.define('Ext.data.Store', {
             me.filterOnLoad = false;
         }
 
-        if (me.groupers.items.length) {
+        // Only sort by group fields if we are doing local grouping
+        if (me.remoteGroup) {
+            me.remoteSort = true;
+        }
+        if (me.groupers.items.length &amp;&amp; !me.remoteGroup) {
             me.sort(me.groupers.items, 'prepend', false);
         }
 
@@ -967,7 +971,7 @@ Ext.define('Ext.data.Store', {
             i = 0,
             length = records.length,
             record,
-            isSorted = me.sorters &amp;&amp; me.sorters.items.length;
+            isSorted = !me.remoteSort &amp;&amp; me.sorters &amp;&amp; me.sorters.items.length;
 
         // If this Store is sorted, and they only passed one Record (99% or use cases)
         // then it's much more efficient to add it sorted than to append and then sort.

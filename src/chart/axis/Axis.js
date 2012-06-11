@@ -184,17 +184,17 @@ Ext.define('Ext.chart.axis.Axis', {
                 // If the series explicitly exclude current Axis, then exit.
                 continue;
             }
-            
+
             if (seriesClasses.Bar && series[i] instanceof seriesClasses.Bar && !series[i].column) {
                 // If this is a horizontal bar series, then flip xField and yField.
                 fields = vertical ? Ext.Array.from(series[i].xField) : Ext.Array.from(series[i].yField);
             } else {
                 fields = vertical ? Ext.Array.from(series[i].yField) : Ext.Array.from(series[i].xField);
             }
-            
+
             if (me.fields.length) {
                 for (j = 0, ln2 = fields.length; j < ln2; j++) {
-                    if(allFields[fields[j]]) {
+                    if (allFields[fields[j]]) {
                         break;
                     }
                 }
@@ -203,7 +203,7 @@ Ext.define('Ext.chart.axis.Axis', {
                     continue;
                 }
             }
-            
+
             if (aggregates = series[i].stacked) {
                 // If this is a bar/column series, then it will be aggregated if it is of the same direction of the axis.
                 if (seriesClasses.Bar && series[i] instanceof seriesClasses.Bar) {
@@ -284,12 +284,14 @@ Ext.define('Ext.chart.axis.Axis', {
                 }
             }
         }
+
         if (!isFinite(max)) {
             max = me.prevMax || 0;
         }
         if (!isFinite(min)) {
             min = me.prevMin || 0;
         }
+
         //normalize min max for snapEnds.
         if (min != max && (max != Math.floor(max))) {
             max = Math.floor(max) + 1;
@@ -303,13 +305,17 @@ Ext.define('Ext.chart.axis.Axis', {
             max = me.maximum;
         }
 
+        if (min >= max) {
+            // snapEnds will return NaN if max >= min;
+            max = min + 1;
+        }
+
         return {min: min, max: max};
     },
 
     // @private creates a structure with start, end and step points.
     calcEnds: function () {
         var me = this,
-            fields = me.fields,
             range = me.getRange(),
             min = range.min,
             max = range.max,
@@ -345,7 +351,7 @@ Ext.define('Ext.chart.axis.Axis', {
             out.to = Math.ceil(out.to / out.step) * out.step;
             out.steps = (out.to - out.from) / out.step;
         }
-        
+
         if (me.adjustMinimumByMajorUnit) {
             out.from = Math.floor(out.from / out.step) * out.step;
             out.steps = (out.to - out.from) / out.step;
@@ -361,7 +367,7 @@ Ext.define('Ext.chart.axis.Axis', {
      */
     drawAxis: function (init) {
         var me = this,
-            i, j,
+            i, 
             x = me.x,
             y = me.y,
             gutterX = me.chart.maxGutter[0],
@@ -382,7 +388,6 @@ Ext.define('Ext.chart.axis.Axis', {
             currentX,
             currentY,
             path,
-            prev,
             dashesX,
             dashesY,
             delta;
@@ -515,7 +520,6 @@ Ext.define('Ext.chart.axis.Axis', {
             position = me.position,
             gutter = me.chart.maxGutter,
             width = me.width - 2,
-            vert = false,
             point, prevPoint,
             i = 1,
             path = [], styles, lineWidth, dlineWidth,
@@ -704,17 +708,14 @@ Ext.define('Ext.chart.axis.Axis', {
             inflections = me.inflections,
             ln = inflections.length,
             labels = me.labels,
-            labelGroup = me.labelGroup,
             maxHeight = 0,
             ratio,
-            gutterY = me.chart.maxGutter[1],
-            ubbox, bbox, point, prevX, prevLabel, prevLabelId,
-            projectedWidth = 0,
+            bbox, point, prevLabel, prevLabelId,
             adjustEnd = me.adjustEnd,
             hasLeft = axes.findIndex('position', 'left') != -1,
             hasRight = axes.findIndex('position', 'right') != -1,
-            textLabel, attr, textRight, text,
-            label, last, x, y, i, firstLabel;
+            textLabel, text,
+            last, x, y, i, firstLabel;
 
         last = ln - 1;
         //get a reference to the first text label dimensions
@@ -782,16 +783,14 @@ Ext.define('Ext.chart.axis.Axis', {
             ceil = Math.ceil,
             axes = me.chart.axes,
             gutterY = me.chart.maxGutter[1],
-            ubbox, bbox, point, prevLabel, prevLabelId,
-            projectedWidth = 0,
+            bbox, point, prevLabel, prevLabelId,
             hasTop = axes.findIndex('position', 'top') != -1,
             hasBottom = axes.findIndex('position', 'bottom') != -1,
             adjustEnd = me.adjustEnd,
-            textLabel, attr, textRight, text,
-            label, last, x, y, i;
+            textLabel, text,
+            last = ln - 1, x, y, i;
 
-        last = ln;
-        for (i = 0; i < last; i++) {
+        for (i = 0; i < ln; i++) {
             point = inflections[i];
             text = me.label.renderer(labels[i]);
             textLabel = me.getOrCreateLabel(i, text);
@@ -800,7 +799,7 @@ Ext.define('Ext.chart.axis.Axis', {
             maxWidth = max(maxWidth, bbox.width + me.dashSize + me.label.padding);
             y = point[1];
             if (adjustEnd && gutterY < bbox.height / 2) {
-                if (i == last - 1 && !hasTop) {
+                if (i == last && !hasTop) {
                     y = Math.max(y, me.y - me.length + ceil(bbox.height / 2) - insetPadding);
                 }
                 else if (i == 0 && !hasBottom) {
@@ -820,7 +819,7 @@ Ext.define('Ext.chart.axis.Axis', {
             }, me.label), true);
             // Skip label if there isn't available minimum space
             if (i != 0 && me.intersect(textLabel, prevLabel)) {
-                if (i === last - 1 && prevLabelId !== 0) {
+                if (i === last && prevLabelId !== 0) {
                     prevLabel.hide(true);
                 } else {
                     textLabel.hide(true);
@@ -866,33 +865,6 @@ Ext.define('Ext.chart.axis.Axis', {
         if (Ext.isString(me.title)) {
             me.drawTitle(maxWidth, maxHeight);
         }
-    },
-
-    // @private creates the elipsis for the text.
-    elipsis: function (sprite, text, desiredWidth, minWidth, center) {
-        var bbox,
-            x;
-
-        if (desiredWidth < minWidth) {
-            sprite.hide(true);
-            return false;
-        }
-        while (text.length > 4) {
-            text = text.substr(0, text.length - 4) + "...";
-            sprite.setAttributes({
-                text: text
-            }, true);
-            bbox = sprite.getBBox();
-            if (bbox.width < desiredWidth) {
-                if (typeof center == 'number') {
-                    sprite.setAttributes({
-                        x: Math.floor(center - (bbox.width / 2))
-                    }, true);
-                }
-                break;
-            }
-        }
-        return true;
     },
 
     /**

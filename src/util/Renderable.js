@@ -215,8 +215,8 @@ Ext.define('Ext.util.Renderable', {
     onBoxReady: Ext.emptyFn,
 
     /**
-     * Sets references to elements inside the component. This applies {@link #renderSelectors}
-     * as well as {@link #childEls}.
+     * Sets references to elements inside the component. This applies {@link Ext.AbstractComponent#renderSelectors renderSelectors}
+     * as well as {@link Ext.AbstractComponent#childEls childEls}.
      * @private
      */
     applyRenderSelectors: function() {
@@ -272,7 +272,7 @@ Ext.define('Ext.util.Renderable', {
      * Called from the selected frame generation template to insert this Component's inner structure inside the framing structure.
      *
      * When framing is used, a selected frame generation template is used as the primary template of the #getElConfig instead
-     * of the configured {@link #renderTpl}. The {@link #renderTpl} is invoked by this method which is injected into the framing template.
+     * of the configured {@link Ext.AbstractComponent#renderTpl renderTpl}. The renderTpl is invoked by this method which is injected into the framing template.
      */
     doApplyRenderTpl: function(out, values) {
         // Careful! This method is bolted on to the frameTpl so all we get for context is
@@ -716,9 +716,39 @@ Ext.define('Ext.util.Renderable', {
         me.lastBox = me.el.lastBox = lastBox;
     },
 
+    /**
+     * Renders the Component into the passed HTML element.
+     * 
+     * **If you are using a {@link Ext.container.Container Container} object to house this
+     * Component, then do not use the render method.**
+     *
+     * A Container's child Components are rendered by that Container's
+     * {@link Ext.container.Container#layout layout} manager when the Container is first rendered.
+     *
+     * If the Container is already rendered when a new child Component is added, you may need to call
+     * the Container's {@link Ext.container.Container#doLayout doLayout} to refresh the view which
+     * causes any unrendered child Components to be rendered. This is required so that you can add
+     * multiple child components if needed while only refreshing the layout once.
+     *
+     * When creating complex UIs, it is important to remember that sizing and positioning
+     * of child items is the responsibility of the Container's {@link Ext.container.Container#layout layout}
+     * manager.  If you expect child items to be sized in response to user interactions, you must
+     * configure the Container with a layout manager which creates and manages the type of layout you
+     * have in mind.
+     *
+     * **Omitting the Container's {@link Ext.Container#layout layout} config means that a basic
+     * layout manager is used which does nothing but render child components sequentially into the
+     * Container. No sizing or positioning will be performed in this situation.**
+     *
+     * @param {Ext.Element/HTMLElement/String} [container] The element this Component should be
+     * rendered into. If it is being created from existing markup, this should be omitted.
+     * @param {String/Number} [position] The element ID or DOM node index within the container **before**
+     * which this component will be inserted (defaults to appending to the end of the container)
+     */
     render: function(container, position) {
         var me = this,
             el = me.el && (me.el = Ext.get(me.el)), // ensure me.el is wrapped
+            vetoed,
             tree,
             nextSibling;
 
@@ -742,19 +772,23 @@ Ext.define('Ext.util.Renderable', {
                 me.wrapPrimaryEl(el);
             }
         } else {
-            // Set configured styles on pre-rendered Component's element
-            me.initStyles(el);
-            if (me.allowDomMove !== false) {
-                //debugger; // TODO
-                if (nextSibling) {
-                    container.dom.insertBefore(el.dom, nextSibling);
-                } else {
-                    container.dom.appendChild(el.dom);
+            if (!me.hasListeners.beforerender || me.fireEvent('beforerender', me) !== false) {
+                // Set configured styles on pre-rendered Component's element
+                me.initStyles(el);
+                if (me.allowDomMove !== false) {
+                    //debugger; // TODO
+                    if (nextSibling) {
+                        container.dom.insertBefore(el.dom, nextSibling);
+                    } else {
+                        container.dom.appendChild(el.dom);
+                    }
                 }
+            } else {
+                vetoed = true;
             }
         }
 
-        if (el) {
+        if (el && !vetoed) {
             me.finishRender(position);
         }
 

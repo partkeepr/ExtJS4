@@ -313,7 +313,7 @@ Ext.define('Ext.tree.Panel', {
             /**
              * @event checkchange
              * Fires when a node with a checkbox's checked property changes
-             * @param {Ext.data.Nodeinterface} node The node who's checked property was changed
+             * @param {Ext.data.NodeInterface} node The node who's checked property was changed
              * @param {Boolean} checked The node's new checked state
              */
             'checkchange',

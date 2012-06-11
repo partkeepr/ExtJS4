@@ -504,11 +504,11 @@ Ext.define('Ext.form.field.Text', {
         var key = e.getKey(),
             charCode = String.fromCharCode(e.getCharCode());
 
-        if(Ext.isGecko && (e.isNavKeyPress() || key === e.BACKSPACE || (key === e.DELETE && e.button === -1))){
+        if((Ext.isGecko || Ext.isOpera) && (e.isNavKeyPress() || key === e.BACKSPACE || (key === e.DELETE && e.button === -1))){
             return;
         }
 
-        if(!Ext.isGecko && e.isSpecialKey() && !charCode){
+        if((!Ext.isGecko && !Ext.isOpera) && e.isSpecialKey() && !charCode){
             return;
         }
         if(!this.maskRe.test(charCode)){

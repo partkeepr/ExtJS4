@@ -116,6 +116,12 @@ Ext.define('Ext.app.Application', {
      * True to automatically load and instantiate AppName.view.Viewport before firing the launch function.
      */
     autoCreateViewport: false,
+    
+    /**
+     * @cfg {Object} paths
+     * Additional load paths to add to Ext.Loader.
+     * See {@link Ext.Loader#paths} config for more details.
+     */
 
     /**
      * Creates new Application.
@@ -181,7 +187,7 @@ Ext.define('Ext.app.Application', {
      * @template
      * Called automatically when the page has completely loaded. This is an empty function that should be
      * overridden by each application that needs to take action on page load.
-     * @param {String} profile The detected {@link #profiles application profile}
+     * @param {String} profile The detected application profile
      * @return {Boolean} By default, the Application will dispatch to the configured startup controller and
      * action immediately after running the launch function. Return false to prevent this behavior.
      */

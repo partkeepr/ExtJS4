@@ -5,18 +5,15 @@ Copyright (c) 2011-2012 Sencha Inc
 
 Contact:  http://www.sencha.com/contact
 
-GNU General Public License Usage
-This file may be used under the terms of the GNU General Public License version 3.0 as
-published by the Free Software Foundation and appearing in the file LICENSE included in the
-packaging of this file.
+Pre-release code in the Ext repository is intended for development purposes only and will
+not always be stable. 
 
-Please review the following information to ensure the GNU General Public License version 3.0
-requirements will be met: http://www.gnu.org/copyleft/gpl.html.
+Use of pre-release code is permitted with your application at your own risk under standard
+Ext license terms. Public redistribution is prohibited.
 
-If you are unsure which license is appropriate for your use, please contact the sales department
-at http://www.sencha.com/contact.
+For early licensing, please contact us at licensing@sencha.com
 
-Build date: 2012-04-20 14:10:47 (19f55ab932145a3443b228045fa80950dfeaf9cc)
+Build date: 2012-05-12 20:31:37 (0c4e02828abd5db4a2b0b2aa79030ddecedbb3f4)
 */
 
 (function(Ext){
@@ -541,7 +538,7 @@ Ext.globalEval = Ext.global.execScript
 (function() {
 
 
-var version = '4.1.0', Version;
+var version = '4.1.1.0RC', Version;
     Ext.Version = Version = Ext.extend(Object, {
 
         
@@ -6169,7 +6166,7 @@ Ext.JSON = (new(function() {
         } else if (Ext.isDate(o)) {
             return Ext.JSON.encodeDate(o);
         } else if (Ext.isString(o)) {
-            return encodeString(o);
+            return Ext.JSON.encodeString(o);
         } else if (typeof o == "number") {
             
             return isFinite(o) ? String(o) : "null";
@@ -6214,7 +6211,7 @@ Ext.JSON = (new(function() {
             len = o.length,
             i;
         for (i = 0; i < len; i += 1) {
-            a.push(doEncode(o[i]), ',');
+            a.push(Ext.JSON.encodeValue(o[i]), ',');
         }
         
         a[a.length - 1] = ']';
@@ -6227,13 +6224,16 @@ Ext.JSON = (new(function() {
             i;
         for (i in o) {
             if (!useHasOwn || o.hasOwnProperty(i)) {
-                a.push(doEncode(i), ":", doEncode(o[i]), ',');
+                a.push(Ext.JSON.encodeValue(i), ":", Ext.JSON.encodeValue(o[i]), ',');
             }
         }
         
         a[a.length - 1] = '}';
         return a.join("");
     };
+    
+    
+    me.encodeString = encodeString;
 
     
     me.encodeValue = doEncode;
@@ -10873,6 +10873,7 @@ Ext.define('Ext.dom.AbstractElement', {
 }, function() {
     var AbstractElement = this;
 
+    
     Ext.getDetachedBody = function () {
         var detachedEl = AbstractElement.detachedBodyEl;
 
@@ -10885,6 +10886,7 @@ Ext.define('Ext.dom.AbstractElement', {
         return detachedEl;
     };
 
+    
     Ext.getElementById = function (id) {
         var el = document.getElementById(id),
             detachedBodyEl;
@@ -19423,6 +19425,8 @@ Ext.define('Ext.data.association.Association', {
     
 
     
+
+    
     primaryKey: 'id',
 
     
@@ -19431,29 +19435,31 @@ Ext.define('Ext.data.association.Association', {
 
     defaultReaderType: 'json',
 
+    isAssociation: true,
+
+    initialConfig: null,
+
     statics: {
         AUTO_ID: 1000,
         
         create: function(association){
-            if (!association.isAssociation) {
-                if (Ext.isString(association)) {
-                    association = {
-                        type: association
-                    };
-                }
+            if (Ext.isString(association)) {
+                association = {
+                    type: association
+                };
+            }
 
-                switch (association.type) {
-                    case 'belongsTo':
-                        return new Ext.data.association.BelongsTo(association);
-                    case 'hasMany':
-                        return new Ext.data.association.HasMany(association);
-                    case 'hasOne':
-                        return new Ext.data.association.HasOne(association);
-                    
+            switch (association.type) {
+                case 'belongsTo':
+                    return new Ext.data.association.BelongsTo(association);
+                case 'hasMany':
+                    return new Ext.data.association.HasMany(association);
+                case 'hasOne':
+                    return new Ext.data.association.HasOne(association);
+                
 
 
-                    default:
-                }
+                default:
             }
             return association;
         }
@@ -19463,27 +19469,29 @@ Ext.define('Ext.data.association.Association', {
     constructor: function(config) {
         Ext.apply(this, config);
 
-        var types           = Ext.ModelManager.types,
+        var me = this,
+            types           = Ext.ModelManager.types,
             ownerName       = config.ownerModel,
             associatedName  = config.associatedModel,
             ownerModel      = types[ownerName],
-            associatedModel = types[associatedName],
-            ownerProto;
+            associatedModel = types[associatedName];
+
+        me.initialConfig = config;
 
 
-        this.ownerModel = ownerModel;
-        this.associatedModel = associatedModel;
+        me.ownerModel = ownerModel;
+        me.associatedModel = associatedModel;
 
         
 
         
 
-        Ext.applyIf(this, {
+        Ext.applyIf(me, {
             ownerName : ownerName,
             associatedName: associatedName
         });
         
-        this.associationId = 'association' + (++this.statics().AUTO_ID);
+        me.associationId = 'association' + (++me.statics().AUTO_ID);
     },
 
     
@@ -19736,7 +19744,7 @@ Ext.define('Ext.data.association.HasOne', {
                 options.success = function(rec){
                     model[instanceName] = rec;
                     if (success) {
-                        success.call(this, arguments);
+                        success.apply(this, arguments);
                     }
                 };
 
@@ -19747,7 +19755,7 @@ Ext.define('Ext.data.association.HasOne', {
             } else {
                 instance = model[instanceName];
                 args = [instance];
-                scope = scope || model;
+                scope = scope || options.scope || model;
 
                 
                 
@@ -21228,6 +21236,7 @@ Ext.define('Ext.draw.Draw', {
         };
     },
 
+    
     snapEnds: function (from, to, stepsMax, prettyNumbers) {
         if (Ext.isDate(from)) {
             return this.snapEndsByDate(from, to, stepsMax);
@@ -21540,9 +21549,7 @@ Ext.define('Ext.draw.Matrix', {
         if (y == null) {
             y = x;
         }
-        me.add(1, 0, 0, 1, cx, cy);
-        me.add(x, 0, 0, y, 0, 0);
-        me.add(1, 0, 0, 1, -cx, -cy);
+        me.add(x, 0, 0, y, cx * (1 - x), cy * (1 - y));
     },
 
     rotate: function(a, x, y) {
@@ -21550,8 +21557,7 @@ Ext.define('Ext.draw.Matrix', {
         var me = this,
             cos = +Math.cos(a).toFixed(9),
             sin = +Math.sin(a).toFixed(9);
-        me.add(cos, sin, -sin, cos, x, y);
-        me.add(1, 0, 0, 1, -x, -y);
+        me.add(cos, sin, -sin, cos, x - cos * x + sin * y, -(sin * x) + y - cos * y);
     },
 
     x: function(x, y) {
@@ -22603,12 +22609,17 @@ Ext.define('Ext.layout.ContextItem', {
     remainingContainerChildLayouts: 0,
 
     
+    props: null,
+
+    
+    state: null,
+
+    
     wrapsComponent: false,
 
     constructor: function (config) {
         var me = this,
-            target = config.target, 
-            el, sizeModel;
+            el, ownerCt, ownerCtContext, sizeModel, target;
 
         Ext.apply(me, config);
 
@@ -22631,43 +22642,222 @@ Ext.define('Ext.layout.ContextItem', {
         
         
         
-        me.blocks = {};
-        me.domBlocks = {};
-        me.triggers = {};
-        me.domTriggers = {};
+        
+        
+        
+        
 
         me.flushedProps = {};
-
-        
         me.props = {};
-
-        
-        me.state = {};
 
         
         me.styles = {};
 
+        target = me.target;
         if (target.isComponent) {
             me.wrapsComponent = true;
-            me.sizeModel = sizeModel = target.getSizeModel(me.ownerCtContext && me.ownerCtContext.sizeModel);
+
+            
+            
+            ownerCt = target.ownerCt;
+            if (ownerCt && (ownerCtContext = me.context.items[ownerCt.el.id])) {
+                me.ownerCtContext = ownerCtContext;
+            }
+
+            
+            
+            me.sizeModel = sizeModel = target.getSizeModel(ownerCtContext &&
+                ownerCtContext.widthModel.pairsByHeightOrdinal[ownerCtContext.heightModel.ordinal]);
+
             me.widthModel = sizeModel.width;
             me.heightModel = sizeModel.height;
-            me.frameBodyContext = me.getEl('frameBody');
+
+            
+            
+            
+            
+            
         }
     },
 
     
-    init: function (ownerCtContext) {
+    init: function (full, options) {
         var me = this,
-            boxParent, widthModel;
+            oldProps = me.props,
+            oldDirty = me.dirty,
+            ownerCtContext = me.ownerCtContext,
+            ownerLayout = me.target.ownerLayout,
+            firstTime = !me.state,
+            ret = full || firstTime,
+            children, i, n, ownerCt, sizeModel, target,
+            oldHeightModel = me.heightModel,
+            oldWidthModel = me.widthModel,
+            newHeightModel, newWidthModel;
 
-        if (ownerCtContext) {
-            me.ownerCtContext = ownerCtContext;
-            me.isBoxParent = me.target.ownerLayout.isItemBoxParent(me);
+        me.dirty = me.invalid = false;
+        me.props = {};
 
-            widthModel = me.widthModel;
+        if (me.boxChildren) {
+            me.boxChildren.length = 0; 
+        }
 
-            if (widthModel.shrinkWrap) {
+        if (!firstTime) {
+            me.clearAllBlocks('blocks');
+            me.clearAllBlocks('domBlocks');
+        }
+
+        
+        if (!me.wrapsComponent) {
+            return ret;
+        }
+
+        
+        target = me.target;
+        me.state = {}; 
+
+        if (firstTime) {
+            
+            
+            if (target.beforeLayout) {
+                target.beforeLayout();
+            }
+
+            
+            
+            
+            
+            
+            
+            if (!ownerCtContext && (ownerCt = target.ownerCt)) {
+                ownerCtContext = me.context.items[ownerCt.el.id];
+            }
+
+            if (ownerCtContext) {
+                me.ownerCtContext = ownerCtContext;
+                me.isBoxParent = target.ownerLayout.isItemBoxParent(me);
+            } else {
+                me.isTopLevel = true; 
+            }
+
+            me.frameBodyContext = me.getEl('frameBody');
+        } else {
+            ownerCtContext = me.ownerCtContext;
+
+            
+            me.isTopLevel = !ownerCtContext;
+
+            
+            
+            children = me.children;
+            for (i = 0, n = children.length; i < n; ++i) {
+                children[i].init(true);
+            }
+        }
+
+        
+        
+        
+        me.hasRawContent = true;
+        if (target.isContainer) {
+            if (target.items.items.length || !target.getTargetEl().dom.firstChild) {
+                me.hasRawContent = false;
+            }
+        }
+
+        if (full) {
+            
+            
+            me.widthModel = me.heightModel = null;
+            sizeModel = target.getSizeModel(ownerCtContext && 
+                ownerCtContext.widthModel.pairsByHeightOrdinal[ownerCtContext.heightModel.ordinal]);
+
+            if (firstTime) {
+                me.sizeModel = sizeModel;
+            }
+
+            me.widthModel = sizeModel.width;
+            me.heightModel = sizeModel.height;
+        } else if (oldProps) {
+            
+            
+            me.recoverProp('x', oldProps, oldDirty);
+            me.recoverProp('y', oldProps, oldDirty);
+
+            
+            if (me.widthModel.calculated) {
+                me.recoverProp('width', oldProps, oldDirty);
+            }
+            if (me.heightModel.calculated) {
+                me.recoverProp('height', oldProps, oldDirty);
+            }
+        }
+
+        if (oldProps && ownerLayout && ownerLayout.manageMargins) {
+            me.recoverProp('margin-top', oldProps, oldDirty);
+            me.recoverProp('margin-right', oldProps, oldDirty);
+            me.recoverProp('margin-bottom', oldProps, oldDirty);
+            me.recoverProp('margin-left', oldProps, oldDirty);
+        }
+
+        
+        
+        if (options) {
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            newHeightModel = options.heightModel;
+            newWidthModel = options.widthModel;
+            if (newWidthModel && newHeightModel && oldWidthModel && oldHeightModel) {
+                if (oldWidthModel.shrinkWrap && oldHeightModel.shrinkWrap) {
+                    if (newWidthModel.constrainedMax && newHeightModel.constrainedMin) {
+                        newHeightModel = null;
+                    }
+                }
+            }
+
+            
+            if (newWidthModel) {
+                me.widthModel = newWidthModel;
+            }
+            if (newHeightModel) {
+                me.heightModel = newHeightModel;
+            }
+
+            if (options.state) {
+                Ext.apply(me.state, options.state);
+            }
+        }
+
+        return ret;
+    },
+
+    
+    initContinue: function (full) {
+        var me = this,
+            ownerCtContext = me.ownerCtContext,
+            widthModel = me.widthModel,
+            boxParent;
+
+        if (full) {
+            if (ownerCtContext && widthModel.shrinkWrap) {
                 boxParent = ownerCtContext.isBoxParent ? ownerCtContext : ownerCtContext.boxParent;
                 if (boxParent) {
                     boxParent.addBoxChild(me);
@@ -22675,12 +22865,40 @@ Ext.define('Ext.layout.ContextItem', {
             } else if (widthModel.natural) {
                 me.boxParent = ownerCtContext;
             }
-        } else {
-            me.isTopLevel = true;
+        }
+
+        return full;
+    },
+
+    
+    initDone: function (full, componentChildrenDone, containerChildrenDone, containerLayoutDone) {
+        var me = this,
+            props = me.props,
+            state = me.state;
+
+        
+        if (componentChildrenDone) {
+            props.componentChildrenDone = true;
+        }
+        if (containerChildrenDone) {
+            props.containerChildrenDone = true;
+        }
+        if (containerLayoutDone) {
+            props.containerLayoutDone = true;
+        }
+
+        if (me.boxChildren && me.boxChildren.length && me.widthModel.shrinkWrap) {
+            
+            
+            me.el.setWidth(10000);
+
+            
+            state.blocks = (state.blocks || 0) + 1;
         }
     },
 
-    initAnimatePolicy: function() {
+    
+    initAnimation: function() {
         var me = this,
             target = me.target,
             ownerCtContext = me.ownerCtContext;
@@ -22689,11 +22907,10 @@ Ext.define('Ext.layout.ContextItem', {
             
             
             me.animatePolicy = target.ownerLayout.getAnimatePolicy(me);
-        }
-        
-        
-        
-        else if (!ownerCtContext && target.isCollapsingOrExpanding && target.animCollapse) {
+        } else if (!ownerCtContext && target.isCollapsingOrExpanding && target.animCollapse) {
+            
+            
+            
             me.animatePolicy = target.componentLayout.getAnimatePolicy(me);
         }
 
@@ -22717,7 +22934,7 @@ Ext.define('Ext.layout.ContextItem', {
     
     addBlock: function (name, layout, propName) {
         var me = this,
-            collection = me[name],
+            collection = me[name] || (me[name] = {}),
             blockedLayouts = collection[propName] || (collection[propName] = {});
 
         if (!blockedLayouts[layout.id]) {
@@ -22756,7 +22973,8 @@ Ext.define('Ext.layout.ContextItem', {
     
     addTrigger: function (propName, inDom) {
         var me = this,
-            collection = inDom ? me.domTriggers : me.triggers,
+            name = inDom ? 'domTriggers' : 'triggers',
+            collection = me[name] || (me[name] = {}),
             context = me.context,
             layout = context.currentLayout,
             triggers = collection[propName] || (collection[propName] = {});
@@ -22877,53 +23095,9 @@ Ext.define('Ext.layout.ContextItem', {
     },
 
     
-    doInvalidate: function (full) {
-        var me = this,
-            oldProps = me.props,
-            oldDirty = me.dirty,
-            ownerLayout = me.target.ownerLayout;
-
-        me.dirty = me.invalid = false;
-        me.props = {};
-        me.state = {};
-
-        me.clearAllBlocks('blocks');
-        me.clearAllBlocks('domBlocks');
-
-        
-        
-        if (me.wrapsComponent) {
-            if (!full) {
-                
-                
-                me.recoverProp('x', oldProps, oldDirty);
-                me.recoverProp('y', oldProps, oldDirty);
-
-                
-                if (me.widthModel.calculated) {
-                    me.recoverProp('width', oldProps, oldDirty);
-                }
-                if (me.heightModel.calculated) {
-                    me.recoverProp('height', oldProps, oldDirty);
-                }
-            } else {
-                me.widthModel = me.sizeModel.width;
-                me.heightModel = me.sizeModel.height;
-            }
-
-        }
-
-        if (ownerLayout && ownerLayout.manageMargins) {
-            me.recoverProp('margin-top', oldProps, oldDirty);
-            me.recoverProp('margin-right', oldProps, oldDirty);
-            me.recoverProp('margin-bottom', oldProps, oldDirty);
-            me.recoverProp('margin-left', oldProps, oldDirty);
-        }
-    },
-
-    
     fireTriggers: function (name, propName) {
-        var triggers = this[name][propName],
+        var collection = this[name],
+            triggers = collection && collection[propName],
             context = this.context,
             layout, layoutId;
 
@@ -22964,7 +23138,7 @@ Ext.define('Ext.layout.ContextItem', {
             delete me.innerHTML;
         }
 
-        if (state.clearBoxWidth) {
+        if (state && state.clearBoxWidth) {
             state.clearBoxWidth = 0;
             me.el.setStyle('width', null);
 
@@ -22979,6 +23153,7 @@ Ext.define('Ext.layout.ContextItem', {
         }
     },
 
+    
     flushAnimations: function() {
         var me = this,
             animateFrom = me.lastBox,
@@ -23325,7 +23500,6 @@ Ext.define('Ext.layout.ContextItem', {
 
     
     invalidate: function (options) {
-        this.invalid = true;
         this.context.queueInvalidate(this, options);
     },
 
@@ -26185,9 +26359,11 @@ Ext.define('Ext.util.Renderable', {
         me.lastBox = me.el.lastBox = lastBox;
     },
 
+    
     render: function(container, position) {
         var me = this,
             el = me.el && (me.el = Ext.get(me.el)), 
+            vetoed,
             tree,
             nextSibling;
 
@@ -26211,19 +26387,23 @@ Ext.define('Ext.util.Renderable', {
                 me.wrapPrimaryEl(el);
             }
         } else {
-            
-            me.initStyles(el);
-            if (me.allowDomMove !== false) {
+            if (!me.hasListeners.beforerender || me.fireEvent('beforerender', me) !== false) {
                 
-                if (nextSibling) {
-                    container.dom.insertBefore(el.dom, nextSibling);
-                } else {
-                    container.dom.appendChild(el.dom);
+                me.initStyles(el);
+                if (me.allowDomMove !== false) {
+                    
+                    if (nextSibling) {
+                        container.dom.insertBefore(el.dom, nextSibling);
+                    } else {
+                        container.dom.appendChild(el.dom);
+                    }
                 }
+            } else {
+                vetoed = true;
             }
         }
 
-        if (el) {
+        if (el && !vetoed) {
             me.finishRender(position);
         }
 
@@ -26702,11 +26882,15 @@ Ext.define('Ext.Action', {
     callEach : function(fnName, args){
         var items = this.items,
             i = 0,
-            len = items.length;
+            len = items.length,
+            item;
 
+        Ext.suspendLayouts();
         for(; i < len; i++){
-            items[i][fnName].apply(items[i], args);
+            item = items[i];
+            item[fnName].apply(item, args);
         }
+        Ext.resumeLayouts(true);
     },
 
     
@@ -29652,6 +29836,7 @@ Ext.define('Ext.form.field.Field', {
     initValue: function() {
         var me = this;
 
+        me.value = me.transformOriginalValue(me.value);
         
         me.originalValue = me.lastValue = me.value;
 
@@ -29659,6 +29844,11 @@ Ext.define('Ext.form.field.Field', {
         me.suspendCheckChange++;
         me.setValue(me.value);
         me.suspendCheckChange--;
+    },
+    
+    
+    transformOriginalValue: function(value){
+        return value;
     },
 
     
@@ -30112,7 +30302,9 @@ Ext.define('Ext.grid.PagingScroller', {
 
         
         if (me.view) {
-            me.view.el.un('scroll', me.onViewScroll, me); 
+            if (me.view.el) {
+                me.view.el.un('scroll', me.onViewScroll, me); 
+            }
             me.view.un(viewListeners);
             me.store.un(storeListeners);
             if (me.grid) {
@@ -30668,11 +30860,11 @@ Ext.define('Ext.grid.feature.Grouping', {
 
     
     
-    groupByText : 'Group By This Field',
+    groupByText : 'Group by this field',
     
     
     
-    showGroupsText : 'Show in Groups',
+    showGroupsText : 'Show in groups',
     
 
     
@@ -30730,14 +30922,14 @@ Ext.define('Ext.grid.feature.Grouping', {
     },
 
     refreshIf: function() {
+        var ownerCt = this.grid.ownerCt;
+            
         if (this.blockRefresh !== true) {
 
             
-            if (this.grid.ownerCt && this.grid.ownerCt.lockable) {
-                this.grid.ownerCt.view.refresh();
-            }
-            
-            else {
+            if (ownerCt && ownerCt.lockable) {
+                ownerCt.view.refresh();
+            } else {
                 this.view.refresh();
             }
         }
@@ -30748,9 +30940,9 @@ Ext.define('Ext.grid.feature.Grouping', {
         return [
             '<tpl if="typeof rows !== \'undefined\'">',
                 
-                '<tr id="{groupHeaderId}" class="' + Ext.baseCSSPrefix + 'grid-group-hd ' + (me.startCollapsed ? me.hdCollapsedCls : '') + ' {hdCollapsedCls}"><td class="' + Ext.baseCSSPrefix + 'grid-cell" colspan="' + parent.columns.length + '" {[this.indentByDepth(values)]}><div class="' + Ext.baseCSSPrefix + 'grid-cell-inner"><div class="' + Ext.baseCSSPrefix + 'grid-group-title">{collapsed}{[this.renderGroupHeaderTpl(values)]}</div></div></td></tr>',
+                '<tr id="{groupHeaderId}" class="' + Ext.baseCSSPrefix + 'grid-group-hd {hdCollapsedCls}"><td class="' + Ext.baseCSSPrefix + 'grid-cell" colspan="' + parent.columns.length + '" {[this.indentByDepth(values)]}><div class="' + Ext.baseCSSPrefix + 'grid-cell-inner"><div class="' + Ext.baseCSSPrefix + 'grid-group-title">{collapsed}{[this.renderGroupHeaderTpl(values)]}</div></div></td></tr>',
                 
-                '<tr id="{groupBodyId}" class="' + Ext.baseCSSPrefix + 'grid-group-body ' + (me.startCollapsed ? me.collapsedCls : '') + ' {collapsedCls}"><td colspan="' + parent.columns.length + '">{[this.recurse(values)]}</td></tr>',
+                '<tr id="{groupBodyId}" class="' + Ext.baseCSSPrefix + 'grid-group-body {collapsedCls}"><td colspan="' + parent.columns.length + '">{[this.recurse(values)]}</td></tr>',
             '</tpl>'
         ].join('');
     },
@@ -31271,8 +31463,18 @@ Ext.define('Ext.grid.feature.Grouping', {
     collectData: function(records, preppedRecords, startIndex, fullWidth, o) {
         var me    = this,
             store = me.view.store,
+            collapsedState = me.collapsedState,
+            collapseGroups,
             g,
             groups, gLen, group;
+            
+        if (me.startCollapsed) {
+            
+            
+            
+            me.startCollapsed = false;
+            collapseGroups = true;
+        }
 
         if (!me.disabled && store.isGrouped()) {
             groups = store.getGroups();
@@ -31280,6 +31482,10 @@ Ext.define('Ext.grid.feature.Grouping', {
 
             for (g = 0; g < gLen; g++) {
                 group = groups[g];
+                
+                if (collapseGroups) {
+                    collapsedState[group.name] = true;
+                }
 
                 me.getGroupRows(group, records, preppedRecords, fullWidth);
             }
@@ -31479,6 +31685,7 @@ Ext.define('Ext.grid.plugin.DragDrop', {
 
     
 
+    
     
     
     dragText : '{0} selected row{1}',
@@ -33101,6 +33308,8 @@ Ext.define('Ext.tree.plugin.TreeViewDragDrop', {
         'Ext.tree.ViewDragZone',
         'Ext.tree.ViewDropZone'
     ],
+
+    
 
     
 
@@ -35799,8 +36008,6 @@ Ext.define('Ext.XTemplate', {
 });
 
 /**
- * @class Ext.app.Controller
- *
  * Controllers are the glue that binds an application together. All they really do is listen for events (usually from
  * views) and take some action. Here's how we might create a Controller to manage Users:
  *
@@ -35847,7 +36054,7 @@ Ext.define('Ext.XTemplate', {
  * functions. The overall effect is that whenever any component that matches our selector fires a 'render' event, our
  * onPanelRendered function is called.
  *
- * <u>Using refs</u>
+ * ## Using refs
  *
  * One of the most useful parts of Controllers is the new ref system. These use the new {@link Ext.ComponentQuery} to
  * make it really easy to get references to Views on your page. Let's look at an example of this now:
@@ -35898,7 +36105,7 @@ Ext.define('Ext.XTemplate', {
  * your Controller as you go. For an example of real-world usage of Controllers see the Feed Viewer example in the
  * examples/app/feed-viewer folder in the SDK download.
  *
- * <u>Generated getter methods</u>
+ * ## Generated getter methods
  *
  * Refs aren't the only thing that generate convenient getter methods. Controllers often have to deal with Models and
  * Stores so the framework offers a couple of easy ways to get access to those too. Let's look at another example:
@@ -35924,7 +36131,7 @@ Ext.define('Ext.XTemplate', {
  * Of course, you could do anything in this function but in this case we just did something simple to demonstrate the
  * functionality.
  *
- * <u>Further Reading</u>
+ * ## Further Reading
  *
  * For more information about writing Ext JS 4 applications, please see the
  * [application architecture guide](#/guide/application_architecture). Also see the {@link Ext.app.Application} documentation.
@@ -37420,6 +37627,8 @@ Ext.define('Ext.Ajax', {
 Ext.define('Ext.data.Field', {
     requires: ['Ext.data.Types', 'Ext.data.SortTypes'],
     alias: 'data.field',
+
+    isField: true,
     
     constructor : function(config) {
         if (Ext.isString(config)) {
@@ -37447,13 +37656,10 @@ Ext.define('Ext.data.Field', {
 
         
         if (!config.hasOwnProperty('convert')) {
-            this.convert = this.type.convert;
-        }
-        
-        
-        
-        
-        else if (!this.convert && !config.hasOwnProperty('defaultValue')) {
+            this.convert = this.type.convert; 
+        } else if (!this.convert && this.type.convert && !config.hasOwnProperty('defaultValue')) {
+            
+            
             this.defaultValue = this.type.convert(this.defaultValue);
         }
     },
@@ -37556,7 +37762,7 @@ Ext.define('Ext.data.NodeInterface', {
         
         decorate: function(modelClass) {
             var idName, idType;
-
+            
             
             if (typeof modelClass == 'string') {
                 modelClass = Ext.ModelManager.getModel(modelClass);
@@ -37676,6 +37882,19 @@ Ext.define('Ext.data.NodeInterface', {
                 createNode: function(node) {
                     if (Ext.isObject(node) && !node.isModel) {
                         node = Ext.ModelManager.create(node, this.modelName);
+                    }
+                    
+                    
+                    
+                    if (!node.childNodes) {
+                        Ext.applyIf(node, {
+                            firstChild: null,
+                            lastChild: null,
+                            parentNode: null,
+                            previousSibling: null,
+                            nextSibling: null,
+                            childNodes: []
+                        });
                     }
                     return node;
                 },
@@ -39112,7 +39331,7 @@ Ext.define('Ext.data.proxy.Server', {
         
         params = Ext.applyIf(params, me.getParams(operation));
 
-        if (operation.id && !params.id) {
+        if (operation.id !== undefined && params.id === undefined) {
             params.id = operation.id;
         }
 
@@ -41838,7 +42057,9 @@ Ext.define('Ext.layout.Layout', {
     }
 }, function () {
     var Layout = this,
-        sizeModels = {};
+        sizeModels = {},
+        sizeModelsArray = [],
+        i, j, n, pairs, sizeModel;
 
     Layout.prototype.sizeModels = Layout.sizeModels = sizeModels;
 
@@ -41853,6 +42074,10 @@ Ext.define('Ext.layout.Layout', {
         SizeModel[name] = sizeModels[name] = me;
 
         me.fixed = !(me.auto = me.natural || me.shrinkWrap);
+
+        
+        me.ordinal = sizeModelsArray.length;
+        sizeModelsArray.push(me);
     };
 
     Ext.layout.SizeModel = SizeModel;
@@ -41948,6 +42173,19 @@ Ext.define('Ext.layout.Layout', {
         constrained: true,
         names: { width: 'minWidth', height: 'minHeight' }
     });
+
+    for (i = 0, n = sizeModelsArray.length; i < n; ++i) {
+        sizeModel = sizeModelsArray[i];
+        
+        sizeModel.pairsByHeightOrdinal = pairs = [];
+
+        for (j = 0; j < n; ++j) {
+            pairs.push({
+                width: sizeModel,
+                height: sizeModelsArray[j]
+            });
+        }
+    }
 });
 
 
@@ -42154,6 +42392,7 @@ Ext.define('Ext.layout.component.Component', {
 
         var me = this,
             owner = me.owner,
+            containerLayout = owner.layout,
             heightModel = ownerContext.heightModel,
             widthModel = ownerContext.widthModel,
             boxParent = ownerContext.boxParent,
@@ -42169,7 +42408,7 @@ Ext.define('Ext.layout.component.Component', {
             zeroWidth, zeroHeight,
             needed = 0,
             got = 0,
-            ready, size;
+            ready, size, temp;
 
         
         
@@ -42217,8 +42456,18 @@ Ext.define('Ext.layout.component.Component', {
                     }
 
                     if (ready) {
-                        if (!isNaN(ret.contentWidth = zeroWidth ? 0 : me.measureContentWidth(ownerContext))) {
-                            ownerContext.setContentWidth(ret.contentWidth, true);
+                        if (zeroWidth) {
+                            temp = 0;
+                        } else if (containerLayout && containerLayout.measureContentWidth) {
+                            
+                            
+                            temp = containerLayout.measureContentWidth(ownerContext);
+                        } else {
+                            temp = me.measureContentWidth(ownerContext);
+                        }
+
+                        if (!isNaN(ret.contentWidth = temp)) {
+                            ownerContext.setContentWidth(temp, true);
                             ret.gotWidth = true;
                             ++got;
                         }
@@ -42301,8 +42550,18 @@ Ext.define('Ext.layout.component.Component', {
                     }
 
                     if (ready) {
-                        if (!isNaN(ret.contentHeight = zeroHeight ? 0 : me.measureContentHeight(ownerContext))) {
-                            ownerContext.setContentHeight(ret.contentHeight, true);
+                        if (zeroHeight) {
+                            temp = 0;
+                        } else if (containerLayout && containerLayout.measureContentHeight) {
+                            
+                            
+                            temp = containerLayout.measureContentHeight(ownerContext);
+                        } else {
+                            temp = me.measureContentHeight(ownerContext);
+                        }
+
+                        if (!isNaN(ret.contentHeight = temp)) {
+                            ownerContext.setContentHeight(temp, true);
                             ret.gotHeight = true;
                             ++got;
                         }
@@ -42458,24 +42717,12 @@ Ext.define('Ext.layout.component.Auto', {
     calculateOwnerWidthFromContentWidth: function (ownerContext, contentWidth) {
         return contentWidth + ownerContext.getFrameInfo().width;
     },
-    
-    onConstrainSize: function (ownerContext, options) {
-        var heightModel = options.heightModel,
-            widthModel = options.widthModel;
-
-        if (heightModel) {
-            ownerContext.heightModel = heightModel;
-        }
-        if (widthModel) {
-            ownerContext.widthModel = widthModel;
-        }
-    },
 
     publishOwnerHeight: function (ownerContext, contentHeight) {
         var me = this,
             owner = me.owner,
             height = me.calculateOwnerHeightFromContentHeight(ownerContext, contentHeight),
-            heightModel, constrainedHeight, dirty;
+            constrainedHeight, dirty, heightModel;
 
         if (isNaN(height)) {
             me.done = false;
@@ -42492,12 +42739,10 @@ Ext.define('Ext.layout.component.Auto', {
                 if (ownerContext.heightModel.calculatedFromShrinkWrap) {
                     
                     
+                    
                     ownerContext.heightModel = heightModel;
                 } else {
-                    ownerContext.invalidate({
-                        before: me.onConstrainSize,
-                        heightModel: heightModel
-                    });
+                    ownerContext.invalidate({ heightModel: heightModel });
                 }
             }
             
@@ -42509,7 +42754,7 @@ Ext.define('Ext.layout.component.Auto', {
         var me = this,
             owner = me.owner,
             width = me.calculateOwnerWidthFromContentWidth(ownerContext, contentWidth),
-            widthModel, constrainedWidth, dirty;
+            constrainedWidth, dirty, widthModel;
 
         if (isNaN(width)) {
             me.done = false;
@@ -42526,12 +42771,10 @@ Ext.define('Ext.layout.component.Auto', {
                 if (ownerContext.widthModel.calculatedFromShrinkWrap) {
                     
                     
+                    
                     ownerContext.widthModel = widthModel;
                 } else {
-                    ownerContext.invalidate({
-                        before: me.onConstrainSize,
-                        widthModel: widthModel
-                    });
+                    ownerContext.invalidate({ widthModel: widthModel });
                 }
             }
 
@@ -44061,6 +44304,7 @@ Ext.define('Ext.AbstractComponent', {
 
         layoutSuspendCount: 0,
 
+        
         cancelLayout: function(comp) {
             var context = this.runningLayoutContext || this.pendingLayouts;
 
@@ -44069,6 +44313,7 @@ Ext.define('Ext.AbstractComponent', {
             }
         },
 
+        
         flushLayouts: function () {
             var me = this,
                 context = me.pendingLayouts;
@@ -44092,6 +44337,7 @@ Ext.define('Ext.AbstractComponent', {
             }
         },
 
+        
         resumeLayouts: function (flush) {
             if (this.layoutSuspendCount && ! --this.layoutSuspendCount) {
                 if (flush) {
@@ -44100,10 +44346,12 @@ Ext.define('Ext.AbstractComponent', {
             }
         },
 
+        
         suspendLayouts: function () {
             ++this.layoutSuspendCount;
         },
 
+        
         updateLayout: function (comp, defer) {
             var me = this,
                 running = me.runningLayoutContext,
@@ -44127,7 +44375,7 @@ Ext.define('Ext.AbstractComponent', {
     
     isComponent: true,
 
-     
+    
     getAutoId: function() {
         this.autoGenId = true;
         return ++Ext.AbstractComponent.AUTO_ID;
@@ -45706,12 +45954,16 @@ Ext.define('Ext.AbstractComponent', {
     getSizeModel: function (ownerCtSizeModel) {
         var me = this,
             models = Ext.layout.SizeModel,
-            ownerCtx = me.componentLayout.ownerContext,
+            ownerContext = me.componentLayout.ownerContext,
             hasWidth, hasHeight, heightModel, ownerLayout, policy, shrinkWrap, widthModel;
 
-        if (ownerCtx) {
-            widthModel = ownerCtx.widthModel;
-            heightModel = ownerCtx.heightModel;
+        if (ownerContext) {
+            
+            
+            
+            
+            widthModel = ownerContext.widthModel;
+            heightModel = ownerContext.heightModel;
         }
 
         if (!widthModel || !heightModel) {
@@ -45785,10 +46037,9 @@ Ext.define('Ext.AbstractComponent', {
             }
         }
 
-        return {
-            width: widthModel,
-            height: heightModel
-        };
+        
+        
+        return widthModel.pairsByHeightOrdinal[heightModel.ordinal];
     },
 
     isDescendant: function(ancestor) {
@@ -46114,28 +46365,30 @@ Ext.define('Ext.AbstractComponent', {
         });
     }
 }, function() {
-    var abstractComponent = this;
+    var AbstractComponent = this;
 
-    abstractComponent.createAlias({
+    AbstractComponent.createAlias({
         on: 'addListener',
         prev: 'previousSibling',
         next: 'nextSibling'
     });
 
+    
     Ext.resumeLayouts = function (flush) {
-        abstractComponent.resumeLayouts(flush);
+        AbstractComponent.resumeLayouts(flush);
     };
 
+    
     Ext.suspendLayouts = function () {
-        abstractComponent.suspendLayouts();
+        AbstractComponent.suspendLayouts();
     };
 
     
     Ext.batchLayouts = function(fn, scope) {
-        abstractComponent.suspendLayouts();
+        AbstractComponent.suspendLayouts();
         
         fn.call(scope);
-        abstractComponent.resumeLayouts(true);
+        AbstractComponent.resumeLayouts(true);
     };
 });
 
@@ -47042,7 +47295,7 @@ Ext.define('Ext.container.DockingContainer', {
         bottom: 1
     },
 
-
+    
     addDocked : function(items, pos) {
         var me = this,
             i = 0,
@@ -47221,6 +47474,7 @@ Ext.define('Ext.data.AbstractStore', {
     },
 
     statics: {
+        
         create: function(store) {
             if (!store.isStore) {
                 if (!store.type) {
@@ -47503,6 +47757,7 @@ Ext.define('Ext.data.AbstractStore', {
         me.fireEvent('refresh', me);
     },
 
+    
     onBatchException: function(batch, operation) {
         
         
@@ -47863,7 +48118,8 @@ Ext.define('Ext.data.Model', {
 
                 validations = data.validations || [],
                 fields = data.fields || [],
-                associations = data.associations || [],
+                field,
+                associationsConfigs = data.associations || [],
                 addAssociations = function(items, type) {
                     var i = 0,
                         len,
@@ -47880,7 +48136,7 @@ Ext.define('Ext.data.Model', {
                             }
 
                             item.type = type;
-                            associations.push(item);
+                            associationsConfigs.push(item);
                         }
                     }
                 },
@@ -47894,7 +48150,7 @@ Ext.define('Ext.data.Model', {
                 superFields = superCls.fields,
                 superAssociations = superCls.associations,
 
-                association, i, ln,
+                associationConfig, i, ln,
                 dependencies = [],
                 idProperty = data.idProperty || cls.prototype.idProperty,
 
@@ -47955,7 +48211,8 @@ Ext.define('Ext.data.Model', {
             });  
 
             for (i = 0, ln = fields.length; i < ln; ++i) {
-                fieldsMixedCollection.add(new Ext.data.Field(fields[i]));
+                field = fields[i];
+                fieldsMixedCollection.add(field.isField ? field : new Ext.data.Field(field));
             }
             if (!fieldsMixedCollection.get(idProperty)) {
                 fieldsMixedCollection.add(new Ext.data.Field(idProperty));
@@ -47984,11 +48241,11 @@ Ext.define('Ext.data.Model', {
             delete data.hasOne;
 
             if (superAssociations) {
-                associations = superAssociations.items.concat(associations);
+                associationsConfigs = superAssociations.items.concat(associationsConfigs);
             }
 
-            for (i = 0, ln = associations.length; i < ln; ++i) {
-                dependencies.push('association.' + associations[i].type.toLowerCase());
+            for (i = 0, ln = associationsConfigs.length; i < ln; ++i) {
+                dependencies.push('association.' + associationsConfigs[i].type.toLowerCase());
             }
 
             
@@ -47999,18 +48256,24 @@ Ext.define('Ext.data.Model', {
             Ext.require(dependencies, function() {
                 Ext.ModelManager.registerType(name, cls);
 
-                for (i = 0, ln = associations.length; i < ln; ++i) {
-                    association = associations[i];
-
-                    Ext.apply(association, {
-                        ownerModel: name,
-                        associatedModel: association.model
-                    });
-
-                    if (Ext.ModelManager.getModel(association.model) === undefined) {
-                        Ext.ModelManager.registerDeferredAssociation(association);
+                for (i = 0, ln = associationsConfigs.length; i < ln; ++i) {
+                    associationConfig = associationsConfigs[i];
+                    if (associationConfig.isAssociation) {
+                        associationConfig = Ext.applyIf({
+                            ownerModel: name,
+                            associatedModel: associationConfig.model
+                        }, associationConfig.initialConfig);
                     } else {
-                        associationsMixedCollection.add(Ext.data.association.Association.create(association));
+                        Ext.apply(associationConfig, {
+                            ownerModel: name,
+                            associatedModel: associationConfig.model
+                        });
+                    }
+
+                    if (Ext.ModelManager.getModel(associationConfig.model) === undefined) {
+                        Ext.ModelManager.registerDeferredAssociation(associationConfig);
+                    } else {
+                        associationsMixedCollection.add(Ext.data.association.Association.create(associationConfig));
                     }
                 }
 
@@ -49001,6 +49264,9 @@ Ext.define('Ext.data.TreeStore', {
 
     
     defaultRootProperty: 'children',
+    
+    
+    rootProperty: 'children',
 
     
     folderSort: false,
@@ -49008,7 +49274,8 @@ Ext.define('Ext.data.TreeStore', {
     constructor: function(config) {
         var me = this,
             root,
-            fields;
+            fields,
+            defaultRoot;
 
         config = Ext.apply({}, config);
 
@@ -49018,6 +49285,15 @@ Ext.define('Ext.data.TreeStore', {
             config.fields = [
                 {name: 'text', type: 'string'}
             ];
+            defaultRoot = config.defaultRootProperty || me.defaultRootProperty;
+            if (defaultRoot !== me.defaultRootProperty) {
+                config.fields.push({
+                    name: defaultRoot,   
+                    type: 'auto',   
+                    defaultValue: null, 
+                    persist: false
+                });
+            }
         }
 
         me.callParent([config]);
@@ -49696,7 +49972,11 @@ Ext.define('Ext.data.Store', {
             me.filterOnLoad = false;
         }
 
-        if (me.groupers.items.length) {
+        
+        if (me.remoteGroup) {
+            me.remoteSort = true;
+        }
+        if (me.groupers.items.length && !me.remoteGroup) {
             me.sort(me.groupers.items, 'prepend', false);
         }
 
@@ -50031,7 +50311,7 @@ Ext.define('Ext.data.Store', {
             i = 0,
             length = records.length,
             record,
-            isSorted = me.sorters && me.sorters.items.length;
+            isSorted = !me.remoteSort && me.sorters && me.sorters.items.length;
 
         
         
@@ -54753,8 +55033,6 @@ Ext.define('Ext.layout.Context', {
         'Ext.fx.Manager'
     ],
 
-    currentOwnerCtContext: null,
-
     remainingLayouts: 0,
 
     
@@ -54876,7 +55154,8 @@ Ext.define('Ext.layout.Context', {
 
     clearTriggers: function (layout, inDom) {
         var id = layout.id,
-            triggers = this.triggers[inDom ? 'dom' : 'data'][id],
+            collection = this.triggers[inDom ? 'dom' : 'data'],
+            triggers = collection && collection[id],
             length = (triggers && triggers.length) || 0,
             collection, i, item, trigger;
 
@@ -54886,21 +55165,6 @@ Ext.define('Ext.layout.Context', {
 
             collection = inDom ? item.domTriggers : item.triggers;
             delete collection[trigger.prop][id];
-        }
-    },
-
-    finishInvalidate: function (options, item, name) {
-        
-        
-        if (options[name]) {
-            var me = this,
-                currentLayout = me.currentLayout;
-
-            me.currentLayout = options.layout || null;
-
-            options[name](item, options);
-
-            me.currentLayout = currentLayout;
         }
     },
 
@@ -55019,8 +55283,7 @@ Ext.define('Ext.layout.Context', {
                   (items[id] = new Ext.layout.ContextItem({
                                     context: this,
                                     target: target,
-                                    el: el,
-                                    ownerCtContext: this.currentOwnerCtContext
+                                    el: el
                                 }));
 
         return item;
@@ -55046,149 +55309,102 @@ Ext.define('Ext.layout.Context', {
     },
 
     
-    invalidate: function (components, ownerCtContext, full) {
+    invalidate: function (components, full) {
         var me = this,
             isArray = !components.isComponent,
-            itemCache = me.items,
-            running = me.state > 0,
-            previousOwnerCtContext = me.currentOwnerCtContext,
-            componentChildrenDone, containerChildrenDone, containerLayoutDone, ownerCt,
-            firstTime, i, k, comp, item, items, length, componentLayout, layout, props,
-            invalidateData;
-
-        me.currentOwnerCtContext = ownerCtContext;
+            componentChildrenDone, containerChildrenDone, containerLayoutDone,
+            firstTime, i, comp, item, items, length, componentLayout, layout,
+            invalidateOptions, token;
 
         for (i = 0, length = isArray ? components.length : 1; i < length; ++i) {
             comp = isArray ? components[i] : components;
 
             if (comp.rendered && !comp.hidden) {
-                firstTime = !comp.componentLayout.ownerContext;
                 item = me.getCmp(comp);
-                if (firstTime) {
-                    
-                    
-                    if (comp.beforeLayout) {
-                        comp.beforeLayout();
-                    }
+                componentLayout = comp.componentLayout;
+                firstTime = !componentLayout.ownerContext;
+                layout = (comp.isContainer && !comp.collapsed) ? comp.layout : null;
 
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    if (running && !ownerCtContext && (ownerCt = comp.ownerCt)) {
-                        ownerCtContext = itemCache[ownerCt.el.id];
-                    }
+                
+                invalidateOptions = me.invalidateData[item.id];
+                delete me.invalidateData[item.id];
 
-                    item.init(ownerCtContext);
+                
+                
+                
+                
+                
+                
+                token = item.init(full, invalidateOptions);
+
+                if (invalidateOptions) {
+                    me.processInvalidate(invalidateOptions, item, 'before');
                 }
+
+                
+                
+                
+                if (componentLayout.beforeLayoutCycle) {
+                    componentLayout.beforeLayoutCycle(item);
+                }
+
+                
+                
+                token = item.initContinue(token);
+
+                
+                
                 componentChildrenDone = containerChildrenDone = containerLayoutDone = true;
 
                 
                 
                 
                 
-                componentLayout = comp.componentLayout;
-                componentLayout.ownerContext = item;
                 if (componentLayout.getLayoutItems) {
                     componentLayout.renderChildren();
 
                     items = componentLayout.getLayoutItems();
                     if (items.length) {
-                        me.invalidate(items, item, true);
+                        me.invalidate(items, true);
                         componentChildrenDone = false;
                     }
                 }
 
-                if (comp.isContainer && !comp.collapsed) {
-                    layout = comp.layout;
-                    layout.ownerContext = item;
-                    layout.renderChildren();
-
+                if (layout) {
                     containerLayoutDone = false;
+                    layout.renderChildren();
 
                     items = layout.getVisibleItems();
                     if (items.length) {
-                        me.invalidate(items, item, true);
+                        me.invalidate(items, true);
                         containerChildrenDone = false;
-                    }
-                } else {
-                    layout = null;
-                }
-
-                if (firstTime){
-                    item.hasRawContent = true;
-
-                    
-                    
-                    
-                    if (item.target.isContainer) {
-                        if (item.target.items.items.length || !item.target.getTargetEl().dom.firstChild) {
-                            item.hasRawContent = false;
-                        }
-                    }
-
-                } else {
-                    item.doInvalidate(full);
-
-                    
-                    items = item.children;
-                    for (k = items.length; k--; ) {
-                        items[k].doInvalidate(true);
                     }
                 }
 
                 
-                props = item.props;
-                if (componentChildrenDone) {
-                    props.componentChildrenDone = true;
-                    if (containerChildrenDone) {
-                        props.childrenDone = true;
-                    }
-                }
-                if (containerChildrenDone) {
-                    props.containerChildrenDone = true;
-                }
-                if (containerLayoutDone) {
-                    props.containerLayoutDone = true;
-                }
+                
+                item.initDone(token, componentChildrenDone, containerChildrenDone,
+                              containerLayoutDone);
 
-                invalidateData = me.invalidateData[item.id];
-                if (invalidateData) {
-                    delete me.invalidateData[item.id];
-                    if (invalidateData.state) {
-                        Ext.apply(item.state, invalidateData.state);
-                    }
-                    me.finishInvalidate(invalidateData, item, 'before');
-                }
-
+                
+                
                 me.resetLayout(componentLayout, item, firstTime);
                 if (layout) {
                     me.resetLayout(layout, item, firstTime);
                 }
 
-                if (invalidateData) {
-                    me.finishInvalidate(invalidateData, item, 'after');
-                }
+                
+                
+                
+                item.initAnimation();
 
-                if (item.boxChildren && item.widthModel.shrinkWrap) {
-                    
-                    
-                    item.el.setWidth(10000);
-
-                    
-                    item.state.blocks = (item.state.blocks || 0) + 1;
-                }
-
-                if (firstTime) {
-                    item.initAnimatePolicy();
+                if (invalidateOptions) {
+                    me.processInvalidate(invalidateOptions, item, 'after');
                 }
             }
         }
 
-        me.currentOwnerCtContext = previousOwnerCtContext;
+        me.currentLayout = null;
     },
 
     layoutDone: function (layout) {
@@ -55234,6 +55450,21 @@ Ext.define('Ext.layout.Context', {
         return new Ext.util.Queue();
     },
 
+    processInvalidate: function (options, item, name) {
+        
+        
+        if (options[name]) {
+            var me = this,
+                currentLayout = me.currentLayout;
+
+            me.currentLayout = options.layout || null;
+
+            options[name](item, options);
+
+            me.currentLayout = currentLayout;
+        }
+    },
+
     
     queueAnimation: function (item) {
         this.animateQueue.add(item);
@@ -55255,16 +55486,23 @@ Ext.define('Ext.layout.Context', {
     },
 
     chainFns: function (oldOptions, newOptions, funcName) {
-        var oldFn = oldOptions[funcName],
+        var me = this,
+            oldLayout = oldOptions.layout,
+            newLayout = newOptions.layout,
+            oldFn = oldOptions[funcName],
             newFn = newOptions[funcName];
 
         
         
         return function (contextItem) {
+            var prev = me.currentLayout;
             if (oldFn) {
+                me.currentLayout = oldLayout;
                 oldFn.call(oldOptions.scope || oldOptions, contextItem, oldOptions);
             }
+            me.currentLayout = newLayout;
             newFn.call(newOptions.scope || newOptions, contextItem, newOptions);
+            me.currentLayout = prev;
         };
     },
 
@@ -55282,6 +55520,8 @@ Ext.define('Ext.layout.Context', {
             comp = item.target;
         }
 
+        item.invalid = true;
+
         
         
         
@@ -55298,6 +55538,12 @@ Ext.define('Ext.layout.Context', {
                 if (!(oldOptions = old.options)) {
                     old.options = options;
                 } else if (options) {
+                    if (options.widthModel) {
+                        oldOptions.widthModel = options.widthModel;
+                    }
+                    if (options.heightModel) {
+                        oldOptions.heightModel = options.heightModel;
+                    }
                     if (!(oldState = oldOptions.state)) {
                         oldOptions.state = options.state;
                     } else if (options.state) {
@@ -55376,6 +55622,7 @@ Ext.define('Ext.layout.Context', {
             ++me.remainingLayouts;
             ++layout.layoutCount; 
 
+            layout.ownerContext = ownerContext;
             layout.beginCount = 0; 
             layout.blockCount = 0; 
             layout.calcCount = 0; 
@@ -56353,6 +56600,10 @@ Ext.define('Ext.Component', {
     
 
     
+    
+    
+
+    
 
     hideMode: 'display',
     
@@ -56717,18 +56968,13 @@ Ext.define('Ext.Component', {
             return [el.getLeft(true), el.getTop(true)];
         }
 
-        
-        if (me.x !== undefined && me.y !== undefined) {
-            xy = [me.x, me.y];
-        } else {
-            xy = me.el.getXY();
+        xy = me.el.getXY();
 
-            
-            if (isContainedFloater) {
-                floatParentBox = me.floatParent.getTargetEl().getViewRegion();
-                xy[0] -= floatParentBox.left;
-                xy[1] -= floatParentBox.top;
-            }
+        
+        if (isContainedFloater) {
+            floatParentBox = me.floatParent.getTargetEl().getViewRegion();
+            xy[0] -= floatParentBox.left;
+            xy[1] -= floatParentBox.top;
         }
         return xy;
     },
@@ -58438,17 +58684,17 @@ Ext.define('Ext.chart.axis.Axis', {
                 
                 continue;
             }
-            
+
             if (seriesClasses.Bar && series[i] instanceof seriesClasses.Bar && !series[i].column) {
                 
                 fields = vertical ? Ext.Array.from(series[i].xField) : Ext.Array.from(series[i].yField);
             } else {
                 fields = vertical ? Ext.Array.from(series[i].yField) : Ext.Array.from(series[i].xField);
             }
-            
+
             if (me.fields.length) {
                 for (j = 0, ln2 = fields.length; j < ln2; j++) {
-                    if(allFields[fields[j]]) {
+                    if (allFields[fields[j]]) {
                         break;
                     }
                 }
@@ -58457,7 +58703,7 @@ Ext.define('Ext.chart.axis.Axis', {
                     continue;
                 }
             }
-            
+
             if (aggregates = series[i].stacked) {
                 
                 if (seriesClasses.Bar && series[i] instanceof seriesClasses.Bar) {
@@ -58538,12 +58784,14 @@ Ext.define('Ext.chart.axis.Axis', {
                 }
             }
         }
+
         if (!isFinite(max)) {
             max = me.prevMax || 0;
         }
         if (!isFinite(min)) {
             min = me.prevMin || 0;
         }
+
         
         if (min != max && (max != Math.floor(max))) {
             max = Math.floor(max) + 1;
@@ -58557,13 +58805,17 @@ Ext.define('Ext.chart.axis.Axis', {
             max = me.maximum;
         }
 
+        if (min >= max) {
+            
+            max = min + 1;
+        }
+
         return {min: min, max: max};
     },
 
     
     calcEnds: function () {
         var me = this,
-            fields = me.fields,
             range = me.getRange(),
             min = range.min,
             max = range.max,
@@ -58599,7 +58851,7 @@ Ext.define('Ext.chart.axis.Axis', {
             out.to = Math.ceil(out.to / out.step) * out.step;
             out.steps = (out.to - out.from) / out.step;
         }
-        
+
         if (me.adjustMinimumByMajorUnit) {
             out.from = Math.floor(out.from / out.step) * out.step;
             out.steps = (out.to - out.from) / out.step;
@@ -58613,7 +58865,7 @@ Ext.define('Ext.chart.axis.Axis', {
     
     drawAxis: function (init) {
         var me = this,
-            i, j,
+            i, 
             x = me.x,
             y = me.y,
             gutterX = me.chart.maxGutter[0],
@@ -58634,7 +58886,6 @@ Ext.define('Ext.chart.axis.Axis', {
             currentX,
             currentY,
             path,
-            prev,
             dashesX,
             dashesY,
             delta;
@@ -58765,7 +59016,6 @@ Ext.define('Ext.chart.axis.Axis', {
             position = me.position,
             gutter = me.chart.maxGutter,
             width = me.width - 2,
-            vert = false,
             point, prevPoint,
             i = 1,
             path = [], styles, lineWidth, dlineWidth,
@@ -58954,17 +59204,14 @@ Ext.define('Ext.chart.axis.Axis', {
             inflections = me.inflections,
             ln = inflections.length,
             labels = me.labels,
-            labelGroup = me.labelGroup,
             maxHeight = 0,
             ratio,
-            gutterY = me.chart.maxGutter[1],
-            ubbox, bbox, point, prevX, prevLabel, prevLabelId,
-            projectedWidth = 0,
+            bbox, point, prevLabel, prevLabelId,
             adjustEnd = me.adjustEnd,
             hasLeft = axes.findIndex('position', 'left') != -1,
             hasRight = axes.findIndex('position', 'right') != -1,
-            textLabel, attr, textRight, text,
-            label, last, x, y, i, firstLabel;
+            textLabel, text,
+            last, x, y, i, firstLabel;
 
         last = ln - 1;
         
@@ -59032,16 +59279,14 @@ Ext.define('Ext.chart.axis.Axis', {
             ceil = Math.ceil,
             axes = me.chart.axes,
             gutterY = me.chart.maxGutter[1],
-            ubbox, bbox, point, prevLabel, prevLabelId,
-            projectedWidth = 0,
+            bbox, point, prevLabel, prevLabelId,
             hasTop = axes.findIndex('position', 'top') != -1,
             hasBottom = axes.findIndex('position', 'bottom') != -1,
             adjustEnd = me.adjustEnd,
-            textLabel, attr, textRight, text,
-            label, last, x, y, i;
+            textLabel, text,
+            last = ln - 1, x, y, i;
 
-        last = ln;
-        for (i = 0; i < last; i++) {
+        for (i = 0; i < ln; i++) {
             point = inflections[i];
             text = me.label.renderer(labels[i]);
             textLabel = me.getOrCreateLabel(i, text);
@@ -59050,7 +59295,7 @@ Ext.define('Ext.chart.axis.Axis', {
             maxWidth = max(maxWidth, bbox.width + me.dashSize + me.label.padding);
             y = point[1];
             if (adjustEnd && gutterY < bbox.height / 2) {
-                if (i == last - 1 && !hasTop) {
+                if (i == last && !hasTop) {
                     y = Math.max(y, me.y - me.length + ceil(bbox.height / 2) - insetPadding);
                 }
                 else if (i == 0 && !hasBottom) {
@@ -59070,7 +59315,7 @@ Ext.define('Ext.chart.axis.Axis', {
             }, me.label), true);
             
             if (i != 0 && me.intersect(textLabel, prevLabel)) {
-                if (i === last - 1 && prevLabelId !== 0) {
+                if (i === last && prevLabelId !== 0) {
                     prevLabel.hide(true);
                 } else {
                     textLabel.hide(true);
@@ -59114,33 +59359,6 @@ Ext.define('Ext.chart.axis.Axis', {
         if (Ext.isString(me.title)) {
             me.drawTitle(maxWidth, maxHeight);
         }
-    },
-
-    
-    elipsis: function (sprite, text, desiredWidth, minWidth, center) {
-        var bbox,
-            x;
-
-        if (desiredWidth < minWidth) {
-            sprite.hide(true);
-            return false;
-        }
-        while (text.length > 4) {
-            text = text.substr(0, text.length - 4) + "...";
-            sprite.setAttributes({
-                text: text
-            }, true);
-            bbox = sprite.getBBox();
-            if (bbox.width < desiredWidth) {
-                if (typeof center == 'number') {
-                    sprite.setAttributes({
-                        x: Math.floor(center - (bbox.width / 2))
-                    }, true);
-                }
-                break;
-            }
-        }
-        return true;
     },
 
     
@@ -59449,7 +59667,7 @@ Ext.define('Ext.chart.axis.Numeric', {
         me.callParent([config]);
         label = me.label;
 
-        if(config.constrain == null){
+        if (config.constrain == null) {
             me.constrain = (config.minimum != null && config.maximum != null);
         }
 
@@ -59473,15 +59691,15 @@ Ext.define('Ext.chart.axis.Numeric', {
 
     
     constrain: true,
-    
+
     
     decimals: 2,
 
     
     scale: "linear",
+
     
-    
-    doConstrain: function () {
+    doConstrain: function() {
         var me = this,
             store = me.chart.store,
             items = store.data.items,
@@ -59489,31 +59707,29 @@ Ext.define('Ext.chart.axis.Numeric', {
             series = me.chart.series.items,
             fields = me.fields,
             ln = fields.length,
-            range = me.getRange(),
-            min = range.min, max = range.max, i, l, excludes = [],
+            range = me.calcEnds(),
+            min = range.from, max = range.to, i, l,
             useAcum = false,
             value, data = [],
             addRecord;
 
         for (i = 0, l = series.length; i < l; i++) {
-            excludes[i] = series[i].__excludes;
-            useAcum = useAcum || series[i].stacked;
+            if (series[i].type === 'bar' && series[i].stacked) {
+                
+                return;
+            }
         }
+
         for (d = 0, dLen = items.length; d < dLen; d++) {
             addRecord = true;
             record = items[d];
             for (i = 0; i < ln; i++) {
-                addRecord = true;
-                if (excludes[i]) {
-                    continue;
-                }
                 value = record.get(fields[i]);
-
-                if (!useAcum && +value < +min) {
+                if (+value < +min) {
                     addRecord = false;
                     break;
                 }
-                if (!useAcum && +value > +max) {
+                if (+value > +max) {
                     addRecord = false;
                     break;
                 }
@@ -59532,16 +59748,16 @@ Ext.define('Ext.chart.axis.Numeric', {
 
     
     adjustMinimumByMajorUnit: false,
+
     
-    
-    processView: function () {
+    processView: function() {
         var me = this,
             constrain = me.constrain;
-        if(constrain){
+        if (constrain) {
             me.doConstrain();
         }
     },
-    
+
     
     applyData: function() {
         this.callParent();
@@ -60758,11 +60974,7 @@ Ext.define('Ext.LoadMask', {
             
         if (comp.floating) {
             listeners.move = me.sizeMask;
-            
-            if (comp.zIndexManager.front !== comp) {
-                me.restack = true;
-                me.activeOwner = comp;
-            }
+            me.activeOwner = comp;
         } else if (comp.ownerCt) {
             me.onComponentAdded(comp.ownerCt);
         } else {
@@ -61010,13 +61222,14 @@ Ext.define('Ext.LoadMask', {
     },
 
     setZIndex: function(index) {
-        var me = this;
+        var me = this,
+            owner = me.activeOwner;
             
-        if (me.restack) {
+        if (owner) {
             
             
             
-            index = parseInt(me.activeOwner.el.getStyle('zIndex'), 10) + 1;
+            index = parseInt(owner.el.getStyle('zIndex'), 10) + 1;
         }
 
         me.getMaskEl().setStyle('zIndex', index - 1);
@@ -61200,7 +61413,10 @@ Ext.define('Ext.view.AbstractView', {
             cfg = {
                 msg: me.loadingText,
                 msgCls: me.loadingCls,
-                useMsg: me.loadingUseMsg
+                useMsg: me.loadingUseMsg,
+                
+                
+                store: me.store
             };
 
         me.callParent(arguments);
@@ -61480,7 +61696,7 @@ Ext.define('Ext.view.AbstractView', {
             index,
             node;
 
-        if (me.rendered) {
+        if (me.viewReady) {
             index = me.store.indexOf(record);
             if (index > -1) {
                 node = me.bufferRender([record], index)[0];
@@ -61793,6 +62009,9 @@ Ext.define('Ext.view.AbstractView', {
     
     indexOf: function(node) {
         node = this.getNode(node);
+        if (!node && node !== 0) {
+            return -1;
+        }
         if (Ext.isNumber(node.viewIndex)) {
             return node.viewIndex;
         }
@@ -61864,6 +62083,7 @@ Ext.define('Ext.view.AbstractView', {
                 return sm.select.apply(sm, arguments);
             },
 
+            
             clearSelections: function() {
                 if (Ext.global.console) {
                     Ext.global.console.warn("DataView: clearSelections will be removed, please access deselectAll through DataView's SelectionModel, ie: view.getSelectionModel().deselectAll()");
@@ -66175,7 +66395,9 @@ Ext.define("Ext.form.Labelable", {
         'labelAttrTpl'
     ],
 
-    labelableRenderProps: 'allowBlank,labelAlign,fieldBodyCls,baseBodyCls,clearCls,labelSeparator,msgTarget',
+    
+    labelableRenderProps: [ 'allowBlank', 'id', 'labelAlign', 'fieldBodyCls', 'baseBodyCls',
+                            'clearCls', 'labelSeparator', 'msgTarget' ],
 
     
     initLabelable: function() {
@@ -68023,6 +68245,16 @@ Ext.define('Ext.layout.component.Button', {
         }
 
         me.callParent(arguments);
+    },
+    
+    finishedLayout: function(){
+        var owner = this.owner;
+        this.callParent(arguments);
+        
+        
+        if (Ext.isWebKit) {
+            owner.el.dom.offsetWidth;
+        }
     }
 });
 
@@ -68163,14 +68395,42 @@ Ext.define('Ext.layout.component.Dock', {
         me.borders = borders;
     },
 
+    beforeLayoutCycle: function (ownerContext) {
+        var me = this,
+            owner = me.owner,
+            shrinkWrap = me.sizeModels.shrinkWrap,
+            collapsedHorz, collapsedVert;
+
+        if (owner.collapsed) {
+            if (owner.collapsedVertical()) {
+                collapsedVert = true;
+                ownerContext.measureDimensions = 1;
+            } else {
+                collapsedHorz = true;
+                ownerContext.measureDimensions = 2;
+            }
+        }
+
+        ownerContext.collapsedVert = collapsedVert;
+        ownerContext.collapsedHorz = collapsedHorz;
+
+        
+        
+        
+        
+        if (collapsedVert) {
+            ownerContext.heightModel = shrinkWrap;
+        } else if (collapsedHorz) {
+            ownerContext.widthModel = shrinkWrap;
+        }
+    },
+
     beginLayout: function(ownerContext) {
         var me = this,
             owner = me.owner,
             docked = me.getLayoutItems(),
             layoutContext = ownerContext.context,
             dockedItemCount = docked.length,
-            collapsedVert = false,
-            collapsedHorz = false,
             dockedItems, i, item, itemContext, offsets,
             collapsed;
 
@@ -68181,8 +68441,7 @@ Ext.define('Ext.layout.component.Dock', {
         
         
         collapsed = owner.getCollapsed();
-        if (Ext.isDefined(me.lastCollapsedState) && (collapsed !== me.lastCollapsedState)) {
-
+        if (collapsed !== me.lastCollapsedState && Ext.isDefined(me.lastCollapsedState)) {
             
             if (me.owner.collapsed) {
                 ownerContext.isCollapsingOrExpanding = 1;
@@ -68209,19 +68468,6 @@ Ext.define('Ext.layout.component.Dock', {
             dockedItems.push(itemContext);
         }
 
-        if (owner.collapsed) {
-            if (owner.collapsedVertical()) {
-                collapsedVert = true;
-                ownerContext.measureDimensions = 1;
-            } else {
-                collapsedHorz = true;
-                ownerContext.measureDimensions = 2;
-            }
-        }
-
-        ownerContext.collapsedVert = collapsedVert;
-        ownerContext.collapsedHorz = collapsedHorz;
-
         ownerContext.bodyContext = ownerContext.getEl('body');
     },
 
@@ -68236,19 +68482,8 @@ Ext.define('Ext.layout.component.Dock', {
 
         me.callParent(arguments);
 
-        
-        
-        
-        
-        if (ownerContext.collapsedVert) {
-            ownerContext.heightModel = me.sizeModels.shrinkWrap;
-        } else if (ownerContext.collapsedHorz) {
-            ownerContext.widthModel = me.sizeModels.shrinkWrap;
-        }
-
         if (lastHeightModel && lastHeightModel.shrinkWrap &&
-            !ownerContext.heightModel.shrinkWrap &&
-            !me.owner.manageHeight) {
+                    !ownerContext.heightModel.shrinkWrap && !me.owner.manageHeight) {
             owner.body.dom.style.marginBottom = '';
         }
 
@@ -68363,12 +68598,10 @@ Ext.define('Ext.layout.component.Dock', {
             maxSize = owner['max' + sizePropCap],
             minSize = owner['min' + sizePropCap] || 0,
             hasMaxSize = maxSize != null, 
-            constrainedSize = ownerContext.state['constrained' + sizePropCap],
-            isConstrainedSize = constrainedSize != null,
             setSize = 'set' + sizePropCap,
             border, bodyContext, frameSize, padding, end;
 
-        if (sizeModel.shrinkWrap && !isConstrainedSize) {
+        if (sizeModel.shrinkWrap) {
             
             
             if (collapsedAxis) {
@@ -68382,15 +68615,9 @@ Ext.define('Ext.layout.component.Dock', {
             frameSize = ownerContext.framingInfo;
             padding   = ownerContext.paddingInfo;
 
-            if (isConstrainedSize) {
-                end = constrainedSize;
-                sizeModel = this.sizeModels.calculated; 
-                ownerContext[setSize](constrainedSize);
-            } else {
-                end = ownerContext.getProp(sizeProp);
-            }
-
+            end = ownerContext.getProp(sizeProp);
             end -= border[dockEnd] + padding[dockEnd] + frameSize[dockEnd];
+
             begin = border[dockBegin] + padding[dockBegin] + frameSize[dockBegin];
         }
 
@@ -68406,7 +68633,6 @@ Ext.define('Ext.layout.component.Dock', {
             ignoreFrameEnd: false,
             initialSize: end - begin,
             hasMinMaxConstraints: (minSize || hasMaxSize) && sizeModel.shrinkWrap,
-            isConstrainedSize: isConstrainedSize,
             minSize: minSize,
             maxSize: hasMaxSize ? maxSize : 1e9,
             bodyPosProp: this.owner.manageHeight ? posProp : ('margin-' + dockBegin), 
@@ -68633,80 +68859,35 @@ Ext.define('Ext.layout.component.Dock', {
 
     
     finishConstraints: function (ownerContext, horz, vert) {
-        var horzTooSmall = horz.size < horz.minSize,
-            horzTooBig   = horz.size > horz.maxSize,
-            vertTooSmall = vert.size < vert.minSize,
-            vertTooBig   = vert.size > vert.maxSize,
-            state = ownerContext.state,
-            ret = true,
-            configured = this.sizeModels.configured,
-            dirty;
+        var sizeModels = this.sizeModels,
+            publishWidth = horz.shrinkWrap,
+            publishHeight = vert.shrinkWrap,
+            dirty, height, width, heightModel, widthModel, size;
 
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+        if (publishWidth) {
+            size = horz.size;
 
-        
-        
-
-        if (horz.shrinkWrap && horzTooBig && vert.shrinkWrap && vertTooSmall) { 
-            state.constrainedWidth = horz.maxSize;
-            ownerContext.widthModel = configured; 
-            ret = false;
-        } else {
-            if (horz.shrinkWrap) {
-                if (horzTooBig) {
-                    state.constrainedWidth = horz.maxSize;
-                    ownerContext.widthModel = configured;
-                    ret = false;
-                } else if (horzTooSmall) {
-                    state.constrainedWidth = horz.minSize;
-                    ownerContext.widthModel = configured;
-                    ret = false;
-                }
-            }
-
-            if (vert.shrinkWrap) {
-                if (vertTooBig) {
-                    state.constrainedHeight = vert.maxSize;
-                    ownerContext.heightModel = configured;
-                    ret = false;
-                } else if (vertTooSmall) {
-                    state.constrainedHeight = vert.minSize;
-                    ownerContext.heightModel = configured;
-                    ret = false;
-                }
+            if (size < horz.minSize) {
+                widthModel = sizeModels.constrainedMin;
+                width = horz.minSize;
+            } else if (size > horz.maxSize) {
+                widthModel = sizeModels.constrainedMax;
+                width = horz.maxSize;
+            } else {
+                width = size;
             }
         }
 
-        if (ret) {
-            if (horz.shrinkWrap) {
-                ownerContext.setWidth(horz.size);
-            }
-            if (vert.shrinkWrap) {
+        if (publishHeight) {
+            size = vert.size;
+
+            if (size < vert.minSize) {
+                heightModel = sizeModels.constrainedMin;
+                height = vert.minSize;
+            } else if (size > vert.maxSize) {
+                heightModel = sizeModels.constrainedMax;
+                height = vert.maxSize;
+            } else {
                 if (!ownerContext.collapsedVert && !this.owner.manageHeight) {
                     
                     
@@ -68716,18 +68897,52 @@ Ext.define('Ext.layout.component.Dock', {
                     ownerContext.bodyContext.setProp('margin-bottom', vert.dockedPixelsEnd);
                 }
 
-                ownerContext.setHeight(vert.size, dirty);
+                height = size;
             }
-        } else {
-            ownerContext.invalidate({
-                state: {
-                    constrainedWidth: state.constrainedWidth,
-                    constrainedHeight: state.constrainedHeight
-                }
-            });
         }
 
-        return ret;
+        
+
+        if (widthModel || heightModel) {
+            
+            
+            if (widthModel && heightModel &&
+                        widthModel.constrainedMax &&  heightModel.constrainedMin) {
+                ownerContext.invalidate({ widthModel: widthModel });
+                return false;
+            }
+
+            
+            
+            
+            if (!ownerContext.widthModel.calculatedFromShrinkWrap &&
+                        !ownerContext.heightModel.calculatedFromShrinkWrap) {
+                
+                ownerContext.invalidate({ widthModel: widthModel, heightModel: heightModel });
+                return false;
+            }
+
+            
+            
+            
+        }
+
+        
+
+        if (publishWidth) {
+            ownerContext.setWidth(width);
+            if (widthModel) {
+                ownerContext.widthModel = widthModel; 
+            }
+        }
+        if (publishHeight) {
+            ownerContext.setHeight(height, dirty);
+            if (heightModel) {
+                ownerContext.heightModel = heightModel; 
+            }
+        }
+
+        return true;
     },
 
     
@@ -69075,6 +69290,12 @@ Ext.define('Ext.layout.component.FieldSet', {
 
     type: 'fieldset',
 
+    beforeLayoutCycle: function (ownerContext) {
+        if (ownerContext.target.collapsed) {
+            ownerContext.heightModel = this.sizeModels.shrinkWrap;
+        }
+    },
+
     
 
     beginLayoutCycle: function (ownerContext) {
@@ -69087,7 +69308,6 @@ Ext.define('Ext.layout.component.FieldSet', {
         
         
         if (target.collapsed) {
-            ownerContext.heightModel = this.sizeModels.shrinkWrap;
             ownerContext.setContentHeight(0);
 
             
@@ -69991,13 +70211,18 @@ Ext.define('Ext.form.field.Base', {
     
     setRawValue: function(value) {
         var me = this;
-        value = Ext.value(value, '');
+        value = Ext.value(me.transformRawValue(value), '');
         me.rawValue = value;
 
         
         if (me.inputEl) {
             me.inputEl.dom.value = value;
         }
+        return value;
+    },
+    
+    
+    transformRawValue: function(value) {
         return value;
     },
 
@@ -71269,11 +71494,11 @@ Ext.define('Ext.form.field.Text', {
         var key = e.getKey(),
             charCode = String.fromCharCode(e.getCharCode());
 
-        if(Ext.isGecko && (e.isNavKeyPress() || key === e.BACKSPACE || (key === e.DELETE && e.button === -1))){
+        if((Ext.isGecko || Ext.isOpera) && (e.isNavKeyPress() || key === e.BACKSPACE || (key === e.DELETE && e.button === -1))){
             return;
         }
 
-        if(!Ext.isGecko && e.isSpecialKey() && !charCode){
+        if((!Ext.isGecko && !Ext.isOpera) && e.isSpecialKey() && !charCode){
             return;
         }
         if(!this.maskRe.test(charCode)){
@@ -71534,6 +71759,8 @@ Ext.define('Ext.form.field.TextArea', {
     componentLayout: 'textareafield',
     
     setGrowSizePolicy: Ext.emptyFn,
+    
+    returnRe: /\r/g,
 
     
     getSubTplData: function() {
@@ -71565,6 +71792,32 @@ Ext.define('Ext.form.field.TextArea', {
             me.inputEl.on('paste', me.onPaste, me);
         }
     },
+    
+    
+    
+    
+    
+    
+    
+    transformRawValue: function(value){
+        return this.stripReturns(value);
+    },
+    
+    transformOriginalValue: function(value){
+        return this.stripReturns(value); 
+    },
+    
+    valueToRaw: function(value){
+        value = this.stripReturns(value);
+        return this.callParent([value]);
+    },
+    
+    stripReturns: function(value){
+        if (value) {
+            value = value.replace(this.returnRe, '');
+        }
+        return value;
+    },
 
     onPaste: function(e){
         var me = this;
@@ -71589,18 +71842,26 @@ Ext.define('Ext.form.field.TextArea', {
     
     fireKey: function(e) {
         var me = this,
+            key = e.getKey(),
             value;
             
-        if (e.isSpecialKey() && (me.enterIsSpecial || (e.getKey() !== e.ENTER || e.hasModifier()))) {
+        if (e.isSpecialKey() && (me.enterIsSpecial || (key !== e.ENTER || e.hasModifier()))) {
             me.fireEvent('specialkey', me, e);
         }
         
-        if (me.needsMaxCheck && e.getKey() !== e.BACKSPACE && !e.isNavKeyPress()) {
+        if (me.needsMaxCheck && key !== e.BACKSPACE && key !== e.DELETE && !e.isNavKeyPress() && !me.isCutCopyPasteSelectAll(e, key)) {
             value = me.getValue();
             if (value.length >= me.maxLength) {
                 e.stopEvent();
             }
         }
+    },
+    
+    isCutCopyPasteSelectAll: function(e, key) {
+        if (e.CTRL) {
+            return key === e.A || key === e.C || key === e.V || key === e.X;
+        }
+        return false;
     },
 
     
@@ -72592,11 +72853,13 @@ Ext.define('Ext.form.field.Spinner', {
 
         me.callParent(arguments);
         triggers = me.triggerEl;
-
+        
         
         me.spinUpEl = triggers.item(0);
         
         me.spinDownEl = triggers.item(1);
+        
+        me.triggerCell = me.spinUpEl.parent(); 
 
         
         me.setSpinUpEnabled(me.spinUpEnabled);
@@ -74348,7 +74611,7 @@ Ext.define('Ext.container.Container', {
     extend: 'Ext.container.AbstractContainer',
     alias: 'widget.container',
     alternateClassName: 'Ext.Container',
-    
+
     
     fireHierarchyEvent: function (ename) {
         this.hierarchyEventSource.fireEvent(ename, this);
@@ -74736,6 +74999,7 @@ Ext.define('Ext.form.FieldSet', {
         }
         if (me.title || me.checkboxToggle || me.collapsible) {
             me.addCls(baseCls + '-with-legend');
+            me.legend = Ext.widget(me.createLegendCt())
         }
     },
 
@@ -74863,10 +75127,8 @@ Ext.define('Ext.form.FieldSet', {
             legend, tree;
 
         
-        if (me.title || me.checkboxToggle || me.collapsible) {
-            me.legend = legend = Ext.widget(me.createLegendCt());
-
-            legend.ownerLayout.configureItem(legend);
+        if (me.legend) {
+            me.legend.ownerLayout.configureItem(me.legend);
             tree = me.legend.getRenderTree();
 
             Ext.DomHelper.generateMarkup(tree, out);
@@ -76755,108 +77017,179 @@ Ext.define('Ext.layout.container.Fit', {
         3: { setsWidth: 1, setsHeight: 1 }
     },
 
-    getItemSizePolicy: function (item) {
+    getItemSizePolicy: function (item, ownerSizeModel) {
         
-        var sizeModel = this.owner.getSizeModel(),
+        var sizeModel = ownerSizeModel || this.owner.getSizeModel(),
             mode = (sizeModel.width.shrinkWrap ? 0 : 1) |
                    (sizeModel.height.shrinkWrap ? 0 : 2);
 
        return this.sizePolicies[mode];
     },
 
-    beginLayoutCycle: function(ownerContext, firstCycle) {
+    beginLayoutCycle: function (ownerContext, firstCycle) {
         var me = this,
-            widthModel = ownerContext.widthModel,
-            heightModel = ownerContext.heightModel,
-            childItems = ownerContext.childItems,
-            childWidthCalculated = !widthModel.shrinkWrap,
-            childHeightCalculated = !heightModel.shrinkWrap,
-            length = childItems.length,
-            clearItemSizes = (ownerContext.targetContext.el.dom.tagName.toUpperCase() === 'TD'),
-            i, invalidateOptions, itemContext, targetEl;
+            
+            resetHeight = me.lastHeightModel && me.lastHeightModel.calculated,
+            resetWidth = me.lastWidthModel && me.lastWidthModel.calculated,
+            resetSizes = resetWidth || resetHeight,
+            maxChildMinHeight = 0, maxChildMinWidth = 0,
+            c, childItems, i, item, length, margins, minHeight, minWidth, style, undef;
 
         me.callParent(arguments);
 
+        
+        
+        
+        
+        if (resetSizes && ownerContext.targetContext.el.dom.tagName.toUpperCase() != 'TD') {
+            resetSizes = resetWidth = resetHeight = false;
+        }
+
+        childItems = ownerContext.childItems;
+        length = childItems.length;
+
         for (i = 0; i < length; ++i) {
-            itemContext = childItems[i];
+            item = childItems[i];
 
-            if (!firstCycle) {
-                if (itemContext.widthModel.calculated == childWidthCalculated) {
-                    invalidateOptions = null;
-                } else {
-                    invalidateOptions = {
-                        widthModel: childWidthCalculated ? me.sizeModels.calculated
-                                                         : itemContext.sizeModel.width
-                    };
-                }
+            
+            
+            
+            if (firstCycle) {
+                c = item.target;
+                minHeight = c.minHeight;
+                minWidth = c.minWidth;
 
-                if (itemContext.heightModel.calculated != childHeightCalculated) {
-                    (invalidateOptions || (invalidateOptions = {})).heightModel =
-                        childHeightCalculated ? me.sizeModels.calculated
-                                              : itemContext.sizeModel.height
-                }
+                if (minWidth || minHeight) {
+                    margins = item.marginInfo || item.getMarginInfo();
+                    
+                    
+                    minHeight += margins.height;
+                    minWidth += margins.height;
 
-                if (invalidateOptions) {
-                    invalidateOptions.before = me.onBeforeInvalidateChild;
-                    itemContext.invalidate(invalidateOptions);
+                    
+                    
+                    if (maxChildMinHeight < minHeight) {
+                        maxChildMinHeight = minHeight;
+                    }
+                    if (maxChildMinWidth < minWidth) {
+                        maxChildMinWidth = minWidth;
+                    }
                 }
             }
 
-            
-            
-            
-            
-            if (clearItemSizes) {
-                targetEl = itemContext.target.el.dom;
-                if (itemContext.heightModel.calculated) {
-                    targetEl.style.height = '';
+            if (resetSizes) {
+                style = item.el.dom.style;
+
+                if (resetHeight) {
+                    style.height = '';
                 }
-                if (itemContext.widthModel.calculated) {
-                    targetEl.style.width = '';
+                if (resetWidth) {
+                    style.width = '';
                 }
             }
         }
+
+        if (firstCycle) {
+            ownerContext.maxChildMinHeight = maxChildMinHeight;
+            ownerContext.maxChildMinWidth = maxChildMinWidth;
+        }
+
+        
+        
+        
+        c = ownerContext.target;
+        ownerContext.overflowX = (!ownerContext.widthModel.shrinkWrap && 
+                                   ownerContext.maxChildMinWidth &&
+                                   (c.autoScroll || c.overflowX)) || undef;
+
+        ownerContext.overflowY = (!ownerContext.heightModel.shrinkWrap &&
+                                   ownerContext.maxChildMinHeight &&
+                                   (c.autoScroll || c.overflowY)) || undef;
     },
 
-    
     calculate : function (ownerContext) {
         var me = this,
             childItems = ownerContext.childItems,
             length = childItems.length,
+            containerSize = me.getContainerSize(ownerContext),
             info = {
-                contentWidth: 0,
-                contentHeight: 0,
                 length: length,
                 ownerContext: ownerContext,
-                targetSize: me.getContainerSize(ownerContext)
+                targetSize: containerSize
             },
-            calcWidth = ownerContext.widthModel.shrinkWrap,
-            calcHeight = ownerContext.heightModel.shrinkWrap,
-            padWidth = 0,
-            padHeight = 0,
-            padding,
-            i;
+            shrinkWrapWidth = ownerContext.widthModel.shrinkWrap,
+            shrinkWrapHeight = ownerContext.heightModel.shrinkWrap,
+            overflowX = ownerContext.overflowX,
+            overflowY = ownerContext.overflowY,
+            scrollbars, scrollbarSize, padding, i, contentWidth, contentHeight;
 
+        if (overflowX || overflowY) {
+            
+            
+            
+            scrollbars = me.getScrollbarsNeeded(
+                    overflowX && containerSize.width, overflowY && containerSize.height,
+                    ownerContext.maxChildMinWidth, ownerContext.maxChildMinHeight);
+
+            if (scrollbars) {
+                scrollbarSize = Ext.getScrollbarSize();
+                if (scrollbars & 1) { 
+                    containerSize.height -= scrollbarSize.height;
+                }
+                if (scrollbars & 2) { 
+                    containerSize.width -= scrollbarSize.width;
+                }
+            }
+        }
+
+        
         for (i = 0; i < length; ++i) {
             info.index = i;
             me.fitItem(childItems[i], info);
         }
         
-        if (calcHeight || calcWidth) {
+        if (shrinkWrapHeight || shrinkWrapWidth) {
             padding = ownerContext.targetContext.getPaddingInfo();
             
-            if (calcWidth) {
-                padWidth = padding.width;
+            if (shrinkWrapWidth) {
+                if (overflowY && !containerSize.gotHeight) {
+                    
+                    
+                    
+                    me.done = false;
+                } else {
+                    contentWidth = info.contentWidth + padding.width;
+                    
+                    
+                    
+                    if (scrollbars & 2) { 
+                        contentWidth += scrollbarSize.width;
+                    }
+                    if (!ownerContext.setContentWidth(contentWidth)) {
+                        me.done = false;
+                    }
+                }
             }
-            
-            if (calcHeight) {
-                padHeight = padding.height;
-            }
-        }
 
-        
-        if (!ownerContext.setContentSize(info.contentWidth + padWidth, info.contentHeight + padHeight)) {
-            me.done = false;
+            if (shrinkWrapHeight) {
+                if (overflowX && !containerSize.gotWidth) {
+                    
+                    
+                    
+                    me.done = false;
+                } else {
+                    contentHeight = info.contentHeight + padding.height;
+                    
+                    
+                    
+                    if (scrollbars & 1) { 
+                        contentHeight += scrollbarSize.height;
+                    }
+                    if (!ownerContext.setContentHeight(contentHeight)) {
+                        me.done = false;
+                    }
+                }
+            }
         }
     },
 
@@ -76881,10 +77214,19 @@ Ext.define('Ext.layout.container.Fit', {
     },
 
     fitItemWidth: function (itemContext, info) {
+        var contentWidth, width;
         
         if (info.ownerContext.widthModel.shrinkWrap) {
             
-            info.contentWidth = Math.max(info.contentWidth, itemContext.getProp('width') + info.margins.width);
+            width = itemContext.getProp('width') + info.margins.width;
+            
+
+            contentWidth = info.contentWidth;
+            if (contentWidth === undefined) {
+                info.contentWidth = width;
+            } else {
+                info.contentWidth = Math.max(contentWidth, width);
+            }
         } else if (itemContext.widthModel.calculated) {
             ++info.needed;
             if (info.targetSize.gotWidth) {
@@ -76897,9 +77239,18 @@ Ext.define('Ext.layout.container.Fit', {
     },
 
     fitItemHeight: function (itemContext, info) {
+        var contentHeight, height;
         if (info.ownerContext.heightModel.shrinkWrap) {
             
-            info.contentHeight = Math.max(info.contentHeight, itemContext.getProp('height') + info.margins.height);
+            height = itemContext.getProp('height') + info.margins.height;
+            
+
+            contentHeight = info.contentHeight;
+            if (contentHeight === undefined) {
+                info.contentHeight = height;
+            } else {
+                info.contentHeight = Math.max(contentHeight, height);
+            }
         } else if (itemContext.heightModel.calculated) {
             ++info.needed;
             if (info.targetSize.gotHeight) {
@@ -76909,17 +77260,6 @@ Ext.define('Ext.layout.container.Fit', {
         }
 
         this.positionItemY(itemContext, info);
-    },
-
-    onBeforeInvalidateChild: function (itemContext, options) {
-        ++itemContext.context.progressCount;
-
-        if (options.widthModel) {
-            itemContext.widthModel = options.widthModel;
-        }
-        if (options.heightModel) {
-            itemContext.heightModel = options.heightModel;
-        }
     },
 
     positionItemX: function (itemContext, info) {
@@ -76958,7 +77298,6 @@ Ext.define('Ext.layout.container.Fit', {
         itemContext.setWidth(info.targetSize.width - info.margins.width);
     }
 });
-
 
 
 Ext.define('Ext.layout.container.Card', {
@@ -78023,7 +78362,7 @@ Ext.define('Ext.menu.Item', {
 
     
 
-     
+    
 
     
     hideOnClick: true,
@@ -78037,6 +78376,8 @@ Ext.define('Ext.menu.Item', {
     
 
     
+
+    
     menuAlign: 'tl-tr?',
 
     
@@ -78046,6 +78387,7 @@ Ext.define('Ext.menu.Item', {
     menuHideDelay: 200,
 
     
+
     
 
     
@@ -79179,6 +79521,7 @@ Ext.define('Ext.button.Button', {
     
     onRender: function() {
         var me = this,
+            addOnclick,
             btn,
             btnListeners;
 
@@ -79234,11 +79577,22 @@ Ext.define('Ext.button.Button', {
         if (me.repeat) {
             me.mon(new Ext.util.ClickRepeater(btn, Ext.isObject(me.repeat) ? me.repeat: {}), 'click', me.onRepeatClick, me);
         } else {
-            btnListeners[me.clickEvent] = me.onClick;
+
+            
+            if (btnListeners[me.clickEvent]) {
+                addOnclick = true;
+            } else {
+                btnListeners[me.clickEvent] = me.onClick;
+            }
         }
 
         
         me.mon(btn, btnListeners);
+
+        
+        if (addOnclick) {
+            me.mon(btn, me.clickEvent, me.onClick, me);
+        }
 
         
         Ext.ButtonToggleManager.register(me);
@@ -79754,8 +80108,9 @@ Ext.define('Ext.button.Button', {
     
     getPersistentPadding: function() {
         var me = this,
+            reset = Ext.scopeResetCSS,
             padding = me.persistentPadding,
-            btn, leftTop, btnEl, btnInnerEl;
+            btn, leftTop, btnEl, btnInnerEl, wrap;
 
         
         
@@ -79768,6 +80123,11 @@ Ext.define('Ext.button.Button', {
                 });
                 btn.el = Ext.DomHelper.append(Ext.getBody(), btn.getRenderTree(), true);
                 btn.applyChildEls(btn.el);
+                if (reset) {
+                    wrap = btn.el.wrap({
+                        cls: Ext.resetCls
+                    });
+                }
                 btnEl = btn.btnEl;
                 btnInnerEl = btn.btnInnerEl;
                 btnEl.setSize(null, null); 
@@ -79779,6 +80139,9 @@ Ext.define('Ext.button.Button', {
                 
                 btn.destroy();
                 btn.el.remove();
+                if (reset) {
+                    wrap.remove();
+                }
             }
         }
         return padding;
@@ -82668,9 +83031,6 @@ Ext.define('Ext.resizer.Splitter', {
 
     
 
-    width: 5,
-    height: 5,
-
     
     collapseTarget: 'next',
 
@@ -82691,10 +83051,20 @@ Ext.define('Ext.resizer.Splitter', {
     beforeRender: function() {
         var me = this,
             target = me.getCollapseTarget(),
-            collapseDir = me.getCollapseDirection();
+            collapseDir = me.getCollapseDirection(),
+            vertical = me.vertical,
+            fixedSizeProp = vertical ? 'width' : 'height',
+            stretchSizeProp = vertical ? 'height' : 'width';
 
         me.callParent();
-        
+
+        if (!me.hasOwnProperty(stretchSizeProp)) {
+            me[stretchSizeProp] = '100%';
+        }
+        if (!me.hasOwnProperty(fixedSizeProp)) {
+            me[fixedSizeProp] = 5;
+        }
+
         if (target.collapsed) {
             me.addCls(me.collapsedClsInternal);
         }
@@ -85191,7 +85561,6 @@ Ext.define('Ext.layout.container.boxOverflow.Menu', {
         var me = this,
             layout = me.layout,
             names = layout.getNames(),
-            methodName = 'get' + names.widthCap,
             plan = ownerContext.state.boxPlan,
             posArgs = [null, null];
 
@@ -85199,11 +85568,11 @@ Ext.define('Ext.layout.container.boxOverflow.Menu', {
 
         
         
-        posArgs[names.heightIndex] = (plan.maxSize - me.menuTrigger['get' + names.heightCap]()) / 2;
+        posArgs[names.heightIndex] = (plan.maxSize - me.menuTrigger[names.getHeight]()) / 2;
         me.menuTrigger.setPosition.apply(me.menuTrigger, posArgs);
 
         return {
-            reservedSpace: me.menuTrigger[methodName]()
+            reservedSpace: me.menuTrigger[names.getWidth]()
         };
     },
 
@@ -85215,6 +85584,8 @@ Ext.define('Ext.layout.container.boxOverflow.Menu', {
         }
     },
 
+    _asLayoutRoot: { isRoot: true },
+
     
     clearOverflow: function(ownerContext) {
         var me = this,
@@ -85222,7 +85593,8 @@ Ext.define('Ext.layout.container.boxOverflow.Menu', {
             item,
             i = 0,
             length = items.length,
-            owner = me.layout.owner;
+            owner = me.layout.owner,
+            asLayoutRoot = me._asLayoutRoot;
 
         owner.suspendLayouts();
         me.captureChildElements();
@@ -85236,7 +85608,7 @@ Ext.define('Ext.layout.container.boxOverflow.Menu', {
             
             item.suspendLayouts();
             item.show();
-            item.resumeLayouts({ isRoot: true });
+            item.resumeLayouts(asLayoutRoot);
         }
 
         items.length = 0;
@@ -85262,7 +85634,7 @@ Ext.define('Ext.layout.container.boxOverflow.Menu', {
         
         menuTrigger.suspendLayouts();
         menuTrigger.show();
-        menuTrigger.resumeLayouts({ isRoot: true });
+        menuTrigger.resumeLayouts(me._asLayoutRoot);
 
         available -= me.menuTrigger.getWidth();
 
@@ -85531,24 +85903,52 @@ Ext.define('Ext.layout.container.Box', {
         return this.names;
     },
 
+    
+    
+    _percentageRe: /^\s*(\d+(?:\.\d*)?)\s*[%]\s*$/,
+
     getItemSizePolicy: function (item, ownerSizeModel) {
         var me = this,
             policy = me.sizePolicy,
             align = me.align,
+            flex = item.flex,
             key = align,
-            ownerHeightModel;
+            names = me.names,
+            width = item[names.width],
+            height = item[names.height],
+            percentageRe = me._percentageRe,
+            percentageWidth = percentageRe.test(width),
+            isStretch = (align == 'stretch');
             
-        if (align === 'stretch') {
-            ownerHeightModel = (ownerSizeModel || me.owner.getSizeModel())[me.names.height];
-            if (ownerHeightModel.shrinkWrap) {
-                key = 'stretchmax';
-            }
-        } else if (align !== 'stretchmax') {
-            key = '';
+        if ((isStretch || flex || percentageWidth) && !ownerSizeModel) {
+            ownerSizeModel = me.owner.getSizeModel();
         }
 
-        if (item.flex) {
-            policy = policy.flex;
+        if (isStretch) {
+            
+            
+            if (!percentageRe.test(height) && ownerSizeModel[names.height].shrinkWrap) {
+                key = 'stretchmax';
+                
+                
+                
+            }
+        } else if (align != 'stretchmax') {
+            if (percentageRe.test(height)) {
+                
+                
+                key = 'stretch';
+            } else {
+                key = '';
+            }
+        }
+
+        if (flex || percentageWidth) {
+            
+            
+            if (!ownerSizeModel[names.width].shrinkWrap) {
+                policy = policy.flex; 
+            }
         }
 
         return policy[key];
@@ -85612,6 +86012,8 @@ Ext.define('Ext.layout.container.Box', {
             style = me.innerCt.dom.style,
             names = me.getNames();
 
+        ownerContext.boxNames = names;
+
         
         
         me.overflowHandler.beginLayout(ownerContext);
@@ -85641,17 +86043,14 @@ Ext.define('Ext.layout.container.Box', {
         
         style.width = '';
         style.height = '';
-
-        me.cacheFlexes(ownerContext);
     },
 
     beginLayoutCycle: function (ownerContext, firstCycle) {
         var me = this,
             align = me.align,
-            names = me.getNames(),
+            names = ownerContext.boxNames,
             pack = me.pack,
-            heightModelName = names.heightModel,
-            childItems, childContext, i, length, shrinkWrap;
+            heightModelName = names.heightModel;
 
         
         
@@ -85689,6 +86088,9 @@ Ext.define('Ext.layout.container.Box', {
         }
 
         
+        align.nostretch = !(align.stretch || align.stretchmax);
+
+        
         
         
 
@@ -85696,79 +86098,74 @@ Ext.define('Ext.layout.container.Box', {
             pack.center = pack.end = false;
         }
 
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-
-        if (align.stretchmax) {
-            childItems = ownerContext.childItems;
-            length = childItems.length;
-            shrinkWrap = me.sizeModels.shrinkWrap;
-
-            for (i = 0; i < length; ++i) {
-                childContext = childItems[i];
-                if (!childContext[heightModelName].configured) {
-                    childContext[heightModelName] = shrinkWrap;
-                }
-            }
-        }
+        me.cacheFlexes(ownerContext);
     },
 
     
     cacheFlexes: function (ownerContext) {
-        var names = this.getNames(),
+        var me = this,
+            names = ownerContext.boxNames,
             widthModelName = names.widthModel,
+            heightModelName = names.heightModel,
+            nostretch = ownerContext.boxOptions.align.nostretch,
             totalFlex = 0,
             childItems = ownerContext.childItems,
             i = childItems.length,
             flexedItems = [],
             minWidth = 0,
             minWidthName = names.minWidth,
-            child, childContext, flex;
+            percentageRe = me._percentageRe,
+            percentageWidths = 0,
+            percentageHeights = 0,
+            child, childContext, flex, match;
 
         while (i--) {
             childContext = childItems[i];
+            child = childContext.target;
 
-            
             
             
             
             if (childContext[widthModelName].calculated) {
-                child = childContext.target;
                 childContext.flex = flex = child.flex;
                 if (flex) {
                     totalFlex += flex;
                     flexedItems.push(childContext);
                     minWidth += child[minWidthName] || 0;
+                } else { 
+                    match = percentageRe.exec(child[names.width]);
+                    childContext.percentageParallel = parseFloat(match[1]) / 100;
+                    ++percentageWidths;
                 }
             }
             
             
+
+            if (nostretch && childContext[heightModelName].calculated) {
+                
+                
+                match = percentageRe.exec(child[names.height]);
+                childContext.percentagePerpendicular = parseFloat(match[1]) / 100;
+                ++percentageHeights;
+            }
         }
 
         ownerContext.flexedItems = flexedItems;
         ownerContext.flexedMinSize = minWidth;
         ownerContext.totalFlex = totalFlex;
+        ownerContext.percentageWidths = percentageWidths;
+        ownerContext.percentageHeights = percentageHeights;
 
         
         
         
-        Ext.Array.sort(flexedItems, this.flexSortFn);
+        Ext.Array.sort(flexedItems, me.flexSortFn);
     },
 
     calculate: function(ownerContext) {
         var me = this,
             targetSize = me.getContainerSize(ownerContext),
-            names = me.getNames(),
+            names = ownerContext.boxNames,
             state = ownerContext.state,
             plan = state.boxPlan || (state.boxPlan = {}),
             extraWidth = Ext.getScrollbarSize()[names.width];
@@ -85838,7 +86235,6 @@ Ext.define('Ext.layout.container.Box', {
 
     calculateParallel: function(ownerContext, names, plan) {
         var me = this,
-            widthShrinkWrap = ownerContext.parallelSizeModel.shrinkWrap,
             widthName = names.width,
             childItems = ownerContext.childItems,
             leftName = names.left,
@@ -85849,33 +86245,53 @@ Ext.define('Ext.layout.container.Box', {
             flexedItemsLength = flexedItems.length,
             pack = ownerContext.boxOptions.pack,
             padding = me.padding,
+            containerWidth = plan.targetSize[widthName],
+            totalMargin = 0,
             left = padding[leftName],
             nonFlexWidth = left + padding[rightName] + me.scrollOffset +
                                     (me.reserveOffset ? me.availableSpaceOffset : 0),
             i, childMargins, remainingWidth, remainingFlex, childContext, flex, flexedWidth,
-            contentWidth;
+            contentWidth, childWidth, percentageSpace;
 
         
         for (i = 0; i < childItemsLength; ++i) {
             childContext = childItems[i];
             childMargins = childContext.marginInfo || childContext.getMarginInfo();
 
-            nonFlexWidth += childMargins[widthName];
+            totalMargin += childMargins[widthName];
 
-            if (!childContext.flex) {
+            if (!childContext[names.widthModel].calculated) {
                 nonFlexWidth += childContext.getProp(widthName); 
                 if (isNaN(nonFlexWidth)) {
                     return false;
                 }
             }
         }
+
+        nonFlexWidth += totalMargin;
+        if (ownerContext.percentageWidths) {
+            percentageSpace = containerWidth - totalMargin;
+            if (isNaN(percentageSpace)) {
+                return false;
+            }
+
+            for (i = 0; i < childItemsLength; ++i) {
+                childContext = childItems[i];
+                if (childContext.percentageParallel) {
+                    childWidth = Math.ceil(percentageSpace * childContext.percentageParallel);
+                    childWidth = childContext.setWidth(childWidth);
+                    nonFlexWidth += childWidth;
+                }
+            }
+        }
+
         
 
-        if (widthShrinkWrap) {
+        if (ownerContext.parallelSizeModel.shrinkWrap) {
             plan.availableSpace = 0;
             plan.tooNarrow = false;
         } else {
-            plan.availableSpace = plan.targetSize[widthName] - nonFlexWidth;
+            plan.availableSpace = containerWidth - nonFlexWidth;
 
             
             plan.tooNarrow = plan.availableSpace < ownerContext.flexedMinSize;
@@ -85897,7 +86313,6 @@ Ext.define('Ext.layout.container.Box', {
             flex         = childContext.flex;
             flexedWidth  = me.roundFlex((flex / remainingFlex) * remainingWidth);
             flexedWidth  = childContext[setWidthName](flexedWidth); 
-            
 
             
 
@@ -85965,10 +86380,9 @@ Ext.define('Ext.layout.container.Box', {
             isStretchMax = align.stretchmax,
             isCenter     = align.center,
             maxHeight = 0,
+            hasPercentageSizes = 0,
             childTop, i, childHeight, childMargins, diff, height, childContext,
-            stretchMaxPartner,
-            scrollbarHeight,
-            stretchMaxChildren;
+            percentagePerpendicular, stretchMaxPartner, scrollbarHeight, stretchMaxChildren;
 
         if (isStretch || (isCenter && !heightShrinkWrap)) {
             if (isNaN(availHeight)) {
@@ -85989,11 +86403,25 @@ Ext.define('Ext.layout.container.Box', {
         } else {
             for (i = 0; i < childItemsLength; i++) {
                 childContext = childItems[i];
-                childMargins = childContext.marginInfo || childContext.getMarginInfo();
-                childHeight  = childContext.getProp(heightName);
+                childMargins = (childContext.marginInfo || childContext.getMarginInfo())[heightName];
+
+                if (!(percentagePerpendicular = childContext.percentagePerpendicular)) {
+                    childHeight = childContext.getProp(heightName);
+                } else {
+                    ++hasPercentageSizes;
+                    if (heightShrinkWrap) {
+                        
+                        
+                        continue;
+                    } else {
+                        childHeight = percentagePerpendicular * availHeight - childMargins;
+                        childHeight = childContext.setHeight(childHeight);
+                    }
+                }
 
                 
-                if (isNaN(maxHeight = mmax(maxHeight, childHeight + childMargins[heightName], childContext.target[names.minHeight]||0))) {
+                if (isNaN(maxHeight = mmax(maxHeight, childHeight + childMargins,
+                                           childContext.target[names.minHeight] || 0))) {
                     return false; 
                 }
             }
@@ -86019,7 +86447,7 @@ Ext.define('Ext.layout.container.Box', {
 
             if (isStretchMax) {
                 height = maxHeight;
-            } else if (isCenter) {
+            } else if (isCenter || hasPercentageSizes) {
                 height = heightShrinkWrap ? maxHeight : mmax(availHeight, maxHeight);
 
                 
@@ -86038,10 +86466,19 @@ Ext.define('Ext.layout.container.Box', {
 
             if (isStretch) {
                 childContext[setHeightName](height - childMargins[heightName]);
-            } else if (isCenter) {
-                diff = height - childContext.props[heightName];
-                if (diff > 0) {
-                    childTop = top + Math.round(diff / 2);
+            } else {
+                percentagePerpendicular = childContext.percentagePerpendicular;
+                if (heightShrinkWrap && percentagePerpendicular) {
+                    childMargins = childContext.marginInfo || childContext.getMarginInfo();
+                    childHeight = percentagePerpendicular * height - childMargins[heightName];
+                    childHeight = childContext.setHeight(childHeight);
+                }
+
+                if (isCenter) {
+                    diff = height - childContext.props[heightName];
+                    if (diff > 0) {
+                        childTop = top + Math.round(diff / 2);
+                    }
                 }
             }
 
@@ -86094,13 +86531,30 @@ Ext.define('Ext.layout.container.Box', {
     },
 
     completeLayout: function(ownerContext) {
-        var me = this;
+        var me = this,
+            names = ownerContext.boxNames,
+            el, overflow, prop;
 
         me.overflowHandler.completeLayout(ownerContext);
 
         
         if (me.scrollParallel) {
-            me.owner.getTargetEl().dom[me.getNames().scrollLeft] = me.scrollPos;
+            me.owner.getTargetEl().dom[names.scrollLeft] = me.scrollPos;
+        }
+
+        if (ownerContext.invalidateScroll) {
+            el = ownerContext.el;
+            prop = names.overflowY;
+            overflow = el.getStyle(prop);
+
+            if (overflow == 'auto') {
+                
+                el.setStyle(prop, 'scroll');
+                
+                el.dom.scrollWidth;
+                
+                el.setStyle(prop, overflow);
+            }
         }
     },
 
@@ -86144,7 +86598,7 @@ Ext.define('Ext.layout.container.Box', {
 
     publishInnerCtSize: function(ownerContext, reservedSpace) {
         var me = this,
-            names = me.getNames(),
+            names = ownerContext.boxNames,
             heightName = names.height,
             widthName = names.width,
             align = ownerContext.boxOptions.align,
@@ -86158,7 +86612,8 @@ Ext.define('Ext.layout.container.Box', {
             innerCtWidth = (ownerContext.parallelSizeModel.shrinkWrap || (plan.tooNarrow && me.scrollParallel)
                     ? ownerContext.state.contentWidth
                     : targetSize[widthName]) - (reservedSpace || 0),
-            innerCtHeight;
+            innerCtHeight,
+            IEShrinkwrapParallelSize;
 
         if (align.stretch) {
             innerCtHeight = height;
@@ -86183,8 +86638,22 @@ Ext.define('Ext.layout.container.Box', {
                 ownerContext.setProp(parallelContentDim, ownerContext.state.contentWidth + ownerContext.state.additionalScrollbarWidth);
 
                 
-                if (Ext.isIE6 || Ext.isIE7 || Ext.isIEQuirks) {
-                    ownerContext[names.setWidth](ownerContext.props[parallelContentDim] + ownerContext.getPaddingInfo()[names.width] + ownerContext.getBorderInfo()[names.width]);
+                
+                
+                if (Ext.isIE && !(Ext.isIE9 && Ext.isStrict)) {
+                    IEShrinkwrapParallelSize = ownerContext.props[parallelContentDim] + 
+                                               ownerContext.getPaddingInfo()[names.width] +
+                                               ownerContext.getBorderInfo()[names.width];
+
+                    ownerContext[names.setWidth](IEShrinkwrapParallelSize);
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    ownerContext.invalidateScroll = (Ext.isStrict && Ext.isIE8);
                 }
             } else {
                 ownerContext.setProp(parallelContentDim, ownerContext.state.contentWidth);
@@ -87275,7 +87744,7 @@ Ext.define('Ext.grid.header.Container', {
     getVisibleHeaderClosestToIndex: function(index) {
         var result = this.getHeaderAtIndex(index);
         if (result && result.hidden) {
-            result = result.next(':not([hidden])') || result.next(':not([hidden])');
+            result = result.next(':not([hidden])') || result.prev(':not([hidden])');
         }
         return result;
     },
@@ -87392,6 +87861,8 @@ Ext.define('Ext.grid.column.Column', {
 
     
     sortable: true,
+
+    
 
     
 
@@ -88153,7 +88624,7 @@ Ext.define('Ext.grid.column.Action', {
                 if (type == 'click' || (key == e.ENTER || key == e.SPACE)) {
                     fn = item.handler || me.handler;
                     if (fn && !item.disabled) {
-                        fn.call(item.scope || me.scope || me, view, recordIndex, cellIndex, item, e, record, row);
+                        fn.call(item.scope || me.origScope || me, view, recordIndex, cellIndex, item, e, record, row);
                     }
                 } else if (type == 'mousedown' && item.stopSelection !== false) {
                     return false;
@@ -90078,6 +90549,7 @@ Ext.define('Ext.panel.Panel', {
         }
     },
 
+    
     getHeader: function() {
         return this.header;
     },
@@ -90543,6 +91015,7 @@ Ext.define('Ext.panel.Panel', {
         return dir == 'top' || dir == 'bottom';
     },
 
+    
     getCollapsed: function() {
         var me = this;
         
@@ -91866,7 +92339,7 @@ Ext.define('Ext.menu.Menu', {
         delete me.ownerButton;
         if (me.rendered) {
             me.el.un(me.mouseMonitor);
-            me.keyNav.destroy();
+            Ext.destroy(me.keyNav);
             delete me.keyNav;
         }
         me.callParent(arguments);
@@ -92204,6 +92677,8 @@ Ext.define('Ext.panel.Table', {
 
     
 
+    
+    
     
 
     
@@ -93434,7 +93909,8 @@ Ext.define('Ext.slider.Multi', {
                 value       : value,
                 slider      : me,
                 index       : me.thumbs.length,
-                constrain   : me.constrainThumbs
+                constrain   : me.constrainThumbs,
+                disabled    : !!me.readOnly
             });
 
         me.thumbs.push(thumb);
@@ -93844,6 +94320,26 @@ Ext.define('Ext.slider.Multi', {
         me.clearInvalid();
         
         delete me.wasValid;
+    },
+    
+    setReadOnly: function(readOnly){
+        var me = this,
+            thumbs = me.thumbs,
+            len = thumbs.length,
+            i = 0;
+            
+        me.callParent(arguments); 
+        readOnly = me.readOnly;
+        
+        for (; i < len; ++i) {
+            if (readOnly) {
+                thumbs[i].disable();
+            } else {
+                thumbs[i].enable();
+            }
+            
+        }
+           
     },
 
     
@@ -95287,14 +95783,9 @@ Ext.define('Ext.chart.series.Area', {
                 }
                 areaElem = record.get(areas[areaIndex]);
                 if (typeof areaElem == 'number') {
-                    minY = mmin(minY, areaElem);
                     yValue.push(areaElem);
-                    acumY += areaElem;
                 }
             }
-            minX = mmin(minX, xValue);
-            maxX = mmax(maxX, xValue);
-            maxY = mmax(maxY, acumY);
             yValues.push(yValue);
         }
 
@@ -96174,6 +96665,17 @@ Ext.define('Ext.chart.series.Bar', {
             if (stacked && items.length) {
                 items[i * counter].totalDim = totalDim;
                 items[i * counter].totalNegDim = totalNegDim;
+            }
+        }
+        if (stacked && counter == 0) {
+            
+            for (i = 0, total = data.length; i < total; i++) {
+                for (shadowIndex = 0; shadowIndex < shadowGroupsLn; shadowIndex++) {
+                    shadow = shadowGroups[shadowIndex].getAt(i);
+                    if (shadow) {
+                        shadow.hide(true);
+                    }
+                }
             }
         }
     },
@@ -98349,13 +98851,12 @@ Ext.define('Ext.chart.series.Pie', {
                                 strokeLinejoin: "round"
                             }, rendererAttributes, shadowAttr));
                         }
+                        shadowAttr = me.renderer(shadow, store.getAt(i), Ext.apply({}, rendererAttributes, shadowAttr), i, store);
                         if (animate) {
-                            shadowAttr = me.renderer(shadow, store.getAt(i), Ext.apply({}, rendererAttributes, shadowAttr), i, store);
                             me.onAnimate(shadow, {
                                 to: shadowAttr
                             });
                         } else {
-                            shadowAttr = me.renderer(shadow, store.getAt(i), shadowAttr, i, store);
                             shadow.setAttributes(shadowAttr, true);
                         }
                         shadows.push(shadow);
@@ -100293,6 +100794,8 @@ Ext.define('Ext.app.Application', {
 
     
     autoCreateViewport: false,
+    
+    
 
     
     constructor: function(config) {
@@ -101607,8 +102110,12 @@ Ext.define('Ext.panel.Tool', {
 
     baseCls: Ext.baseCSSPrefix + 'tool',
     disabledCls: Ext.baseCSSPrefix + 'tool-disabled',
+    
+    
     toolPressedCls: Ext.baseCSSPrefix + 'tool-pressed',
+    
     toolOverCls: Ext.baseCSSPrefix + 'tool-over',
+
     ariaRole: 'button',
 
     childEls: [
@@ -102251,7 +102758,10 @@ Ext.define('Ext.view.DragZone', {
     containerScroll: false,
 
     constructor: function(config) {
-        var me = this;
+        var me = this,
+            view,
+            ownerCt,
+            el;
 
         Ext.apply(me, config);
 
@@ -102271,7 +102781,16 @@ Ext.define('Ext.view.DragZone', {
         
         
         
-        me.callParent([me.view.el.dom.parentNode]);
+        view = me.view;
+        ownerCt = view.ownerCt;
+        
+        
+        if (ownerCt) {
+            el = ownerCt.getTargetEl().dom;
+        } else {
+            el = view.el.dom.parentNode;
+        }
+        me.callParent([el]);
 
         me.ddel = Ext.get(document.createElement('div'));
         me.ddel.addCls(Ext.baseCSSPrefix + 'grid-dd-wrap');
@@ -103397,7 +103916,7 @@ Ext.define('Ext.view.View', {
             newNode,
             highlighted;
         
-        if (me.rendered) {
+        if (me.viewReady) {
             node = me.getNode(record);
             newNode = me.callParent(arguments);
             highlighted = me.highlightedItem;
@@ -103761,6 +104280,8 @@ Ext.define('Ext.form.field.ComboBox', {
     
     
     hiddenName: '',
+    
+    
 
     
     hiddenDataCls: Ext.baseCSSPrefix + 'hide-display ' + Ext.baseCSSPrefix + 'form-data-hidden',
@@ -105196,7 +105717,7 @@ Ext.define('Ext.view.Table', {
             destinationCellIdx = toIdx,
             colCount = me.getGridColumns().length,
             lastIdx = colCount - 1,
-            doFirstLastClasses = (me.firstCls || me.lastCls) && (toIdx == 0 || toIdx == colCount || fromIdx == 0 || fromIdx == lastIdx),
+            doFirstLastClasses = (me.firstCls || me.lastCls) && (toIdx === 0 || toIdx == colCount || fromIdx === 0 || fromIdx == lastIdx),
             i,
             j,
             rows, len, tr, headerRows;
@@ -105700,7 +106221,7 @@ Ext.define('Ext.view.Table', {
             columns, overItemCls,
             isHovered, row;
             
-        if (me.rendered) {
+        if (me.viewReady) {
             
             index = me.store.indexOf(record);
             columns = me.headerCt.getGridColumns();
@@ -107319,6 +107840,7 @@ Ext.define('Ext.tree.View', {
         return rec.get('checked');
     },
 
+    
     createAnimWrap: function(record, index) {
         var thHtml = '',
             headerCt = this.panel.headerCt,
@@ -107429,13 +107951,11 @@ Ext.define('Ext.tree.View', {
     },
 
     beginBulkUpdate: function(){
-        this.bulkUpdate = true;
-        this.ownerCt.changingScrollbars = true;  
+        this.bulkUpdate = true;  
     },
 
     endBulkUpdate: function(){
         this.bulkUpdate = false;
-        this.ownerCt.changingScrollbars = true;  
     },
 
     onRemove : function(ds, record, index) {
@@ -107537,6 +108057,7 @@ Ext.define('Ext.tree.View', {
                     
                     animWrap.el.insertSibling(targetEl.query(me.itemSelector), 'before');
                     animWrap.el.remove();
+                    me.refreshSize();
                     delete me.animWraps[animWrap.record.internalId];
                     delete queue[id];
                 }
@@ -107606,6 +108127,7 @@ Ext.define('Ext.tree.View', {
                 scope: me,
                 lastframe: function() {
                     animWrap.el.remove();
+                    me.refreshSize();
                     delete me.animWraps[animWrap.record.internalId];
                     delete queue[id];
                 }             
@@ -108164,6 +108686,8 @@ Ext.define('Ext.window.Window', {
     ariaRole: 'alertdialog',
 
     itemCls: Ext.baseCSSPrefix + 'window-item',
+    
+    initialAlphaNum: /^[a-z0-9]/,
 
     overlapHeader: true,
 
@@ -108178,6 +108702,9 @@ Ext.define('Ext.window.Window', {
     
     initComponent: function() {
         var me = this;
+        
+        
+        me.frame = false;
         me.callParent();
         me.addEvents(
             
@@ -108409,10 +108936,15 @@ Ext.define('Ext.window.Window', {
             
             else if (Ext.isString(defaultComp)) {
                 selector = defaultComp;
-                if (selector.substr(0, 1) !== '#') {
-                    selector = '#' + selector;
+                
+                
+                if (selector.match(me.initialAlphaNum)) {
+                    result = me.down('#' + selector);
                 }
-                result = me.down(selector);
+                
+                if (!result) {
+                    result = me.down(selector);
+                }
             }
             
             else if (defaultComp.focus) {

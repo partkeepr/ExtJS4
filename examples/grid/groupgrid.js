@@ -6,7 +6,7 @@ Ext.onReady(function() {
         fields: ['name', 'cuisine']
     });
 
-    var Restaurants = Ext.create('Ext.data.Store', {
+    var restaurants = Ext.create('Ext.data.Store', {
         storeId: 'restaraunts',
         model: 'Restaurant',
         groupField: 'cuisine',
@@ -212,7 +212,13 @@ Ext.onReady(function() {
         },{
             name: 'Tai Pan',
             cuisine: 'Chinese'
-        }]
+        }],
+        listeners: {
+            // Clear grouping button only valid if the store is grouped
+            groupchange: function() {
+                grid.down('[text=Clear Grouping]').setDisabled(!restaurants.isGrouped());
+            }
+        }
     });
     
     var groupingFeature = Ext.create('Ext.grid.feature.Grouping',{
@@ -225,7 +231,7 @@ Ext.onReady(function() {
         collapsible: true,
         iconCls: 'icon-grid',
         frame: true,
-        store: Restaurants,
+        store: restaurants,
         width: 600,
         height: 400,
         title: 'Restaurants',

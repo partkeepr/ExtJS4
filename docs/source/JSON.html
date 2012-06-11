@@ -47,7 +47,7 @@ Ext.JSON = (new(function() {
         } else if (Ext.isDate(o)) {
             return Ext.JSON.encodeDate(o);
         } else if (Ext.isString(o)) {
-            return encodeString(o);
+            return Ext.JSON.encodeString(o);
         } else if (typeof o == &quot;number&quot;) {
             //don't use isNumber here, since finite checks happen inside isNumber
             return isFinite(o) ? String(o) : &quot;null&quot;;
@@ -94,7 +94,7 @@ Ext.JSON = (new(function() {
             i;
 
         for (i = 0; i &lt; len; i += 1) {
-            a.push(doEncode(o[i], cnewline), sep);
+            a.push(Ext.JSON.encodeValue(o[i], cnewline), sep);
         }
 
         // Overwrite trailing comma (or empty string)
@@ -111,7 +111,7 @@ Ext.JSON = (new(function() {
 
         for (i in o) {
             if (!useHasOwn || o.hasOwnProperty(i)) {
-                a.push(doEncode(i) + ': ' + doEncode(o[i], cnewline), sep);
+                a.push(Ext.JSON.encodeValue(i) + ': ' + Ext.JSON.encodeValue(o[i], cnewline), sep);
             }
         }
 
@@ -133,7 +133,7 @@ Ext.JSON = (new(function() {
             len = o.length,
             i;
         for (i = 0; i &lt; len; i += 1) {
-            a.push(doEncode(o[i]), ',');
+            a.push(Ext.JSON.encodeValue(o[i]), ',');
         }
         // Overwrite trailing comma (or empty string)
         a[a.length - 1] = ']';
@@ -151,13 +151,27 @@ Ext.JSON = (new(function() {
             i;
         for (i in o) {
             if (!useHasOwn || o.hasOwnProperty(i)) {
-                a.push(doEncode(i), &quot;:&quot;, doEncode(o[i]), ',');
+                a.push(Ext.JSON.encodeValue(i), &quot;:&quot;, Ext.JSON.encodeValue(o[i]), ',');
             }
         }
         // Overwrite trailing comma (or empty string)
         a[a.length - 1] = '}';
         return a.join(&quot;&quot;);
     };
+    
+<span id='Ext-JSON-method-encodeString'>    /**
+</span>     * Encodes a String. This returns the actual string which is inserted into the JSON string as the literal expression.
+     * **The returned value includes enclosing double quotation marks.**
+     *
+     * To override this:
+     *    Ext.JSON.encodeString = function(s) {
+     *        return 'Foo' + s;
+     *    };
+     *
+     * @param {String} s The String to encode
+     * @return {String} The string literal to use in a JSON string.
+     */
+    me.encodeString = encodeString;
 
 <span id='Ext-JSON-method-encodeValue'>    /**
 </span>     * The function which {@link #encode} uses to encode all javascript values to their JSON representations

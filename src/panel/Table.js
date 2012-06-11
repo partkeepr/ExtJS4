@@ -211,6 +211,11 @@ Ext.define('Ext.panel.Table', {
      * @cfg {String} emptyText Default text (html tags are accepted) to display in the Panel body when the Store
      * is empty. When specified, and the Store is empty, the text will be rendered inside a DIV with the CSS class "x-grid-empty".
      */
+    
+    /**
+     * @cfg {Boolean} [allowDeselect=false]
+     * True to allow deselecting a record. This config is forwarded to {@link Ext.selection.Model#allowDeselect}.
+     */
 
     /**
      * @property {Boolean} optimizedColumnMove

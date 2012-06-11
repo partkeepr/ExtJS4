@@ -24,15 +24,15 @@ Ext JS 4 applications follow a unified directory structure that is the same for 
 
 {@img folderStructure.png Folder Structure}
 
-In this example, we are encapsulating the whole application inside one folder called '`account_manager`'. Essential files from the [Ext JS 4 SDK](http://www.sencha.com/products/extjs/) are wrapped inside `ext-4.0` folder. Hence the content of our `index.html` looks like this:
+In this example, we are encapsulating the whole application inside one folder called '`account_manager`'. Essential files from the [Ext JS 4 SDK](http://www.sencha.com/products/extjs/) are wrapped inside `ext-4` folder. Hence the content of our `index.html` looks like this:
 
     <html>
     <head>
         <title>Account Manager</title>
 
-        <link rel="stylesheet" type="text/css" href="ext-4.0/resources/css/ext-all.css">
+        <link rel="stylesheet" type="text/css" href="ext-4/resources/css/ext-all.css">
 
-        <script type="text/javascript" src="ext-4.0/ext-debug.js"></script>
+        <script type="text/javascript" src="ext-4/ext-debug.js"></script>
 
         <script type="text/javascript" src="app.js"></script>
     </head>
@@ -46,7 +46,7 @@ Every Ext JS 4 application starts with an instance of [Application](#/api/Ext.ap
 Let's create a simple Account Manager app that will help us manage User accounts. First we need to pick a global namespace for this application. All Ext JS 4 applications should only use a single global variable, with all of the application's classes nested inside it. Usually we want a short global variable so in this case we're going to use "AM":
 
     Ext.application({
-        requires: 'Ext.container.Viewport',
+        requires: ['Ext.container.Viewport'],
         name: 'AM',
 
         appFolder: 'app',
@@ -322,11 +322,15 @@ then we'll update `app/view/user/List.js` to simply reference the Store by id:
     Ext.define('AM.view.user.List' ,{
         extend: 'Ext.grid.Panel',
         alias : 'widget.userlist',
-
-        //we no longer define the Users store in the `initComponent` method
+        title : 'All Users',
+    
+        // we no longer define the Users store in the `initComponent` method
         store: 'Users',
-
-        ...
+    
+        initComponent: function() {
+    
+            this.columns = [
+            ...
     });
 
 By including the stores that our `Users` controller cares about in its definition they are automatically loaded onto the page and given a [storeId](#/api/Ext.data.Store-cfg-storeId), which makes them really easy to reference in our views (by simply configuring `store: 'Users'` in this case).
@@ -338,17 +342,8 @@ At the moment we've just defined our fields (`'name'` and `'email'`) inline on t
         fields: ['name', 'email']
     });
 
-That's all we need to do to define our Model, now we'll just update our Store to reference the Model name instead of providing fields inline, and ask the `Users` controller to get a reference to the model too:
+That's all we need to do to define our Model. Now we'll just update our Store to reference the Model name instead of providing fields inline...
 
-    //the Users controller will make sure that the User model is included on the page and available to our app
-    Ext.define('AM.controller.Users', {
-        extend: 'Ext.app.Controller',
-        stores: ['Users'],
-        models: ['User'],
-        ...
-    });
-
-    // we now reference the Model instead of defining fields inline
     Ext.define('AM.store.Users', {
         extend: 'Ext.data.Store',
         model: 'AM.model.User',
@@ -357,6 +352,15 @@ That's all we need to do to define our Model, now we'll just update our Store to
             {name: 'Ed',    email: 'ed@sencha.com'},
             {name: 'Tommy', email: 'tommy@sencha.com'}
         ]
+    });
+
+And we'll ask the `Users` controller to get a reference to the `User` model too:
+
+    Ext.define('AM.controller.Users', {
+        extend: 'Ext.app.Controller',
+        stores: ['Users'],
+        models: ['User'],
+        ...
     });
 
 
@@ -369,6 +373,7 @@ Our refactoring will make the next section easier but should not have affected t
 Now that we have our users grid loading data and opening an edit window when we double click each row, we'd like to save the changes that the user makes. The Edit User window that the defined above contains a form (with fields for name and email), and a save button. First let's update our controller's init function to listen for clicks to that save button:
 
     Ext.define('AM.controller.Users', {
+        ...
         init: function() {
             this.control({
                 'viewport > userlist': {
@@ -379,10 +384,11 @@ Now that we have our users grid loading data and opening an edit window when we 
                 }
             });
         },
-
+        ...
         updateUser: function(button) {
             console.log('clicked the Save button');
         }
+        ...
     });
 
 We added a second ComponentQuery selector to our `this.control` call - this time `'useredit button[action=save]'`. This works the same way as the first selector - it uses the `'useredit'` xtype that we defined above to focus in on our edit user window, and then looks for any buttons with the `'save'` action inside that window. When we defined our edit user window we passed `{action: 'save'}` to the save button, which gives us an easy way to target that button.
@@ -458,7 +464,9 @@ The last thing we want to do here is send our changes back to the server. For th
         }
     }
 
-We're still reading the data from `users.json`, but any updates will be sent to `updateUsers.json`. This is just so that we can return a dummy response so we know things are working. The `updateUsers.json` file just contains `{"success": true}`. The only other change we need to make is to tell our Store to synchronize itself after editing, which we do by adding one more line inside the updateUser function, which now looks like this:
+We're still reading the data from `users.json` but any updates will be sent to `updateUsers.json`. This is just so we know things are working without overwriting our test data. After updating a record, the `updateUsers.json` file just contains `{"success": true}`. Since it is updated through a HTTP POST command, you may have to create an empty file to avoid receiving a 404 error.
+
+The only other change we need to make is to tell our Store to synchronize itself after editing, which we do by adding one more line inside the updateUser function, which now looks like this:
 
     updateUser: function(button) {
         var win    = button.up('window'),
@@ -468,6 +476,7 @@ We're still reading the data from `users.json`, but any updates will be sent to 
 
         record.set(values);
         win.close();
+        // synchronize the store after editing the record
         this.getUsersStore().sync();
     }
 

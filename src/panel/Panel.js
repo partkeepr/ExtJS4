@@ -228,7 +228,7 @@ Ext.define('Ext.panel.Panel', {
     collapsible: false,
 
     /**
-     * @cfg {Boolean} collapseDirection
+     * @cfg {String} collapseDirection
      * The direction to collapse the Panel when the toggle button is clicked.
      *
      * Defaults to the {@link #headerPosition}
@@ -529,6 +529,9 @@ Ext.define('Ext.panel.Panel', {
         }
     },
 
+    /**
+     * Gets the {@link Ext.panel.Header Header} for this panel.
+     */
     getHeader: function() {
         return this.header;
     },
@@ -1146,6 +1149,10 @@ Ext.define('Ext.panel.Panel', {
         return dir == 'top' || dir == 'bottom';
     },
 
+    /**
+     * Returns the current collapsed state of the panel.
+     * @return {Boolean/String} False when not collapsed, otherwise the value of {@link #collapseDirection}.
+     */
     getCollapsed: function() {
         var me = this;
         // The collapsed flag, when the Panel is collapsed acts as the direction in which the collapse took
@@ -1827,7 +1834,7 @@ Ext.define('Ext.panel.Panel', {
     /**
      * Expands the panel body so that it becomes visible.  Fires the {@link #beforeexpand} event which will
      * cancel the expand action if it returns false.
-     * @param {Boolean} animate True to animate the transition, else false (defaults to the value of the
+     * @param {Boolean} [animate] True to animate the transition, else false (defaults to the value of the
      * {@link #animCollapse} panel config)
      * @return {Ext.panel.Panel} this
      */

@@ -80,7 +80,7 @@ Ext.define('Ext.ux.GroupTabPanel', {
                         if (node.previousSibling) {
                             cls += ' x-grouptab-prev';
                         }
-                        if (!node.get('expanded')) {
+                        if (!node.get('expanded') || node.firstChild == null) {
                             cls += ' x-grouptab-last';
                         }
                     } else if (node.nextSibling === null) {

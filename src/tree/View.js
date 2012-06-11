@@ -173,6 +173,9 @@ Ext.define('Ext.tree.View', {
         return rec.get('checked');
     },
 
+    /**
+     * @private
+     */
     createAnimWrap: function(record, index) {
         var thHtml = '',
             headerCt = this.panel.headerCt,
@@ -306,13 +309,11 @@ Ext.define('Ext.tree.View', {
     },
 
     beginBulkUpdate: function(){
-        this.bulkUpdate = true;
-        this.ownerCt.changingScrollbars = true;  
+        this.bulkUpdate = true;  
     },
 
     endBulkUpdate: function(){
         this.bulkUpdate = false;
-        this.ownerCt.changingScrollbars = true;  
     },
 
     onRemove : function(ds, record, index) {
@@ -414,6 +415,7 @@ Ext.define('Ext.tree.View', {
                     // Move all the nodes out of the anim wrap to their proper location
                     animWrap.el.insertSibling(targetEl.query(me.itemSelector), 'before');
                     animWrap.el.remove();
+                    me.refreshSize();
                     delete me.animWraps[animWrap.record.internalId];
                     delete queue[id];
                 }
@@ -483,6 +485,7 @@ Ext.define('Ext.tree.View', {
                 scope: me,
                 lastframe: function() {
                     animWrap.el.remove();
+                    me.refreshSize();
                     delete me.animWraps[animWrap.record.internalId];
                     delete queue[id];
                 }             

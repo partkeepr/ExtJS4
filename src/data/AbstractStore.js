@@ -37,6 +37,19 @@ Ext.define('Ext.data.AbstractStore', {
     },
 
     statics: {
+        /**
+         * Creates a store from config object.
+         * 
+         * @param {Object/Ext.data.AbstractStore} store A config for
+         * the store to be created.  It may contain a `type` field
+         * which defines the particular type of store to create.
+         * 
+         * Alteratively passing an actual store to this method will
+         * just return it, no changes made.
+         * 
+         * @return {Ext.data.AbstractStore} The created store.
+         * @static
+         */
         create: function(store) {
             if (!store.isStore) {
                 if (!store.type) {
@@ -263,9 +276,9 @@ Ext.define('Ext.data.AbstractStore', {
         /**
          * @property {Object} modelDefaults
          * @private
-         * A set of default values to be applied to every model instance added via {@link #insert} or created via {@link #create}.
-         * This is used internally by associations to set foreign keys and other fields. See the Association classes source code
-         * for examples. This should not need to be used by application developers.
+         * A set of default values to be applied to every model instance added via {@link Ext.data.Store#insert insert} or created
+         * via {@link Ext.data.Store#createModel createModel}. This is used internally by associations to set foreign keys and
+         * other fields. See the Association classes source code for examples. This should not need to be used by application developers.
          */
         Ext.applyIf(me, {
             modelDefaults: {}
@@ -497,6 +510,9 @@ Ext.define('Ext.data.AbstractStore', {
         me.fireEvent('refresh', me);
     },
 
+    /**
+     * @private
+     */
     onBatchException: function(batch, operation) {
         // //decide what to do... could continue with the next operation
         // batch.start();

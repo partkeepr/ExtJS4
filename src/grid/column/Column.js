@@ -163,6 +163,12 @@ Ext.define('Ext.grid.column.Column', {
      */
 
     /**
+     * @cfg {Boolean} [locked=false]
+     * True to lock this column in place.  Implicitly enables locking on the grid.
+     * See also {@link Ext.grid.Panel#enableLocking}.
+     */
+
+    /**
      * @cfg {Boolean} resizable
      * False to prevent the column from being resizable.
      */

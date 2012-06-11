@@ -746,7 +746,8 @@ Ext.define('Ext.window.MessageBox', {
      *
      * @param {String} title The title bar text
      * @param {String} msg The message box body text
-     * @param {Function} [fn] The callback function invoked after the message box is closed
+     * @param {Function} [fn] The callback function invoked after the message box is closed.
+     * See {@link #method-show} method for details.
      * @param {Object} [scope=window] The scope (`this` reference) in which the callback is executed.
      * @return {Ext.window.MessageBox} this
      */
@@ -772,7 +773,8 @@ Ext.define('Ext.window.MessageBox', {
      *
      * @param {String} title The title bar text
      * @param {String} msg The message box body text
-     * @param {Function} [fn] The callback function invoked after the message box is closed
+     * @param {Function} [fn] The callback function invoked after the message box is closed.
+     * See {@link #method-show} method for details.
      * @param {Object} [scope=window] The scope (`this` reference) in which the callback is executed.
      * @param {Boolean/Number} [multiline=false] True to create a multiline textbox using the defaultTextHeight
      * property, or the height in pixels to create the textbox/
@@ -829,7 +831,8 @@ Ext.define('Ext.window.MessageBox', {
      *
      * @param {String} title The title bar text
      * @param {String} msg The message box body text
-     * @param {Function} [fn] The callback function invoked after the message box is closed
+     * @param {Function} [fn] The callback function invoked after the message box is closed.
+     * See {@link #method-show} method for details.
      * @param {Object} [scope=window] The scope (<code>this</code> reference) in which the callback is executed.
      * @return {Ext.window.MessageBox} this
      */

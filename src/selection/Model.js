@@ -474,7 +474,7 @@ Ext.define('Ext.selection.Model', {
 
     /**
      * Sets the current selectionMode.
-     * @param {String} selModel 'SINGLE', 'MULTI' or 'SIMPLE'.
+     * @param {String} selMode 'SINGLE', 'MULTI' or 'SIMPLE'.
      */
     setSelectionMode: function(selMode) {
         selMode = selMode ? selMode.toUpperCase() : 'SINGLE';

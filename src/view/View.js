@@ -6,7 +6,7 @@
  * to reflect the changes. The view also provides built-in behavior for many common events that can
  * occur for its contained items including click, doubleclick, mouseover, mouseout, etc. as well as a
  * built-in selection model. **In order to use these features, an {@link #itemSelector} config must
- * be provided for the DataView to determine what nodes it will be working with.**
+ * be provided for the View to determine what nodes it will be working with.**
  *
  * The example below binds a View to a {@link Ext.data.Store} and renders it into an {@link Ext.panel.Panel}.
  *
@@ -582,7 +582,7 @@ Ext.define('Ext.view.View', {
     onBeforeContainerKeyDown: Ext.emptyFn,
 
     /**
-     * Highlights a given item in the DataView. This is called by the mouseover handler if {@link #overItemCls}
+     * Highlights a given item in the View. This is called by the mouseover handler if {@link #overItemCls}
      * and {@link #trackOver} are configured, but can also be called manually by other code, for instance to
      * handle stepping through the list via keyboard navigation.
      * @param {HTMLElement} item The item to highlight
@@ -615,7 +615,7 @@ Ext.define('Ext.view.View', {
             newNode,
             highlighted;
         
-        if (me.rendered) {
+        if (me.viewReady) {
             node = me.getNode(record);
             newNode = me.callParent(arguments);
             highlighted = me.highlightedItem;

@@ -68,9 +68,6 @@ Ext.define('Ext.resizer.Splitter', {
      * A class to add to the splitter when it is collapsed. See {@link #collapsible}.
      */
 
-    width: 5,
-    height: 5,
-
     /**
      * @cfg {String/Ext.panel.Panel} collapseTarget
      * A string describing the relative position of the immediate sibling Panel to collapse. May be 'prev' or 'next'.
@@ -109,10 +106,20 @@ Ext.define('Ext.resizer.Splitter', {
     beforeRender: function() {
         var me = this,
             target = me.getCollapseTarget(),
-            collapseDir = me.getCollapseDirection();
+            collapseDir = me.getCollapseDirection(),
+            vertical = me.vertical,
+            fixedSizeProp = vertical ? 'width' : 'height',
+            stretchSizeProp = vertical ? 'height' : 'width';
 
         me.callParent();
-        
+
+        if (!me.hasOwnProperty(stretchSizeProp)) {
+            me[stretchSizeProp] = '100%';
+        }
+        if (!me.hasOwnProperty(fixedSizeProp)) {
+            me[fixedSizeProp] = 5;
+        }
+
         if (target.collapsed) {
             me.addCls(me.collapsedClsInternal);
         }

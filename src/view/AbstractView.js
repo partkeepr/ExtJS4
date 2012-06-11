@@ -306,7 +306,10 @@ Ext.define('Ext.view.AbstractView', {
             cfg = {
                 msg: me.loadingText,
                 msgCls: me.loadingCls,
-                useMsg: me.loadingUseMsg
+                useMsg: me.loadingUseMsg,
+                // The store gets bound in initComponent, so while
+                // rendering let's push on the store
+                store: me.store
             };
 
         me.callParent(arguments);
@@ -623,7 +626,7 @@ Ext.define('Ext.view.AbstractView', {
             index,
             node;
 
-        if (me.rendered) {
+        if (me.viewReady) {
             index = me.store.indexOf(record);
             if (index > -1) {
                 node = me.bufferRender([record], index)[0];
@@ -915,6 +918,7 @@ Ext.define('Ext.view.AbstractView', {
      * @param {Ext.data.Model[]/Number} records An array of records or an index
      * @param {Boolean} keepExisting
      * @param {Boolean} suppressEvent Set to false to not fire a select event
+     * @deprecated 4.0 Use {@link Ext.selection.Model#select} instead.
      */
     select: function(records, keepExisting, suppressEvent) {
         this.selModel.select(records, keepExisting, suppressEvent);
@@ -1002,6 +1006,9 @@ Ext.define('Ext.view.AbstractView', {
      */
     indexOf: function(node) {
         node = this.getNode(node);
+        if (!node && node !== 0) {
+            return -1;
+        }
         if (Ext.isNumber(node.viewIndex)) {
             return node.viewIndex;
         }
@@ -1049,21 +1056,25 @@ Ext.define('Ext.view.AbstractView', {
              * @cfg {Boolean} [multiSelect=false]
              * True to allow selection of more than one item at a time, false to allow selection of only a single item
              * at a time or no selection at all, depending on the value of {@link #singleSelect}.
+             * @deprecated 4.0 Use {@link Ext.selection.Model#mode} 'MULTI' instead.
              */
             /**
              * @cfg {Boolean} [singleSelect=false]
              * True to allow selection of exactly one item at a time, false to allow no selection at all.
              * Note that if {@link #multiSelect} = true, this value will be ignored.
+             * @deprecated 4.0 Use {@link Ext.selection.Model#mode} 'SINGLE' instead.
              */
             /**
              * @cfg {Boolean} [simpleSelect=false]
              * True to enable multiselection by clicking on multiple items without requiring the user to hold Shift or Ctrl,
              * false to force the user to hold Ctrl or Shift to select more than on item.
+             * @deprecated 4.0 Use {@link Ext.selection.Model#mode} 'SIMPLE' instead.
              */
 
             /**
              * Gets the number of selected nodes.
              * @return {Number} The node count
+             * @deprecated 4.0 Use {@link Ext.selection.Model#getCount} instead.
              */
             getSelectionCount : function(){
                 if (Ext.global.console) {
@@ -1075,6 +1086,7 @@ Ext.define('Ext.view.AbstractView', {
             /**
              * Gets an array of the selected records
              * @return {Ext.data.Model[]} An array of {@link Ext.data.Model} objects
+             * @deprecated 4.0 Use {@link Ext.selection.Model#getSelection} instead.
              */
             getSelectedRecords : function(){
                 if (Ext.global.console) {
@@ -1091,6 +1103,10 @@ Ext.define('Ext.view.AbstractView', {
                 return sm.select.apply(sm, arguments);
             },
 
+            /**
+             * Deselects all selected records.
+             * @deprecated 4.0 Use {@link Ext.selection.Model#deselectAll} instead.
+             */
             clearSelections: function() {
                 if (Ext.global.console) {
                     Ext.global.console.warn("DataView: clearSelections will be removed, please access deselectAll through DataView's SelectionModel, ie: view.getSelectionModel().deselectAll()");

@@ -76,6 +76,9 @@ Ext.define('Ext.data.TreeStore', {
      * The root property to specify on the reader if one is not explicitly defined.
      */
     defaultRootProperty: 'children',
+    
+    // Keep a copy of the default so we know if it's been changed in a subclass/config
+    rootProperty: 'children',
 
     /**
      * @cfg {Boolean} [folderSort=false]
@@ -86,7 +89,8 @@ Ext.define('Ext.data.TreeStore', {
     constructor: function(config) {
         var me = this,
             root,
-            fields;
+            fields,
+            defaultRoot;
 
         config = Ext.apply({}, config);
 
@@ -99,6 +103,15 @@ Ext.define('Ext.data.TreeStore', {
             config.fields = [
                 {name: 'text', type: 'string'}
             ];
+            defaultRoot = config.defaultRootProperty || me.defaultRootProperty;
+            if (defaultRoot !== me.defaultRootProperty) {
+                config.fields.push({
+                    name: defaultRoot,   
+                    type: 'auto',   
+                    defaultValue: null, 
+                    persist: false
+                });
+            }
         }
 
         me.callParent([config]);

@@ -67,7 +67,8 @@ Ext.define('Ext.chart.axis.Time', {
     /**
      * @cfg {Array/Boolean} step
      * An array with two components: The first is the unit of the step (day, month, year, etc). The second one is the number of units for the step (1, 2, etc.).
-     * Default's [Ext.Date.DAY, 1]. If this is specified, {@link #steps} config is omitted.
+     *
+     * Defaults to: [Ext.Date.DAY, 1].
      */
     step: [Ext.Date.DAY, 1],
 
@@ -75,7 +76,6 @@ Ext.define('Ext.chart.axis.Time', {
      * @cfg {Boolean} constrain
      * If true, the values of the chart will be rendered only if they belong between the fromDate and toDate.
      * If false, the time axis will adapt to the new values by adding/removing steps.
-     * Default's false.
      */
     constrain: false,
 

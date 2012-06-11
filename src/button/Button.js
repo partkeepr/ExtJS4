@@ -689,6 +689,7 @@ Ext.define('Ext.button.Button', {
     // private
     onRender: function() {
         var me = this,
+            addOnclick,
             btn,
             btnListeners;
 
@@ -744,11 +745,22 @@ Ext.define('Ext.button.Button', {
         if (me.repeat) {
             me.mon(new Ext.util.ClickRepeater(btn, Ext.isObject(me.repeat) ? me.repeat: {}), 'click', me.onRepeatClick, me);
         } else {
-            btnListeners[me.clickEvent] = me.onClick;
+
+            // If the activation event already has a handler, make a note to add the handler later
+            if (btnListeners[me.clickEvent]) {
+                addOnclick = true;
+            } else {
+                btnListeners[me.clickEvent] = me.onClick;
+            }
         }
 
         // Add whatever button listeners we need
         me.mon(btn, btnListeners);
+
+        // If the listeners object had an entry for our clickEvent, add a listener now
+        if (addOnclick) {
+            me.mon(btn, me.clickEvent, me.onClick, me);
+        }
 
         // Register the button in the toggle manager
         Ext.ButtonToggleManager.register(me);
@@ -1393,8 +1405,9 @@ Ext.define('Ext.button.Button', {
      */
     getPersistentPadding: function() {
         var me = this,
+            reset = Ext.scopeResetCSS,
             padding = me.persistentPadding,
-            btn, leftTop, btnEl, btnInnerEl;
+            btn, leftTop, btnEl, btnInnerEl, wrap;
 
         // Create auto-size button offscreen and measure its insides
         // Short-circuit IE as it sometimes gives false positive for padding
@@ -1407,6 +1420,11 @@ Ext.define('Ext.button.Button', {
                 });
                 btn.el = Ext.DomHelper.append(Ext.getBody(), btn.getRenderTree(), true);
                 btn.applyChildEls(btn.el);
+                if (reset) {
+                    wrap = btn.el.wrap({
+                        cls: Ext.resetCls
+                    });
+                }
                 btnEl = btn.btnEl;
                 btnInnerEl = btn.btnInnerEl;
                 btnEl.setSize(null, null); //clear any hard dimensions on the button el to see what it does naturally
@@ -1418,6 +1436,9 @@ Ext.define('Ext.button.Button', {
                 
                 btn.destroy();
                 btn.el.remove();
+                if (reset) {
+                    wrap.remove();
+                }
             }
         }
         return padding;

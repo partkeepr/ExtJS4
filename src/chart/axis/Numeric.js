@@ -95,7 +95,7 @@ Ext.define('Ext.chart.axis.Numeric', {
         me.callParent([config]);
         label = me.label;
 
-        if(config.constrain == null){
+        if (config.constrain == null) {
             me.constrain = (config.minimum != null && config.maximum != null);
         }
 
@@ -134,7 +134,7 @@ Ext.define('Ext.chart.axis.Numeric', {
      * Default's true if maximum and minimum is specified.
      */
     constrain: true,
-    
+
     /**
      * The number of decimals to round the value to.
      *
@@ -150,9 +150,9 @@ Ext.define('Ext.chart.axis.Numeric', {
      * @private
      */
     scale: "linear",
-    
+
     // @private constrains to datapoints between minimum and maximum only
-    doConstrain: function () {
+    doConstrain: function() {
         var me = this,
             store = me.chart.store,
             items = store.data.items,
@@ -160,31 +160,29 @@ Ext.define('Ext.chart.axis.Numeric', {
             series = me.chart.series.items,
             fields = me.fields,
             ln = fields.length,
-            range = me.getRange(),
-            min = range.min, max = range.max, i, l, excludes = [],
+            range = me.calcEnds(),
+            min = range.from, max = range.to, i, l,
             useAcum = false,
             value, data = [],
             addRecord;
 
         for (i = 0, l = series.length; i < l; i++) {
-            excludes[i] = series[i].__excludes;
-            useAcum = useAcum || series[i].stacked;
+            if (series[i].type === 'bar' && series[i].stacked) {
+                // Do not constrain stacked bar chart.
+                return;
+            }
         }
+
         for (d = 0, dLen = items.length; d < dLen; d++) {
             addRecord = true;
             record = items[d];
             for (i = 0; i < ln; i++) {
-                addRecord = true;
-                if (excludes[i]) {
-                    continue;
-                }
                 value = record.get(fields[i]);
-
-                if (!useAcum && +value < +min) {
+                if (+value < +min) {
                     addRecord = false;
                     break;
                 }
-                if (!useAcum && +value > +max) {
+                if (+value > +max) {
                     addRecord = false;
                     break;
                 }
@@ -217,16 +215,16 @@ Ext.define('Ext.chart.axis.Numeric', {
      * @property {Boolean} adjustMinimumByMajorUnit
      */
     adjustMinimumByMajorUnit: false,
-    
+
     // applying constraint
-    processView: function () {
+    processView: function() {
         var me = this,
             constrain = me.constrain;
-        if(constrain){
+        if (constrain) {
             me.doConstrain();
         }
     },
-    
+
     // @private apply data.
     applyData: function() {
         this.callParent();

@@ -95,7 +95,9 @@ Ext.define('Ext.grid.PagingScroller', {
 
         // If we need unbinding...
         if (me.view) {
-            me.view.el.un('scroll', me.onViewScroll, me); // un does not understand the element options
+            if (me.view.el) {
+                me.view.el.un('scroll', me.onViewScroll, me); // un does not understand the element options
+            }
             me.view.un(viewListeners);
             me.store.un(storeListeners);
             if (me.grid) {
@@ -2154,7 +2156,7 @@ Ext.define('Ext.data.validations', {
     },
     
     /**
-     * Validates that the given value is present in the configured `list`.
+     * Validates that the given value is not present in the configured `list`.
      * For example:
      *
      *     validations: [{type: 'exclusion', field: 'username', list: ['Admin', 'Operator']}]
@@ -2278,13 +2280,31 @@ Ext.define('Ext.data.validations', {
 Ext.define('Ext.data.association.Association', {
     alternateClassName: 'Ext.data.Association',
     /**
-     * @cfg {String} ownerModel (required)
+     * @cfg {String} ownerModel
      * The string name of the model that owns the association.
+     *
+     * **NB!** This config is required when instantiating the Association directly.
+     * However, it cannot be used at all when defining the association as a config
+     * object inside Model, because the name of the model itself will be supplied
+     * automatically as the value of this config.
      */
 
     /**
-     * @cfg {String} associatedModel (required)
+     * @cfg {String} associatedModel
      * The string name of the model that is being associated with.
+     *
+     * **NB!** This config is required when instantiating the Association directly.
+     * When defining the association as a config object inside Model, the #model
+     * configuration will shadow this config.
+     */
+
+    /**
+     * @cfg {String} model
+     * The string name of the model that is being associated with.
+     *
+     * This config option is to be used when defining the association as a config
+     * object within Model.  The value is then mapped to #associatedModel when
+     * Association is instantiated inside Model.
      */
 
     /**
@@ -2306,30 +2326,32 @@ Ext.define('Ext.data.association.Association', {
 
     defaultReaderType: 'json',
 
+    isAssociation: true,
+
+    initialConfig: null,
+
     statics: {
         AUTO_ID: 1000,
         
         create: function(association){
-            if (!association.isAssociation) {
-                if (Ext.isString(association)) {
-                    association = {
-                        type: association
-                    };
-                }
+            if (Ext.isString(association)) {
+                association = {
+                    type: association
+                };
+            }
 
-                switch (association.type) {
-                    case 'belongsTo':
-                        return new Ext.data.association.BelongsTo(association);
-                    case 'hasMany':
-                        return new Ext.data.association.HasMany(association);
-                    case 'hasOne':
-                        return new Ext.data.association.HasOne(association);
-                    //TODO Add this back when it's fixed
+            switch (association.type) {
+                case 'belongsTo':
+                    return new Ext.data.association.BelongsTo(association);
+                case 'hasMany':
+                    return new Ext.data.association.HasMany(association);
+                case 'hasOne':
+                    return new Ext.data.association.HasOne(association);
+                //TODO Add this back when it's fixed
 //                    case 'polymorphic':
 //                        return Ext.create('Ext.data.PolymorphicAssociation', association);
-                    default:
-                        Ext.Error.raise('Unknown Association type: "' + association.type + '"');
-                }
+                default:
+                    Ext.Error.raise('Unknown Association type: "' + association.type + '"');
             }
             return association;
         }
@@ -2342,12 +2364,14 @@ Ext.define('Ext.data.association.Association', {
     constructor: function(config) {
         Ext.apply(this, config);
 
-        var types           = Ext.ModelManager.types,
+        var me = this,
+            types           = Ext.ModelManager.types,
             ownerName       = config.ownerModel,
             associatedName  = config.associatedModel,
             ownerModel      = types[ownerName],
-            associatedModel = types[associatedName],
-            ownerProto;
+            associatedModel = types[associatedName];
+
+        me.initialConfig = config;
 
         if (ownerModel === undefined) {
             Ext.Error.raise("The configured ownerModel was not valid (you tried " + ownerName + ")");
@@ -2356,8 +2380,8 @@ Ext.define('Ext.data.association.Association', {
             Ext.Error.raise("The configured associatedModel was not valid (you tried " + associatedName + ")");
         }
 
-        this.ownerModel = ownerModel;
-        this.associatedModel = associatedModel;
+        me.ownerModel = ownerModel;
+        me.associatedModel = associatedModel;
 
         /**
          * @property {String} ownerName
@@ -2370,12 +2394,12 @@ Ext.define('Ext.data.association.Association', {
          * 'Order')
          */
 
-        Ext.applyIf(this, {
+        Ext.applyIf(me, {
             ownerName : ownerName,
             associatedName: associatedName
         });
         
-        this.associationId = 'association' + (++this.statics().AUTO_ID);
+        me.associationId = 'association' + (++me.statics().AUTO_ID);
     },
 
     /**
@@ -2957,7 +2981,7 @@ Ext.define('Ext.data.association.HasOne', {
                 options.success = function(rec){
                     model[instanceName] = rec;
                     if (success) {
-                        success.call(this, arguments);
+                        success.apply(this, arguments);
                     }
                 };
 
@@ -2968,7 +2992,7 @@ Ext.define('Ext.data.association.HasOne', {
             } else {
                 instance = model[instanceName];
                 args = [instance];
-                scope = scope || model;
+                scope = scope || options.scope || model;
 
                 //TODO: We're duplicating the callback invokation code that the instance.load() call above
                 //makes here - ought to be able to normalize this - perhaps by caching at the Model.load layer
@@ -3355,7 +3379,8 @@ Ext.define('Ext.layout.ClassList', (function () {
  *
  * Triggers, once added, remain for the entire layout. Any changes to the property will
  * reschedule all unfinished layouts in their trigger set.
- * @protected
+ *
+ * @private
  */
 Ext.define('Ext.layout.ContextItem', {
     
@@ -3395,6 +3420,15 @@ Ext.define('Ext.layout.ContextItem', {
     remainingComponentChildLayouts: 0,
     remainingContainerChildLayouts: 0,
 
+    // the current set of property values:
+    props: null,
+
+    /**
+     * @property {Object} state
+     * State variables that are cleared when invalidated. Only applies to component items.
+     */
+    state: null,
+
     /**
      * @property {Boolean} wrapsComponent
      * True if this item wraps a Component (rather than an Element).
@@ -3404,8 +3438,7 @@ Ext.define('Ext.layout.ContextItem', {
 
     constructor: function (config) {
         var me = this,
-            target = config.target, // target must come in as a config
-            el, sizeModel;
+            el, ownerCt, ownerCtContext, sizeModel, target;
 
         Ext.apply(me, config);
 
@@ -3427,50 +3460,236 @@ Ext.define('Ext.layout.ContextItem', {
         // with the layout instance as the value. This prevents duplicate entries for one
         // layout and gives O(1) access to the layout instance when we need to iterate and
         // process them.
-        //
-        me.blocks = {};
-        me.domBlocks = {};
-        me.triggers = {};
-        me.domTriggers = {};
+        // 
+        // me.blocks = {};
+        // me.domBlocks = {};
+        // me.domTriggers = {};
+        // me.triggers = {};
 
         me.flushedProps = {};
-
-        // the current set of property values:
         me.props = {};
-
-        /**
-         * @property {Object} state
-         * State variables that are cleared when invalidated.
-         */
-        me.state = {};
 
         // the set of cached styles for the element:
         me.styles = {};
 
+        target = me.target;
         if (target.isComponent) {
             me.wrapsComponent = true;
-            me.sizeModel = sizeModel = target.getSizeModel(me.ownerCtContext && me.ownerCtContext.sizeModel);
+
+            // These items are created top-down, so the ContextItem of our ownerCt should
+            // be available (if it is part of this layout run).
+            ownerCt = target.ownerCt;
+            if (ownerCt && (ownerCtContext = me.context.items[ownerCt.el.id])) {
+                me.ownerCtContext = ownerCtContext;
+            }
+
+            // If our ownerCtContext is in the run, it will have a SizeModel that we use to
+            // optimize the determination of our sizeModel.
+            me.sizeModel = sizeModel = target.getSizeModel(ownerCtContext &&
+                ownerCtContext.widthModel.pairsByHeightOrdinal[ownerCtContext.heightModel.ordinal]);
+
             me.widthModel = sizeModel.width;
             me.heightModel = sizeModel.height;
-            me.frameBodyContext = me.getEl('frameBody');
+
+            // NOTE: The initial determination of sizeModel is valid (thankfully) and is
+            // needed to cope with adding components to a layout run on-the-fly (e.g., in
+            // the menu overflow handler of a box layout). Since this is the case, we do
+            // not need to recompute the sizeModel in init unless it is a "full" init (as
+            // our ownerCt's sizeModel could have changed in that case).
         }
     },
 
     /**
-     * Initializes ContextItem.
-     * @param ownerCtContext
+     * Clears all properties on this object except (perhaps) those not calculated by this
+     * component. This is more complex than it would seem because a layout can decide to
+     * invalidate its results and run the component's layouts again, but since some of the
+     * values may be calculated by the container, care must be taken to preserve those
+     * values.
+     *
+     * @param {Boolean} full True if all properties are to be invalidated, false to keep
+     * those calculated by the ownerCt.
+     * @return {Mixed} A value to pass as the first argument to {@link #initContinue}.
+     * @private
      */
-    init: function (ownerCtContext) {
+    init: function (full, options) {
         var me = this,
-            boxParent, widthModel;
+            oldProps = me.props,
+            oldDirty = me.dirty,
+            ownerCtContext = me.ownerCtContext,
+            ownerLayout = me.target.ownerLayout,
+            firstTime = !me.state,
+            ret = full || firstTime,
+            children, i, n, ownerCt, sizeModel, target,
+            oldHeightModel = me.heightModel,
+            oldWidthModel = me.widthModel,
+            newHeightModel, newWidthModel;
 
-        if (ownerCtContext) {
-            me.ownerCtContext = ownerCtContext;
-            me.isBoxParent = me.target.ownerLayout.isItemBoxParent(me);
+        me.dirty = me.invalid = false;
+        me.props = {};
 
-            widthModel = me.widthModel;
+        if (me.boxChildren) {
+            me.boxChildren.length = 0; // keep array (more GC friendly)
+        }
 
-            if (widthModel.shrinkWrap) {
+        if (!firstTime) {
+            me.clearAllBlocks('blocks');
+            me.clearAllBlocks('domBlocks');
+        }
+
+        // For Element wrappers, we are done...
+        if (!me.wrapsComponent) {
+            return ret;
+        }
+
+        // From here on, we are only concerned with Component wrappers...
+        target = me.target;
+        me.state = {}; // only Component wrappers need a "state"
+
+        if (firstTime) {
+            // This must occur before we proceed since it can do many things (like add
+            // child items perhaps):
+            if (target.beforeLayout) {
+                target.beforeLayout();
+            }
+
+            // Determine the ownerCtContext if we aren't given one. Normally the firstTime
+            // we meet a component is before the context is run, but it is possible for
+            // components to be added to a run that is already in progress. If so, we have
+            // to lookup the ownerCtContext since the odds are very high that the new
+            // component is a child of something already in the run. It is currently
+            // unsupported to drag in the owner of a running component (needs testing).
+            if (!ownerCtContext && (ownerCt = target.ownerCt)) {
+                ownerCtContext = me.context.items[ownerCt.el.id];
+            }
+
+            if (ownerCtContext) {
+                me.ownerCtContext = ownerCtContext;
+                me.isBoxParent = target.ownerLayout.isItemBoxParent(me);
+            } else {
+                me.isTopLevel = true; // this is used by initAnimation...
+            }
+
+            me.frameBodyContext = me.getEl('frameBody');
+        } else {
+            ownerCtContext = me.ownerCtContext;
+
+            // In theory (though untested), this flag can change on-the-fly...
+            me.isTopLevel = !ownerCtContext;
+
+            // Init the children element items since they may have dirty state (no need to
+            // do this the firstTime).
+            children = me.children;
+            for (i = 0, n = children.length; i < n; ++i) {
+                children[i].init(true);
+            }
+        }
+
+        // We need to know how we will determine content size: containers can look at the
+        // results of their items but non-containers or item-less containers with just raw
+        // markup need to be measured in the DOM:
+        me.hasRawContent = true;
+        if (target.isContainer) {
+            if (target.items.items.length || !target.getTargetEl().dom.firstChild) {
+                me.hasRawContent = false;
+            }
+        }
+
+        if (full) {
+            // We must null these out or getSizeModel will assume they are the correct,
+            // dynamic size model and return them (the previous dynamic sizeModel).
+            me.widthModel = me.heightModel = null;
+            sizeModel = target.getSizeModel(ownerCtContext && 
+                ownerCtContext.widthModel.pairsByHeightOrdinal[ownerCtContext.heightModel.ordinal]);
+
+            if (firstTime) {
+                me.sizeModel = sizeModel;
+            }
+
+            me.widthModel = sizeModel.width;
+            me.heightModel = sizeModel.height;
+        } else if (oldProps) {
+            // these are almost always calculated by the ownerCt (we might need to track
+            // this at some point more carefully):
+            me.recoverProp('x', oldProps, oldDirty);
+            me.recoverProp('y', oldProps, oldDirty);
+
+            // if these are calculated by the ownerCt, don't trash them:
+            if (me.widthModel.calculated) {
+                me.recoverProp('width', oldProps, oldDirty);
+            }
+            if (me.heightModel.calculated) {
+                me.recoverProp('height', oldProps, oldDirty);
+            }
+        }
+
+        if (oldProps && ownerLayout && ownerLayout.manageMargins) {
+            me.recoverProp('margin-top', oldProps, oldDirty);
+            me.recoverProp('margin-right', oldProps, oldDirty);
+            me.recoverProp('margin-bottom', oldProps, oldDirty);
+            me.recoverProp('margin-left', oldProps, oldDirty);
+        }
+
+        // Process any invalidate options present. These can only come from explicit calls
+        // to the invalidate() method.
+        if (options) {
+            // Consider a container box with wrapping text. If the box is made wider, the
+            // text will take up less height (until there is no more wrapping). Conversely,
+            // if the box is made narrower, the height starts to increase due to wrapping.
+            //
+            // Imposing a minWidth constraint would increase the width. This may decrease
+            // the height. If the box is shrinkWrap, however, the width will already be
+            // such that there is no wrapping, so the height will not further decrease.
+            // Since the height will also not increase if we widen the box, there is no
+            // problem simultaneously imposing a minHeight or maxHeight constraint.
+            //
+            // When we impose as maxWidth constraint, however, we are shrinking the box
+            // which may increase the height. If we are imposing a maxHeight constraint,
+            // that is fine because a further increased height will still need to be
+            // constrained. But if we are imposing a minHeight constraint, we cannot know
+            // whether the increase in height due to wrapping will be greater than the
+            // minHeight. If we impose a minHeight constraint at the same time, then, we
+            // could easily be locking in the wrong height.
+            //
+            // It is important to note that this logic applies to simultaneously *adding*
+            // both a maxWidth and a minHeight constraint. It is perfectly fine to have
+            // a state with both constraints, but we cannot add them both at once.
+            newHeightModel = options.heightModel;
+            newWidthModel = options.widthModel;
+            if (newWidthModel && newHeightModel && oldWidthModel && oldHeightModel) {
+                if (oldWidthModel.shrinkWrap && oldHeightModel.shrinkWrap) {
+                    if (newWidthModel.constrainedMax && newHeightModel.constrainedMin) {
+                        newHeightModel = null;
+                    }
+                }
+            }
+
+            // Apply size model updates (if any) and state updates (if any).
+            if (newWidthModel) {
+                me.widthModel = newWidthModel;
+            }
+            if (newHeightModel) {
+                me.heightModel = newHeightModel;
+            }
+
+            if (options.state) {
+                Ext.apply(me.state, options.state);
+            }
+        }
+
+        return ret;
+    },
+
+    /**
+     * @private
+     */
+    initContinue: function (full) {
+        var me = this,
+            ownerCtContext = me.ownerCtContext,
+            widthModel = me.widthModel,
+            boxParent;
+
+        if (full) {
+            if (ownerCtContext && widthModel.shrinkWrap) {
                 boxParent = ownerCtContext.isBoxParent ? ownerCtContext : ownerCtContext.boxParent;
                 if (boxParent) {
                     boxParent.addBoxChild(me);
@@ -3478,12 +3697,44 @@ Ext.define('Ext.layout.ContextItem', {
             } else if (widthModel.natural) {
                 me.boxParent = ownerCtContext;
             }
-        } else {
-            me.isTopLevel = true;
+        }
+
+        return full;
+    },
+
+    /**
+     * @private
+     */
+    initDone: function (full, componentChildrenDone, containerChildrenDone, containerLayoutDone) {
+        var me = this,
+            props = me.props,
+            state = me.state;
+
+        // These properties are only set when they are true:
+        if (componentChildrenDone) {
+            props.componentChildrenDone = true;
+        }
+        if (containerChildrenDone) {
+            props.containerChildrenDone = true;
+        }
+        if (containerLayoutDone) {
+            props.containerLayoutDone = true;
+        }
+
+        if (me.boxChildren && me.boxChildren.length && me.widthModel.shrinkWrap) {
+            // set a very large width to allow the children to measure their natural
+            // widths (this is cleared once all children have been measured):
+            me.el.setWidth(10000);
+
+            // don't run layouts for this component until we clear this width...
+            state.blocks = (state.blocks || 0) + 1;
         }
     },
 
-    initAnimatePolicy: function() {
+    /**
+     * @private
+     */
+    initAnimation: function() {
         var me = this,
             target = me.target,
             ownerCtContext = me.ownerCtContext;
@@ -3492,11 +3743,10 @@ Ext.define('Ext.layout.ContextItem', {
             // See which properties we are supposed to animate to their new state.
             // If there are any, queue ourself to be animated by the owning Context
             me.animatePolicy = target.ownerLayout.getAnimatePolicy(me);
-        }
-        // Collapsing/expnding a top level Panel with animation.
-        // We need to fabricate an animatePolicy depending on which dimension the collapse is using,
-        // isCollapsingOrExpanding is set during the collapse/expand process.
-        else if (!ownerCtContext && target.isCollapsingOrExpanding && target.animCollapse) {
+        } else if (!ownerCtContext && target.isCollapsingOrExpanding && target.animCollapse) {
+            // Collapsing/expnding a top level Panel with animation. We need to fabricate
+            // an animatePolicy depending on which dimension the collapse is using,
+            // isCollapsingOrExpanding is set during the collapse/expand process.
             me.animatePolicy = target.componentLayout.getAnimatePolicy(me);
         }
 
@@ -3531,7 +3781,7 @@ Ext.define('Ext.layout.ContextItem', {
      */
     addBlock: function (name, layout, propName) {
         var me = this,
-            collection = me[name],
+            collection = me[name] || (me[name] = {}),
             blockedLayouts = collection[propName] || (collection[propName] = {});
 
         if (!blockedLayouts[layout.id]) {
@@ -3576,7 +3826,8 @@ Ext.define('Ext.layout.ContextItem', {
      */
     addTrigger: function (propName, inDom) {
         var me = this,
-            collection = inDom ? me.domTriggers : me.triggers,
+            name = inDom ? 'domTriggers' : 'triggers',
+            collection = me[name] || (me[name] = {}),
             context = me.context,
             layout = context.currentLayout,
             triggers = collection[propName] || (collection[propName] = {});
@@ -3716,60 +3967,6 @@ Ext.define('Ext.layout.ContextItem', {
     },
 
     /**
-     * Clears all properties on this object except (perhaps) those not calculated by this
-     * component. This is more complex than it would seem because a layout can decide to
-     * invalidate its results and run the component's layouts again, but since some of the
-     * values may be calculated by the container, care must be taken to preserve those
-     * values.
-     *
-     * @param {Boolean} full True if all properties are to be invalidated, false to keep
-     *  those calculated by the ownerCt.
-     */
-    doInvalidate: function (full) {
-        var me = this,
-            oldProps = me.props,
-            oldDirty = me.dirty,
-            ownerLayout = me.target.ownerLayout;
-
-        me.dirty = me.invalid = false;
-        me.props = {};
-        me.state = {};
-
-        me.clearAllBlocks('blocks');
-        me.clearAllBlocks('domBlocks');
-
-        // If we had dirty properties and we are not fully invalidating, we need to recover
-        // some of thos values...
-        if (me.wrapsComponent) {
-            if (!full) {
-                // these are almost always calculated by the ownerCt (we might need to track
-                // this at some point more carefully):
-                me.recoverProp('x', oldProps, oldDirty);
-                me.recoverProp('y', oldProps, oldDirty);
-
-                // if these are calculated by the ownerCt, don't trash them:
-                if (me.widthModel.calculated) {
-                    me.recoverProp('width', oldProps, oldDirty);
-                }
-                if (me.heightModel.calculated) {
-                    me.recoverProp('height', oldProps, oldDirty);
-                }
-            } else {
-                me.widthModel = me.sizeModel.width;
-                me.heightModel = me.sizeModel.height;
-            }
-
-        }
-
-        if (ownerLayout && ownerLayout.manageMargins) {
-            me.recoverProp('margin-top', oldProps, oldDirty);
-            me.recoverProp('margin-right', oldProps, oldDirty);
-            me.recoverProp('margin-bottom', oldProps, oldDirty);
-            me.recoverProp('margin-left', oldProps, oldDirty);
-        }
-    },
-
-    /**
      * Reschedules any layouts associated with a given trigger.
      * 
      * @param {String} name The name of the trigger list ('triggers' or 'domTriggers').
@@ -3777,7 +3974,8 @@ Ext.define('Ext.layout.ContextItem', {
      * @private
      */
     fireTriggers: function (name, propName) {
-        var triggers = this[name][propName],
+        var collection = this[name],
+            triggers = collection && collection[propName],
             context = this.context,
             layout, layoutId;
 
@@ -3822,7 +4020,7 @@ Ext.define('Ext.layout.ContextItem', {
             delete me.innerHTML;
         }
 
-        if (state.clearBoxWidth) {
+        if (state && state.clearBoxWidth) {
             state.clearBoxWidth = 0;
             me.el.setStyle('width', null);
 
@@ -3837,6 +4035,9 @@ Ext.define('Ext.layout.ContextItem', {
         }
     },
 
+    /**
+     * @private
+     */
     flushAnimations: function() {
         var me = this,
             animateFrom = me.lastBox,
@@ -4170,7 +4371,7 @@ Ext.define('Ext.layout.ContextItem', {
      *
      * @param {String[]} styleNames The CSS style names.
      * @param {String[]} [altNames] The alternate names for the returned styles. If given,
-     * these names must correspond one-for-one to the {@link #styleNames}.
+     * these names must correspond one-for-one to the `styleNames`.
      * @return {Object} The values of the DOM styles (parsed as necessary).
      */
     getStyles: function (styleNames, altNames) {
@@ -4274,7 +4475,6 @@ Ext.define('Ext.layout.ContextItem', {
      * @param {Object} options.scope The scope to use when calling the callback functions.
      */
     invalidate: function (options) {
-        this.invalid = true;
         this.context.queueInvalidate(this, options);
     },
 
@@ -5590,7 +5790,7 @@ Ext.define('Ext.util.Observable', {
      *
      * @param {Object} origin The Observable whose events this object is to relay.
      * @param {String[]} events Array of event names to relay.
-     * @param {String} [prefix] A common prefix to attach to the event names. For example:
+     * @param {String} [prefix] A common prefix to prepend to the event names. For example:
      *
      *     this.relayEvents(this.getStore(), ['load', 'clear'], 'store');
      *
@@ -8560,7 +8760,7 @@ Ext.define('Ext.util.TextMetrics', {
  *          ],
  *          
  *          renderTpl: [
- *              '&lt;div id="{id}-bodyEl"&gt;&lt;/div&gt;'
+ *              '<div id="{id}-bodyEl"></div>'
  *          ],
  *          
  *          // ...
@@ -8615,9 +8815,9 @@ Ext.define('Ext.util.TextMetrics', {
  *          ],
  *          
  *          renderTpl: [
- *              '&lt;div id="{id}-bodyEl"&gt;'
- *                  '&lt;div id="{id}-innerEl"&gt;&lt;/div&gt;'
- *              '&lt;/div&gt;'
+ *              '<div id="{id}-bodyEl">'
+ *                  '<div id="{id}-innerEl"></div>'
+ *              '</div>'
  *          ],
  *          
  *          // ...
@@ -8673,7 +8873,7 @@ Ext.define('Ext.util.ElementContainer', {
     },
 
     /**
-     * Adds each argument passed to this method to the {@link #childEls} array.
+     * Adds each argument passed to this method to the {@link Ext.AbstractComponent#childEls childEls} array.
      */
     addChildEls: function () {
         var me = this,
@@ -10767,15 +10967,16 @@ mc.add(otherEl);
     },
 
     /**
-     * Executes the specified function once for every item in the collection, passing the following arguments:
-     * <div class="mdetail-params"><ul>
-     * <li><b>item</b> : Mixed<p class="sub-desc">The collection item</p></li>
-     * <li><b>index</b> : Number<p class="sub-desc">The item's index</p></li>
-     * <li><b>length</b> : Number<p class="sub-desc">The total number of items in the collection</p></li>
-     * </ul></div>
-     * The function should return a boolean value. Returning false from the function will stop the iteration.
+     * Executes the specified function once for every item in the collection.
+     * The function should return a boolean value.
+     * Returning false from the function will stop the iteration.
+     *
      * @param {Function} fn The function to execute for each item.
-     * @param {Object} scope (optional) The scope (<code>this</code> reference) in which the function is executed. Defaults to the current item in the iteration.
+     * @param {Mixed} fn.item The collection item.
+     * @param {Number} fn.index The index of item.
+     * @param {Number} fn.len Total length of collection.
+     * @param {Object} scope (optional) The scope (<code>this</code> reference)
+     * in which the function is executed. Defaults to the current item in the iteration.
      */
     each : function(fn, scope){
         var items = [].concat(this.items), // each safe for removal
@@ -10795,7 +10996,12 @@ mc.add(otherEl);
      * Executes the specified function once for every key in the collection, passing each
      * key, and its associated item as the first two parameters.
      * @param {Function} fn The function to execute for each item.
-     * @param {Object} scope (optional) The scope (<code>this</code> reference) in which the function is executed. Defaults to the browser window.
+     * @param {String} fn.key The key of collection item.
+     * @param {Mixed} fn.item The collection item.
+     * @param {Number} fn.index The index of item.
+     * @param {Number} fn.len Total length of collection.
+     * @param {Object} scope (optional) The scope (<code>this</code> reference) in which the
+     * function is executed. Defaults to the browser window.
      */
     eachKey : function(fn, scope){
         var keys = this.keys,
@@ -10812,8 +11018,12 @@ mc.add(otherEl);
      * Returns the first item in the collection which elicits a true return value from the
      * passed selection function.
      * @param {Function} fn The selection function to execute for each item.
-     * @param {Object} scope (optional) The scope (<code>this</code> reference) in which the function is executed. Defaults to the browser window.
-     * @return {Object} The first item in the collection which returned true from the selection function, or null if none was found
+     * @param {Mixed} fn.item The collection item.
+     * @param {String} fn.key The key of collection item.
+     * @param {Object} scope (optional) The scope (<code>this</code> reference) in which the
+     * function is executed. Defaults to the browser window.
+     * @return {Object} The first item in the collection which returned true from the selection
+     * function, or null if none was found.
      */
     findBy : function(fn, scope) {
         var keys = this.keys,
@@ -11218,8 +11428,11 @@ var middleAged = people.filter('age', 24);
      * Filter by a function. Returns a <i>new</i> collection that has been filtered.
      * The passed function will be called with each object in the collection.
      * If the function returns true, the value is included otherwise it is filtered.
-     * @param {Function} fn The function to be called, it will receive the args o (the object), k (the key)
-     * @param {Object} scope (optional) The scope (<code>this</code> reference) in which the function is executed. Defaults to this MixedCollection.
+     * @param {Function} fn The function to be called.
+     * @param {Mixed} fn.item The collection item.
+     * @param {String} fn.key The key of collection item.
+     * @param {Object} scope (optional) The scope (<code>this</code> reference) in
+     * which the function is executed. Defaults to this MixedCollection.
      * @return {Ext.util.MixedCollection} The new filtered collection
      */
     filterBy : function(fn, scope) {
@@ -11264,7 +11477,9 @@ var middleAged = people.filter('age', 24);
     /**
      * Find the index of the first matching object in this collection by a function.
      * If the function returns <i>true</i> it is considered a match.
-     * @param {Function} fn The function to be called, it will receive the args o (the object), k (the key).
+     * @param {Function} fn The function to be called.
+     * @param {Mixed} fn.item The collection item.
+     * @param {String} fn.key The key of collection item.
      * @param {Object} [scope] The scope (<code>this</code> reference) in which the function is executed. Defaults to this MixedCollection.
      * @param {Number} [start=0] The index to start searching at.
      * @return {Number} The matched index or -1
@@ -13360,8 +13575,8 @@ Ext.define('Ext.util.Renderable', {
     onBoxReady: Ext.emptyFn,
 
     /**
-     * Sets references to elements inside the component. This applies {@link #renderSelectors}
-     * as well as {@link #childEls}.
+     * Sets references to elements inside the component. This applies {@link Ext.AbstractComponent#renderSelectors renderSelectors}
+     * as well as {@link Ext.AbstractComponent#childEls childEls}.
      * @private
      */
     applyRenderSelectors: function() {
@@ -13417,7 +13632,7 @@ Ext.define('Ext.util.Renderable', {
      * Called from the selected frame generation template to insert this Component's inner structure inside the framing structure.
      *
      * When framing is used, a selected frame generation template is used as the primary template of the #getElConfig instead
-     * of the configured {@link #renderTpl}. The {@link #renderTpl} is invoked by this method which is injected into the framing template.
+     * of the configured {@link Ext.AbstractComponent#renderTpl renderTpl}. The renderTpl is invoked by this method which is injected into the framing template.
      */
     doApplyRenderTpl: function(out, values) {
         // Careful! This method is bolted on to the frameTpl so all we get for context is
@@ -13861,9 +14076,39 @@ Ext.define('Ext.util.Renderable', {
         me.lastBox = me.el.lastBox = lastBox;
     },
 
+    /**
+     * Renders the Component into the passed HTML element.
+     * 
+     * **If you are using a {@link Ext.container.Container Container} object to house this
+     * Component, then do not use the render method.**
+     *
+     * A Container's child Components are rendered by that Container's
+     * {@link Ext.container.Container#layout layout} manager when the Container is first rendered.
+     *
+     * If the Container is already rendered when a new child Component is added, you may need to call
+     * the Container's {@link Ext.container.Container#doLayout doLayout} to refresh the view which
+     * causes any unrendered child Components to be rendered. This is required so that you can add
+     * multiple child components if needed while only refreshing the layout once.
+     *
+     * When creating complex UIs, it is important to remember that sizing and positioning
+     * of child items is the responsibility of the Container's {@link Ext.container.Container#layout layout}
+     * manager.  If you expect child items to be sized in response to user interactions, you must
+     * configure the Container with a layout manager which creates and manages the type of layout you
+     * have in mind.
+     *
+     * **Omitting the Container's {@link Ext.Container#layout layout} config means that a basic
+     * layout manager is used which does nothing but render child components sequentially into the
+     * Container. No sizing or positioning will be performed in this situation.**
+     *
+     * @param {Ext.Element/HTMLElement/String} [container] The element this Component should be
+     * rendered into. If it is being created from existing markup, this should be omitted.
+     * @param {String/Number} [position] The element ID or DOM node index within the container **before**
+     * which this component will be inserted (defaults to appending to the end of the container)
+     */
     render: function(container, position) {
         var me = this,
             el = me.el && (me.el = Ext.get(me.el)), // ensure me.el is wrapped
+            vetoed,
             tree,
             nextSibling;
 
@@ -13887,19 +14132,23 @@ Ext.define('Ext.util.Renderable', {
                 me.wrapPrimaryEl(el);
             }
         } else {
-            // Set configured styles on pre-rendered Component's element
-            me.initStyles(el);
-            if (me.allowDomMove !== false) {
-                //debugger; // TODO
-                if (nextSibling) {
-                    container.dom.insertBefore(el.dom, nextSibling);
-                } else {
-                    container.dom.appendChild(el.dom);
+            if (!me.hasListeners.beforerender || me.fireEvent('beforerender', me) !== false) {
+                // Set configured styles on pre-rendered Component's element
+                me.initStyles(el);
+                if (me.allowDomMove !== false) {
+                    //debugger; // TODO
+                    if (nextSibling) {
+                        container.dom.insertBefore(el.dom, nextSibling);
+                    } else {
+                        container.dom.appendChild(el.dom);
+                    }
                 }
+            } else {
+                vetoed = true;
             }
         }
 
-        if (el) {
+        if (el && !vetoed) {
             me.finishRender(position);
         }
 
@@ -14225,10 +14474,19 @@ Ext.define('Ext.util.Renderable', {
  * Provides searching of Components within Ext.ComponentManager (globally) or a specific
  * Ext.container.Container on the document with a similar syntax to a CSS selector.
  *
- * Components can be retrieved by using their {@link Ext.Component xtype} with an optional . prefix
+ * Components can be retrieved by using their {@link Ext.Component xtype}
  *
- * - `component` or `.component`
- * - `gridpanel` or `.gridpanel`
+ * - `component`
+ * - `gridpanel`
+ * 
+ * Matching by xtype matches inherited types, so in the following code, the previous field
+ * *of any type which inherits from `TextField`* will be found:
+ *
+ *     prevField = myField.previousNode('textfield');
+ *
+ * To match only the exact type, pass the "shallow" flag (See {@link Ext.AbstractComponent#isXType AbstractComponent's isXType method})
+ *
+ *     prevTextField = myField.previousNode('textfield(true)');
  *
  * An itemId or id must be prefixed with a #
  *
@@ -16079,6 +16337,7 @@ Ext.define('Ext.form.field.Field', {
     initValue: function() {
         var me = this;
 
+        me.value = me.transformOriginalValue(me.value);
         /**
          * @property {Object} originalValue
          * The original value of the field as configured in the {@link #value} configuration, or as loaded by the last
@@ -16090,6 +16349,17 @@ Ext.define('Ext.form.field.Field', {
         me.suspendCheckChange++;
         me.setValue(me.value);
         me.suspendCheckChange--;
+    },
+    
+    /**
+     * Allows for any necessary modifications before the original
+     * value is set
+     * @protected
+     * @param {Object} value The initial value
+     * @return {Object} The modified initial value
+     */
+    transformOriginalValue: function(value){
+        return value;
     },
 
     /**
@@ -17088,7 +17358,7 @@ Ext.define('Ext.grid.feature.Grouping', {
     groupHeaderTpl: '{columnName}: {name}',
     
     /**
-     * @cfg {Number} depthToIndent
+     * @cfg {Number} [depthToIndent=17]
      * Number of pixels to indent per grouping level
      */
     depthToIndent: 17,
@@ -17098,40 +17368,40 @@ Ext.define('Ext.grid.feature.Grouping', {
 
     //<locale>
     /**
-     * @cfg
+     * @cfg {String} [groupByText="Group by this field"]
      * Text displayed in the grid header menu for grouping by header.
      */
-    groupByText : 'Group By This Field',
+    groupByText : 'Group by this field',
     //</locale>
     //<locale>
     /**
-     * @cfg
+     * @cfg {String} [showGroupsText="Show in groups"]
      * Text displayed in the grid header for enabling/disabling grouping.
      */
-    showGroupsText : 'Show in Groups',
+    showGroupsText : 'Show in groups',
     //</locale>
 
     /**
-     * @cfg
+     * @cfg {Boolean} [hideGroupedHeader=false]
      * True to hide the header that is currently grouped.
      */
     hideGroupedHeader : false,
 
     /**
-     * @cfg
+     * @cfg {Boolean} [startCollapsed=false]
      * True to start all groups collapsed.
      */
     startCollapsed : false,
 
     /**
-     * @cfg
+     * @cfg {Boolean} [enableGroupingMenu=true]
      * True to enable the grouping control in the header menu.
      */
     enableGroupingMenu : true,
 
     /**
-     * @cfg
-     * True  to allow the user to turn off grouping.
+     * @cfg {Boolean} [enableNoGroups=true]
+     * True to allow the user to turn off grouping.
      */
     enableNoGroups : true,
 
@@ -17178,14 +17448,14 @@ Ext.define('Ext.grid.feature.Grouping', {
     },
 
     refreshIf: function() {
+        var ownerCt = this.grid.ownerCt;
+            
         if (this.blockRefresh !== true) {
 
             // We are one side of a lockable grid, so refresh the locking view
-            if (this.grid.ownerCt && this.grid.ownerCt.lockable) {
-                this.grid.ownerCt.view.refresh();
-            }
-            // Refresh our view
-            else {
+            if (ownerCt && ownerCt.lockable) {
+                ownerCt.view.refresh();
+            } else {
                 this.view.refresh();
             }
         }
@@ -17196,9 +17466,9 @@ Ext.define('Ext.grid.feature.Grouping', {
         return [
             '<tpl if="typeof rows !== \'undefined\'">',
                 // group row tpl
-                '<tr id="{groupHeaderId}" class="' + Ext.baseCSSPrefix + 'grid-group-hd ' + (me.startCollapsed ? me.hdCollapsedCls : '') + ' {hdCollapsedCls}"><td class="' + Ext.baseCSSPrefix + 'grid-cell" colspan="' + parent.columns.length + '" {[this.indentByDepth(values)]}><div class="' + Ext.baseCSSPrefix + 'grid-cell-inner"><div class="' + Ext.baseCSSPrefix + 'grid-group-title">{collapsed}{[this.renderGroupHeaderTpl(values)]}</div></div></td></tr>',
+                '<tr id="{groupHeaderId}" class="' + Ext.baseCSSPrefix + 'grid-group-hd {hdCollapsedCls}"><td class="' + Ext.baseCSSPrefix + 'grid-cell" colspan="' + parent.columns.length + '" {[this.indentByDepth(values)]}><div class="' + Ext.baseCSSPrefix + 'grid-cell-inner"><div class="' + Ext.baseCSSPrefix + 'grid-group-title">{collapsed}{[this.renderGroupHeaderTpl(values)]}</div></div></td></tr>',
                 // this is the rowbody
-                '<tr id="{groupBodyId}" class="' + Ext.baseCSSPrefix + 'grid-group-body ' + (me.startCollapsed ? me.collapsedCls : '') + ' {collapsedCls}"><td colspan="' + parent.columns.length + '">{[this.recurse(values)]}</td></tr>',
+                '<tr id="{groupBodyId}" class="' + Ext.baseCSSPrefix + 'grid-group-body {collapsedCls}"><td colspan="' + parent.columns.length + '">{[this.recurse(values)]}</td></tr>',
             '</tpl>'
         ].join('');
     },
@@ -17751,8 +18021,18 @@ Ext.define('Ext.grid.feature.Grouping', {
     collectData: function(records, preppedRecords, startIndex, fullWidth, o) {
         var me    = this,
             store = me.view.store,
+            collapsedState = me.collapsedState,
+            collapseGroups,
             g,
             groups, gLen, group;
+            
+        if (me.startCollapsed) {
+            // If we start collapse, we'll set the state of the groups here
+            // and unset the flag so any subsequent expand/collapse is
+            // managed by the feature
+            me.startCollapsed = false;
+            collapseGroups = true;
+        }
 
         if (!me.disabled && store.isGrouped()) {
             groups = store.getGroups();
@@ -17760,6 +18040,10 @@ Ext.define('Ext.grid.feature.Grouping', {
 
             for (g = 0; g < gLen; g++) {
                 group = groups[g];
+                
+                if (collapseGroups) {
+                    collapsedState[group.name] = true;
+                }
 
                 me.getGroupRows(group, records, preppedRecords, fullWidth);
             }
@@ -18591,6 +18875,15 @@ Ext.define('Ext.grid.plugin.DragDrop', {
      * of the node.
      */
     //<locale>
+    /**
+     * @cfg
+     * The text to show while dragging.
+     *
+     * Two placeholders can be used in the text:
+     *
+     * - `{0}` The number of selected items.
+     * - `{1}` 's' when more than 1 items (only useful for English).
+     */
     dragText : '{0} selected row{1}',
     //</locale>
 
@@ -20061,6 +20354,8 @@ Ext.define('Ext.data.Connection', {
 Ext.define('Ext.data.Field', {
     requires: ['Ext.data.Types', 'Ext.data.SortTypes'],
     alias: 'data.field',
+
+    isField: true,
     
     constructor : function(config) {
         if (Ext.isString(config)) {
@@ -20088,13 +20383,10 @@ Ext.define('Ext.data.Field', {
 
         // Reference this type's default converter if we did not recieve one in configuration.
         if (!config.hasOwnProperty('convert')) {
-            this.convert = this.type.convert;
-        }
-        
-        
-        // If the converter has been nulled out, and we have not been configured
-        // with a field-specific defaultValue, then coerce the inherited defaultValue into our data type.
-        else if (!this.convert && !config.hasOwnProperty('defaultValue')) {
+            this.convert = this.type.convert; // this may be undefined (e.g., AUTO)
+        } else if (!this.convert && this.type.convert && !config.hasOwnProperty('defaultValue')) {
+            // If the converter has been nulled out, and we have not been configured
+            // with a field-specific defaultValue, then coerce the inherited defaultValue into our data type.
             this.defaultValue = this.type.convert(this.defaultValue);
         }
     },
@@ -20478,7 +20770,7 @@ Ext.define('Ext.data.NodeInterface', {
          */
         decorate: function(modelClass) {
             var idName, idType;
-
+            
             // get the reference to the model class, in case the argument was a string or a record
             if (typeof modelClass == 'string') {
                 modelClass = Ext.ModelManager.getModel(modelClass);
@@ -20571,7 +20863,8 @@ Ext.define('Ext.data.NodeInterface', {
                          * @param {Ext.data.NodeInterface} this This node
                          * @param {Ext.data.NodeInterface} node The removed node
                          * @param {Boolean} isMove `true` if the child node is being removed so it can be moved to another position in the tree.
-                         * (a side effect of calling {@link #appendChild} or {@link #insertBefore} with a node that already has a parentNode 
+                         * (a side effect of calling {@link Ext.data.NodeInterface#appendChild appendChild} or
+                         * {@link Ext.data.NodeInterface#insertBefore insertBefore} with a node that already has a parentNode)
                          */
                         "remove",
 
@@ -20608,7 +20901,8 @@ Ext.define('Ext.data.NodeInterface', {
                          * @param {Ext.data.NodeInterface} this This node
                          * @param {Ext.data.NodeInterface} node The child node to be removed
                          * @param {Boolean} isMove `true` if the child node is being removed so it can be moved to another position in the tree.
-                         * (a side effect of calling {@link #appendChild} or {@link #insertBefore} with a node that already has a parentNode 
+                         * (a side effect of calling {@link Ext.data.NodeInterface#appendChild appendChild} or
+                         * {@link Ext.data.NodeInterface#insertBefore insertBefore} with a node that already has a parentNode)
                          */
                         "beforeremove",
 
@@ -20676,6 +20970,19 @@ Ext.define('Ext.data.NodeInterface', {
                 createNode: function(node) {
                     if (Ext.isObject(node) && !node.isModel) {
                         node = Ext.ModelManager.create(node, this.modelName);
+                    }
+                    // The node may already decorated, but may not have been
+                    // so when the model constructor was called. If not,
+                    // setup defaults here
+                    if (!node.childNodes) {
+                        Ext.applyIf(node, {
+                            firstChild: null,
+                            lastChild: null,
+                            parentNode: null,
+                            previousSibling: null,
+                            nextSibling: null,
+                            childNodes: []
+                        });
                     }
                     return node;
                 },
@@ -22983,7 +23290,7 @@ Ext.define('Ext.data.proxy.Server', {
         //copy any sorters, filters etc into the params so they can be sent over the wire
         params = Ext.applyIf(params, me.getParams(operation));
 
-        if (operation.id && !params.id) {
+        if (operation.id !== undefined && params.id === undefined) {
             params.id = operation.id;
         }
 
@@ -23419,7 +23726,7 @@ Ext.define('Ext.data.proxy.JsonP', {
     /**
      * @private
      * Performs the read request to the remote domain. JsonP proxy does not actually create an Ajax request,
-     * instead we write out a <script> tag based on the configuration of the internal Ext.data.Request object
+     * instead we write out a `<script>` tag based on the configuration of the internal Ext.data.Request object
      * @param {Ext.data.Operation} operation The {@link Ext.data.Operation Operation} object to execute
      * @param {Function} callback A callback function to execute when the Operation has been completed
      * @param {Object} scope The scope to execute the callback in
@@ -24426,7 +24733,7 @@ Ext.define('Ext.data.reader.Reader', {
     
     /**
      * @cfg {Boolean} [readRecordsOnFailure=true]
-     * True to extract the records from a data packet even if the {@link #success} property returns false.
+     * True to extract the records from a data packet even if the {@link #successProperty} returns false.
      */
     readRecordsOnFailure: true,
     
@@ -24947,126 +25254,111 @@ Ext.define('Ext.data.reader.Reader', {
 
 /**
  * @author Ed Spencer
- * @class Ext.data.reader.Json
  *
- * <p>The JSON Reader is used by a Proxy to read a server response that is sent back in JSON format. This usually
- * happens as a result of loading a Store - for example we might create something like this:</p>
+ * The JSON Reader is used by a Proxy to read a server response that is sent back in JSON format. This usually
+ * happens as a result of loading a Store - for example we might create something like this:
  *
-<pre><code>
-Ext.define('User', {
-    extend: 'Ext.data.Model',
-    fields: ['id', 'name', 'email']
-});
-
-var store = Ext.create('Ext.data.Store', {
-    model: 'User',
-    proxy: {
-        type: 'ajax',
-        url : 'users.json',
-        reader: {
-            type: 'json'
-        }
-    }
-});
-</code></pre>
+ *     Ext.define('User', {
+ *         extend: 'Ext.data.Model',
+ *         fields: ['id', 'name', 'email']
+ *     });
  *
- * <p>The example above creates a 'User' model. Models are explained in the {@link Ext.data.Model Model} docs if you're
- * not already familiar with them.</p>
+ *     var store = Ext.create('Ext.data.Store', {
+ *         model: 'User',
+ *         proxy: {
+ *             type: 'ajax',
+ *             url : 'users.json',
+ *             reader: {
+ *                 type: 'json'
+ *             }
+ *         }
+ *     });
  *
- * <p>We created the simplest type of JSON Reader possible by simply telling our {@link Ext.data.Store Store}'s
+ * The example above creates a 'User' model. Models are explained in the {@link Ext.data.Model Model} docs if you're
+ * not already familiar with them.
+ *
+ * We created the simplest type of JSON Reader possible by simply telling our {@link Ext.data.Store Store}'s
  * {@link Ext.data.proxy.Proxy Proxy} that we want a JSON Reader. The Store automatically passes the configured model to the
  * Store, so it is as if we passed this instead:
  *
-<pre><code>
-reader: {
-    type : 'json',
-    model: 'User'
-}
-</code></pre>
+ *     reader: {
+ *         type : 'json',
+ *         model: 'User'
+ *     }
  *
- * <p>The reader we set up is ready to read data from our server - at the moment it will accept a response like this:</p>
+ * The reader we set up is ready to read data from our server - at the moment it will accept a response like this:
  *
-<pre><code>
-[
-    {
-        "id": 1,
-        "name": "Ed Spencer",
-        "email": "ed@sencha.com"
-    },
-    {
-        "id": 2,
-        "name": "Abe Elias",
-        "email": "abe@sencha.com"
-    }
-]
-</code></pre>
+ *     [
+ *         {
+ *             "id": 1,
+ *             "name": "Ed Spencer",
+ *             "email": "ed@sencha.com"
+ *         },
+ *         {
+ *             "id": 2,
+ *             "name": "Abe Elias",
+ *             "email": "abe@sencha.com"
+ *         }
+ *     ]
  *
- * <p><u>Reading other JSON formats</u></p>
+ * ## Reading other JSON formats
  *
- * <p>If you already have your JSON format defined and it doesn't look quite like what we have above, you can usually
+ * If you already have your JSON format defined and it doesn't look quite like what we have above, you can usually
  * pass JsonReader a couple of configuration options to make it parse your format. For example, we can use the
- * {@link #root} configuration to parse data that comes back like this:</p>
+ * {@link #root} configuration to parse data that comes back like this:
  *
-<pre><code>
-{
-    "users": [
-       {
-           "id": 1,
-           "name": "Ed Spencer",
-           "email": "ed@sencha.com"
-       },
-       {
-           "id": 2,
-           "name": "Abe Elias",
-           "email": "abe@sencha.com"
-       }
-    ]
-}
-</code></pre>
+ *     {
+ *         "users": [
+ *            {
+ *                "id": 1,
+ *                "name": "Ed Spencer",
+ *                "email": "ed@sencha.com"
+ *            },
+ *            {
+ *                "id": 2,
+ *                "name": "Abe Elias",
+ *                "email": "abe@sencha.com"
+ *            }
+ *         ]
+ *     }
  *
- * <p>To parse this we just pass in a {@link #root} configuration that matches the 'users' above:</p>
+ * To parse this we just pass in a {@link #root} configuration that matches the 'users' above:
  *
-<pre><code>
-reader: {
-    type: 'json',
-    root: 'users'
-}
-</code></pre>
+ *     reader: {
+ *         type: 'json',
+ *         root: 'users'
+ *     }
  *
- * <p>Sometimes the JSON structure is even more complicated. Document databases like CouchDB often provide metadata
- * around each record inside a nested structure like this:</p>
+ * Sometimes the JSON structure is even more complicated. Document databases like CouchDB often provide metadata
+ * around each record inside a nested structure like this:
  *
-<pre><code>
-{
-    "total": 122,
-    "offset": 0,
-    "users": [
-        {
-            "id": "ed-spencer-1",
-            "value": 1,
-            "user": {
-                "id": 1,
-                "name": "Ed Spencer",
-                "email": "ed@sencha.com"
-            }
-        }
-    ]
-}
-</code></pre>
+ *     {
+ *         "total": 122,
+ *         "offset": 0,
+ *         "users": [
+ *             {
+ *                 "id": "ed-spencer-1",
+ *                 "value": 1,
+ *                 "user": {
+ *                     "id": 1,
+ *                     "name": "Ed Spencer",
+ *                     "email": "ed@sencha.com"
+ *                 }
+ *             }
+ *         ]
+ *     }
  *
- * <p>In the case above the record data is nested an additional level inside the "users" array as each "user" item has
+ * In the case above the record data is nested an additional level inside the "users" array as each "user" item has
  * additional metadata surrounding it ('id' and 'value' in this case). To parse data out of each "user" item in the
- * JSON above we need to specify the {@link #record} configuration like this:</p>
+ * JSON above we need to specify the {@link #record} configuration like this:
  *
-<pre><code>
-reader: {
-    type  : 'json',
-    root  : 'users',
-    record: 'user'
-}
-</code></pre>
+ *     reader: {
+ *         type  : 'json',
+ *         root  : 'users',
+ *         record: 'user'
+ *     }
  *
- * <p><u>Response MetaData</u></p>
+ * ## Response MetaData
  *
  * The server can return metadata in its response, in addition to the record data, that describe attributes
  * of the data set itself or are used to reconfigure the Reader. To pass metadata in the response you simply
@@ -25083,37 +25375,37 @@ reader: {
  * 
  * An initial Reader configuration containing all of these properties might look like this ("fields" would be
  * included in the Model definition, not shown):
-
-    reader: {
-        type : 'json',
-        root : 'root',
-        idProperty     : 'id',
-        totalProperty  : 'total',
-        successProperty: 'success',
-        messageProperty: 'message'
-    }
-
-If you were to pass a response object containing attributes different from those initially defined above, you could
-use the `metaData` attribute to reconifgure the Reader on the fly. For example:
-
-    {
-        "count": 1,
-        "ok": true,
-        "msg": "Users found",
-        "users": [{
-            "userId": 123,
-            "name": "Ed Spencer",
-            "email": "ed@sencha.com"
-        }],
-        "metaData": {
-            "root": "users",
-            "idProperty": 'userId',
-            "totalProperty": 'count',
-            "successProperty": 'ok',
-            "messageProperty": 'msg'
-        }
-    }
-
+ *
+ *     reader: {
+ *         type : 'json',
+ *         root : 'root',
+ *         idProperty     : 'id',
+ *         totalProperty  : 'total',
+ *         successProperty: 'success',
+ *         messageProperty: 'message'
+ *     }
+ *
+ * If you were to pass a response object containing attributes different from those initially defined above, you could
+ * use the `metaData` attribute to reconifgure the Reader on the fly. For example:
+ *
+ *     {
+ *         "count": 1,
+ *         "ok": true,
+ *         "msg": "Users found",
+ *         "users": [{
+ *             "userId": 123,
+ *             "name": "Ed Spencer",
+ *             "email": "ed@sencha.com"
+ *         }],
+ *         "metaData": {
+ *             "root": "users",
+ *             "idProperty": 'userId',
+ *             "totalProperty": 'count',
+ *             "successProperty": 'ok',
+ *             "messageProperty": 'msg'
+ *         }
+ *     }
+ *
  * You can also place any other arbitrary data you need into the `metaData` attribute which will be ignored by the Reader,
  * but will be accessible via the Reader's {@link #metaData} property (which is also passed to listeners via the Proxy's
  * {@link Ext.data.proxy.Proxy#metachange metachange} event (also relayed by the {@link Ext.data.AbstractStore#metachange
@@ -25124,37 +25416,37 @@ use the `metaData` attribute to reconifgure the Reader on the fly. For example:
  * reflected automatically in the grid unless you also update the column configuration. You could do this manually, or you
  * could simply pass a standard grid {@link Ext.panel.Table#columns column} config object as part of the `metaData` attribute
  * and then pass that along to the grid. Here's a very simple example for how that could be accomplished:
-
-    // response format:
-    {
-        ...
-        "metaData": {
-            "fields": [
-                { "name": "userId", "type": "int" },
-                { "name": "name", "type": "string" },
-                { "name": "birthday", "type": "date", "dateFormat": "Y-j-m" },
-            ],
-            "columns": [
-                { "text": "User ID", "dataIndex": "userId", "width": 40 },
-                { "text": "User Name", "dataIndex": "name", "flex": 1 },
-                { "text": "Birthday", "dataIndex": "birthday", "flex": 1, "format": 'Y-j-m', "xtype": "datecolumn" }
-            ]
-        }
-    }
-
-The Reader will automatically read the meta fields config and rebuild the Model based on the new fields, but to handle
-the new column configuration you would need to handle the metadata within the application code. This is done simply enough
-by handling the metachange event on either the store or the proxy, e.g.:
-
-        var store = Ext.create('Ext.data.Store', {
-            ...
-            listeners: {
-                'metachange': function(store, meta) {
-                    myGrid.reconfigure(store, meta.columns);
-                }
-            }
-        });
-
+ *
+ *     // response format:
+ *     {
+ *         ...
+ *         "metaData": {
+ *             "fields": [
+ *                 { "name": "userId", "type": "int" },
+ *                 { "name": "name", "type": "string" },
+ *                 { "name": "birthday", "type": "date", "dateFormat": "Y-j-m" },
+ *             ],
+ *             "columns": [
+ *                 { "text": "User ID", "dataIndex": "userId", "width": 40 },
+ *                 { "text": "User Name", "dataIndex": "name", "flex": 1 },
+ *                 { "text": "Birthday", "dataIndex": "birthday", "flex": 1, "format": 'Y-j-m', "xtype": "datecolumn" }
+ *             ]
+ *         }
+ *     }
+ *
+ * The Reader will automatically read the meta fields config and rebuild the Model based on the new fields, but to handle
+ * the new column configuration you would need to handle the metadata within the application code. This is done simply enough
+ * by handling the metachange event on either the store or the proxy, e.g.:
+ *
+ *     var store = Ext.create('Ext.data.Store', {
+ *         ...
+ *         listeners: {
+ *             'metachange': function(store, meta) {
+ *                 myGrid.reconfigure(store, meta.columns);
+ *             }
+ *         }
+ *     });
+ *
  */
 Ext.define('Ext.data.reader.Json', {
     extend: 'Ext.data.reader.Reader',
@@ -25170,7 +25462,8 @@ Ext.define('Ext.data.reader.Json', {
 
     /**
      * @cfg {Boolean} useSimpleAccessors True to ensure that field names/mappings are treated as literals when
-     * reading values. Defalts to <tt>false</tt>.
+     * reading values.
+     *
      * For example, by default, using the mapping "foo.bar.baz" will try and read a property foo from the root, then a property bar
      * from foo, then a property baz from bar. Setting the simple accessors to true will read the property with the name
      * "foo.bar.baz" direct from the root object.
@@ -25190,8 +25483,9 @@ Ext.define('Ext.data.reader.Json', {
         }
 
         /**
-         * @deprecated will be removed in Ext JS 5.0. This is just a copy of this.rawData - use that instead
          * @property {Object} jsonData
+         * A copy of this.rawData.
+         * @deprecated Will be removed in Ext JS 5.0. This is just a copy of this.rawData - use that instead.
          */
         this.jsonData = data;
         return this.callParent([data]);
@@ -25267,10 +25561,13 @@ Ext.define('Ext.data.reader.Json', {
 
     /**
      * @private
+     * @method
      * Returns an accessor function for the given property string. Gives support for properties such as the following:
-     * 'someProperty'
-     * 'some.property'
-     * 'some["property"]'
+     *
+     * - 'someProperty'
+     * - 'some.property'
+     * - 'some["property"]'
+     * 
      * This is used by buildExtractors to create optimized extractor functions when casting raw data into model instances.
      */
     createAccessor: (function() {
@@ -25297,10 +25594,13 @@ Ext.define('Ext.data.reader.Json', {
 
     /**
      * @private
+     * @method
      * Returns an accessor expression for the passed Field. Gives support for properties such as the following:
-     * 'someProperty'
-     * 'some.property'
-     * 'some["property"]'
+     * 
+     * - 'someProperty'
+     * - 'some.property'
+     * - 'some["property"]'
+     * 
      * This is used by buildExtractors to create optimized on extractor function which converts raw data into model instances.
      */
     createFieldAccessExpression: (function() {
@@ -25805,19 +26105,29 @@ Ext.define('Ext.tree.plugin.TreeViewDragDrop', {
      * @param {String} dropPosition `"before"`, `"after"` or `"append"` depending on whether the mouse is above or below
      * the midline of the node, or the node is a branch node which accepts new child nodes.
      */
+
     //<locale>
+    /**
+     * @cfg
+     * The text to show while dragging.
+     *
+     * Two placeholders can be used in the text:
+     *
+     * - `{0}` The number of selected items.
+     * - `{1}` 's' when more than 1 items (only useful for English).
+     */
     dragText : '{0} selected node{1}',
     //</locale>
 
     /**
-     * @cfg {Boolean} allowParentInsert
+     * @cfg {Boolean} allowParentInserts
      * Allow inserting a dragged node between an expanded parent node and its first child that will become a sibling of
      * the parent when dropped.
      */
     allowParentInserts: false,
 
     /**
-     * @cfg {String} allowContainerDrop
+     * @cfg {Boolean} allowContainerDrops
      * True if drops on the tree container (outside of a specific tree node) are allowed.
      */
     allowContainerDrops: false,
@@ -28240,6 +28550,19 @@ Ext.define('Ext.data.AbstractStore', {
     },
 
     statics: {
+        /**
+         * Creates a store from config object.
+         * 
+         * @param {Object/Ext.data.AbstractStore} store A config for
+         * the store to be created.  It may contain a `type` field
+         * which defines the particular type of store to create.
+         * 
+         * Alteratively passing an actual store to this method will
+         * just return it, no changes made.
+         * 
+         * @return {Ext.data.AbstractStore} The created store.
+         * @static
+         */
         create: function(store) {
             if (!store.isStore) {
                 if (!store.type) {
@@ -28466,9 +28789,9 @@ Ext.define('Ext.data.AbstractStore', {
         /**
          * @property {Object} modelDefaults
          * @private
-         * A set of default values to be applied to every model instance added via {@link #insert} or created via {@link #create}.
-         * This is used internally by associations to set foreign keys and other fields. See the Association classes source code
-         * for examples. This should not need to be used by application developers.
+         * A set of default values to be applied to every model instance added via {@link Ext.data.Store#insert insert} or created
+         * via {@link Ext.data.Store#createModel createModel}. This is used internally by associations to set foreign keys and
+         * other fields. See the Association classes source code for examples. This should not need to be used by application developers.
          */
         Ext.applyIf(me, {
             modelDefaults: {}
@@ -28698,6 +29021,9 @@ Ext.define('Ext.data.AbstractStore', {
         me.fireEvent('refresh', me);
     },
 
+    /**
+     * @private
+     */
     onBatchException: function(batch, operation) {
         // //decide what to do... could continue with the next operation
         // batch.start();
@@ -29375,6 +29701,9 @@ Ext.define('Ext.data.TreeStore', {
      * The root property to specify on the reader if one is not explicitly defined.
      */
     defaultRootProperty: 'children',
+    
+    // Keep a copy of the default so we know if it's been changed in a subclass/config
+    rootProperty: 'children',
 
     /**
      * @cfg {Boolean} [folderSort=false]
@@ -29385,7 +29714,8 @@ Ext.define('Ext.data.TreeStore', {
     constructor: function(config) {
         var me = this,
             root,
-            fields;
+            fields,
+            defaultRoot;
 
         config = Ext.apply({}, config);
 
@@ -29398,6 +29728,15 @@ Ext.define('Ext.data.TreeStore', {
             config.fields = [
                 {name: 'text', type: 'string'}
             ];
+            defaultRoot = config.defaultRootProperty || me.defaultRootProperty;
+            if (defaultRoot !== me.defaultRootProperty) {
+                config.fields.push({
+                    name: defaultRoot,   
+                    type: 'auto',   
+                    defaultValue: null, 
+                    persist: false
+                });
+            }
         }
 
         me.callParent([config]);
@@ -30565,7 +30904,8 @@ Ext.define('Ext.data.Model', {
 
                 validations = data.validations || [],
                 fields = data.fields || [],
-                associations = data.associations || [],
+                field,
+                associationsConfigs = data.associations || [],
                 addAssociations = function(items, type) {
                     var i = 0,
                         len,
@@ -30582,7 +30922,7 @@ Ext.define('Ext.data.Model', {
                             }
 
                             item.type = type;
-                            associations.push(item);
+                            associationsConfigs.push(item);
                         }
                     }
                 },
@@ -30596,7 +30936,7 @@ Ext.define('Ext.data.Model', {
                 superFields = superCls.fields,
                 superAssociations = superCls.associations,
 
-                association, i, ln,
+                associationConfig, i, ln,
                 dependencies = [],
                 idProperty = data.idProperty || cls.prototype.idProperty,
 
@@ -30657,7 +30997,8 @@ Ext.define('Ext.data.Model', {
             });  
 
             for (i = 0, ln = fields.length; i < ln; ++i) {
-                fieldsMixedCollection.add(new Ext.data.Field(fields[i]));
+                field = fields[i];
+                fieldsMixedCollection.add(field.isField ? field : new Ext.data.Field(field));
             }
             if (!fieldsMixedCollection.get(idProperty)) {
                 fieldsMixedCollection.add(new Ext.data.Field(idProperty));
@@ -30686,11 +31027,11 @@ Ext.define('Ext.data.Model', {
             delete data.hasOne;
 
             if (superAssociations) {
-                associations = superAssociations.items.concat(associations);
+                associationsConfigs = superAssociations.items.concat(associationsConfigs);
             }
 
-            for (i = 0, ln = associations.length; i < ln; ++i) {
-                dependencies.push('association.' + associations[i].type.toLowerCase());
+            for (i = 0, ln = associationsConfigs.length; i < ln; ++i) {
+                dependencies.push('association.' + associationsConfigs[i].type.toLowerCase());
             }
 
             // If we have not been supplied with a Proxy *instance*, then add the proxy type to our dependency list
@@ -30701,18 +31042,24 @@ Ext.define('Ext.data.Model', {
             Ext.require(dependencies, function() {
                 Ext.ModelManager.registerType(name, cls);
 
-                for (i = 0, ln = associations.length; i < ln; ++i) {
-                    association = associations[i];
-
-                    Ext.apply(association, {
-                        ownerModel: name,
-                        associatedModel: association.model
-                    });
-
-                    if (Ext.ModelManager.getModel(association.model) === undefined) {
-                        Ext.ModelManager.registerDeferredAssociation(association);
+                for (i = 0, ln = associationsConfigs.length; i < ln; ++i) {
+                    associationConfig = associationsConfigs[i];
+                    if (associationConfig.isAssociation) {
+                        associationConfig = Ext.applyIf({
+                            ownerModel: name,
+                            associatedModel: associationConfig.model
+                        }, associationConfig.initialConfig);
                     } else {
-                        associationsMixedCollection.add(Ext.data.association.Association.create(association));
+                        Ext.apply(associationConfig, {
+                            ownerModel: name,
+                            associatedModel: associationConfig.model
+                        });
+                    }
+
+                    if (Ext.ModelManager.getModel(associationConfig.model) === undefined) {
+                        Ext.ModelManager.registerDeferredAssociation(associationConfig);
+                    } else {
+                        associationsMixedCollection.add(Ext.data.association.Association.create(associationConfig));
                     }
                 }
 
@@ -32114,8 +32461,8 @@ Ext.define('Ext.grid.property.Property', {
  *
  * ## Filtering and Sorting
  *
- * Stores can be sorted and filtered - in both cases either remotely or locally. The {@link #sorters} and {@link #cfg-
- * filters} are held inside {@link Ext.util.MixedCollection MixedCollection} instances to make them easy to manage.
+ * Stores can be sorted and filtered - in both cases either remotely or locally. The {@link #sorters} and
+ * {@link #cfg-filters} are held inside {@link Ext.util.MixedCollection MixedCollection} instances to make them easy to manage.
  * Usually it is sufficient to either just specify sorters and filters in the Store configuration or call {@link #sort}
  * or {@link #filter}:
  *
@@ -32349,8 +32696,8 @@ Ext.define('Ext.data.Store', {
      * {@link #trailingBufferZone}.
      *
      * By defult, only 5 pages of data are cached in the page cache, with pages "scrolling" out of the buffer
-     * as the view moves down through the dataset. This can be increased by changing the {@link #purgePageSize}
-     * value. Setting this value to zero means that no pages are *ever* scrolled out of the page cache, and
+     * as the view moves down through the dataset.
+     * Setting this value to zero means that no pages are *ever* scrolled out of the page cache, and
      * that eventually the whole dataset may become present in the page cache. This is sometimes desirable
      * as long as datasets do not reach astronomical proportions.
      *
@@ -32371,7 +32718,7 @@ Ext.define('Ext.data.Store', {
      *
      * The number of pages *additional to the required buffered range* to keep in the prefetch cache before purging least recently used records.
      *
-     * For example, if the height of the view area and the configured {@link trailingBufferZone} and {@link #leadingBufferZone} require that there
+     * For example, if the height of the view area and the configured {@link #trailingBufferZone} and {@link #leadingBufferZone} require that there
      * are three pages in the cache, then a `purgePageCount` of 5 ensures that up to 8 pages can be in the page cache any any one time.
      *
      * A value of 0 indicates to never purge the prefetched data.
@@ -32497,7 +32844,11 @@ Ext.define('Ext.data.Store', {
             me.filterOnLoad = false;
         }
 
-        if (me.groupers.items.length) {
+        // Only sort by group fields if we are doing local grouping
+        if (me.remoteGroup) {
+            me.remoteSort = true;
+        }
+        if (me.groupers.items.length && !me.remoteGroup) {
             me.sort(me.groupers.items, 'prepend', false);
         }
 
@@ -32967,7 +33318,7 @@ Ext.define('Ext.data.Store', {
             i = 0,
             length = records.length,
             record,
-            isSorted = me.sorters && me.sorters.items.length;
+            isSorted = !me.remoteSort && me.sorters && me.sorters.items.length;
 
         // If this Store is sorted, and they only passed one Record (99% or use cases)
         // then it's much more efficient to add it sorted than to append and then sort.
@@ -34634,7 +34985,6 @@ Ext.define('Ext.data.Store', {
 <pre><code>
 var store = new Ext.data.JsonStore({
     // store configs
-    autoDestroy: true,
     storeId: 'myStore',
 
     proxy: {
@@ -34834,10 +35184,8 @@ Ext.define('Ext.grid.property.Store', {
  *
  *     var store = Ext.create('Ext.data.ArrayStore', {
  *         // store configs
- *         autoDestroy: true,
  *         storeId: 'myStore',
  *         // reader configs
- *         idIndex: 0,
  *         fields: [
  *            'company',
  *            {name: 'price', type: 'float'},
@@ -34919,7 +35267,6 @@ Ext.define('Ext.data.BufferStore', {
  * <p>A store configuration would be something like:<pre><code>
 var store = new Ext.data.JsonPStore({
     // store configs
-    autoDestroy: true,
     storeId: 'myStore',
 
     // proxy configs
@@ -35221,7 +35568,6 @@ Ext.define('Ext.data.NodeStore', {
  * <p>A store configuration would be something like:<pre><code>
 var store = new Ext.data.XmlStore({
     // store configs
-    autoDestroy: true,
     storeId: 'myStore',
     url: 'sheldon.xml', // automatically configures a HttpProxy
     // reader configs
@@ -38045,7 +38391,7 @@ Ext.define('Ext.layout.Layout', {
     /**
      * This method is called after all layouts are complete and their calculations flushed
      * to the DOM. No further layouts will be run and this method is only called once per
-     * layout run. The base component layout caches {@link #lastComponentSize}.
+     * layout run. The base component layout caches `lastComponentSize`.
      * 
      * This is a write phase and DOM reads should be avoided if possible when overridding
      * this method.
@@ -38428,7 +38774,9 @@ Ext.define('Ext.layout.Layout', {
     }
 }, function () {
     var Layout = this,
-        sizeModels = {};
+        sizeModels = {},
+        sizeModelsArray = [],
+        i, j, n, pairs, sizeModel;
 
     Layout.prototype.sizeModels = Layout.sizeModels = sizeModels;
 
@@ -38464,6 +38812,14 @@ Ext.define('Ext.layout.Layout', {
         SizeModel[name] = sizeModels[name] = me;
 
         me.fixed = !(me.auto = me.natural || me.shrinkWrap);
+
+        /**
+         * @prop {Number} ordinal
+         * The 0-based ordinal for this `SizeModel` instance.
+         * @readonly
+         */
+        me.ordinal = sizeModelsArray.length;
+        sizeModelsArray.push(me);
     };
 
     Ext.layout.SizeModel = SizeModel;
@@ -38621,6 +38977,40 @@ Ext.define('Ext.layout.Layout', {
         constrained: true,
         names: { width: 'minWidth', height: 'minHeight' }
     });
+
+    for (i = 0, n = sizeModelsArray.length; i < n; ++i) {
+        sizeModel = sizeModelsArray[i];
+        /**
+         * An array of objects indexed by the {@link #ordinal} of a height `SizeModel` on
+         * a width `SizeModel` to yield an object describing both height and width size
+         * models.
+         * 
+         * Used like this:
+         *
+         *      widthModel.pairsByHeightOrdinal[heightModel.ordinal]
+         *
+         * This provides a reusable object equivalent to the following:
+         * 
+         *      {
+         *          width: widthModel,
+         *          height: heightModel
+         *      }
+         *
+         * @property {Object[]} pairsByHeightOrdinal
+         * @property {Ext.layout.SizeModel} pairsByHeightOrdinal.width The `SizeModel` for
+         * the width.
+         * @property {Ext.layout.SizeModel} pairsByHeightOrdinal.height The `SizeModel` for
+         * the height.
+         */
+        sizeModel.pairsByHeightOrdinal = pairs = [];
+
+        for (j = 0; j < n; ++j) {
+            pairs.push({
+                width: sizeModel,
+                height: sizeModelsArray[j]
+            });
+        }
+    }
 });
 
 /**
@@ -38839,6 +39229,7 @@ Ext.define('Ext.layout.component.Component', {
 
         var me = this,
             owner = me.owner,
+            containerLayout = owner.layout,
             heightModel = ownerContext.heightModel,
             widthModel = ownerContext.widthModel,
             boxParent = ownerContext.boxParent,
@@ -38854,7 +39245,7 @@ Ext.define('Ext.layout.component.Component', {
             zeroWidth, zeroHeight,
             needed = 0,
             got = 0,
-            ready, size;
+            ready, size, temp;
 
         // Note: this method is called *a lot*, so we have to be careful not to waste any
         // time or make useless calls or, especially, read the DOM when we can avoid it.
@@ -38902,8 +39293,18 @@ Ext.define('Ext.layout.component.Component', {
                     }
 
                     if (ready) {
-                        if (!isNaN(ret.contentWidth = zeroWidth ? 0 : me.measureContentWidth(ownerContext))) {
-                            ownerContext.setContentWidth(ret.contentWidth, true);
+                        if (zeroWidth) {
+                            temp = 0;
+                        } else if (containerLayout && containerLayout.measureContentWidth) {
+                            // Allow the container layout to do the measurement since it
+                            // may have a better idea of how to do it even with no items:
+                            temp = containerLayout.measureContentWidth(ownerContext);
+                        } else {
+                            temp = me.measureContentWidth(ownerContext);
+                        }
+
+                        if (!isNaN(ret.contentWidth = temp)) {
+                            ownerContext.setContentWidth(temp, true);
                             ret.gotWidth = true;
                             ++got;
                         }
@@ -38986,8 +39387,18 @@ Ext.define('Ext.layout.component.Component', {
                     }
 
                     if (ready) {
-                        if (!isNaN(ret.contentHeight = zeroHeight ? 0 : me.measureContentHeight(ownerContext))) {
-                            ownerContext.setContentHeight(ret.contentHeight, true);
+                        if (zeroHeight) {
+                            temp = 0;
+                        } else if (containerLayout && containerLayout.measureContentHeight) {
+                            // Allow the container layout to do the measurement since it
+                            // may have a better idea of how to do it even with no items:
+                            temp = containerLayout.measureContentHeight(ownerContext);
+                        } else {
+                            temp = me.measureContentHeight(ownerContext);
+                        }
+
+                        if (!isNaN(ret.contentHeight = temp)) {
+                            ownerContext.setContentHeight(temp, true);
                             ret.gotHeight = true;
                             ++got;
                         }
@@ -39064,7 +39475,7 @@ Ext.define('Ext.layout.component.Component', {
  * In either of these size models, the dimension of the outer element is of a known size.
  * The size is found in the `ownerContext` (the {@link Ext.layout.ContextItem} for the owner
  * component) as either "width" or "height". This value, if available, is passed to the
- * {@link #publishInnerWidth} or {@link #publishInnerHeight} method, respectively.
+ * `publishInnerWidth` or `publishInnerHeight` method, respectively.
  * 
  * ## shrinkWrap
  *
@@ -39073,10 +39484,10 @@ Ext.define('Ext.layout.component.Component', {
  * 
  * For example, for a shrinkWrap width, the following sequence of calls are made:
  * 
- * * {@link Ext.layout.component.Component#measureContentWidth}
- * * {@link #publishOwnerWidth}
- *    * {@link #calculateOwnerWidthFromContentWidth}
- *    * {@link #publishInnerWidth} (in the event of hitting a min/maxWidth constraint)
+ * - `Ext.layout.component.Component#measureContentWidth`
+ * - `publishOwnerWidth`
+ *    - `calculateOwnerWidthFromContentWidth`
+ *    - `publishInnerWidth` (in the event of hitting a min/maxWidth constraint)
  *
  * ## natural
  *
@@ -39084,8 +39495,8 @@ Ext.define('Ext.layout.component.Component', {
  * (owner) element. This size is then used to determine the content area in much the same
  * way as if the outer element had a `configured` or `calculated` size model.
  * 
- * * {@link Ext.layout.component.Component#measureOwnerWidth}
- * * {@link #publishInnerWidth}
+ * - `Ext.layout.component.Component#measureOwnerWidth`
+ * - `publishInnerWidth`
  *
  * @protected
  */
@@ -39190,24 +39601,12 @@ Ext.define('Ext.layout.component.Auto', {
     calculateOwnerWidthFromContentWidth: function (ownerContext, contentWidth) {
         return contentWidth + ownerContext.getFrameInfo().width;
     },
-    
-    onConstrainSize: function (ownerContext, options) {
-        var heightModel = options.heightModel,
-            widthModel = options.widthModel;
-
-        if (heightModel) {
-            ownerContext.heightModel = heightModel;
-        }
-        if (widthModel) {
-            ownerContext.widthModel = widthModel;
-        }
-    },
 
     publishOwnerHeight: function (ownerContext, contentHeight) {
         var me = this,
             owner = me.owner,
             height = me.calculateOwnerHeightFromContentHeight(ownerContext, contentHeight),
-            heightModel, constrainedHeight, dirty;
+            constrainedHeight, dirty, heightModel;
 
         if (isNaN(height)) {
             me.done = false;
@@ -39222,14 +39621,12 @@ Ext.define('Ext.layout.component.Auto', {
                 height = constrainedHeight;
 
                 if (ownerContext.heightModel.calculatedFromShrinkWrap) {
-                    // don't bother to invalidate since that will come soon from the
-                    // owner... but note that we are constrained...
+                    // Don't bother to invalidate since that will come soon... but we need
+                    // to signal our ownerLayout that we need an invalidate to actually
+                    // make good on the determined (constrained) size!
                     ownerContext.heightModel = heightModel;
                 } else {
-                    ownerContext.invalidate({
-                        before: me.onConstrainSize,
-                        heightModel: heightModel
-                    });
+                    ownerContext.invalidate({ heightModel: heightModel });
                 }
             }
             
@@ -39241,7 +39638,7 @@ Ext.define('Ext.layout.component.Auto', {
         var me = this,
             owner = me.owner,
             width = me.calculateOwnerWidthFromContentWidth(ownerContext, contentWidth),
-            widthModel, constrainedWidth, dirty;
+            constrainedWidth, dirty, widthModel;
 
         if (isNaN(width)) {
             me.done = false;
@@ -39256,14 +39653,12 @@ Ext.define('Ext.layout.component.Auto', {
                 width = constrainedWidth;
 
                 if (ownerContext.widthModel.calculatedFromShrinkWrap) {
-                    // don't bother to invalidate since that will come soon from the
-                    // owner... but note that we are constrained...
+                    // Don't bother to invalidate since that will come soon... but we need
+                    // to signal our ownerLayout that we need an invalidate to actually
+                    // make good on the determined (constrained) size!
                     ownerContext.widthModel = widthModel;
                 } else {
-                    ownerContext.invalidate({
-                        before: me.onConstrainSize,
-                        widthModel: widthModel
-                    });
+                    ownerContext.invalidate({ widthModel: widthModel });
                 }
             }
 
@@ -39821,6 +40216,16 @@ Ext.define('Ext.layout.component.Button', {
         }
 
         me.callParent(arguments);
+    },
+    
+    finishedLayout: function(){
+        var owner = this.owner;
+        this.callParent(arguments);
+        // Fixes issue EXTJSIV-5989. Looks like a browser repaint bug
+        // This hack can be removed once it is resolved.
+        if (Ext.isWebKit) {
+            owner.el.dom.offsetWidth;
+        }
     }
 });
 
@@ -39967,14 +40372,42 @@ Ext.define('Ext.layout.component.Dock', {
         me.borders = borders;
     },
 
+    beforeLayoutCycle: function (ownerContext) {
+        var me = this,
+            owner = me.owner,
+            shrinkWrap = me.sizeModels.shrinkWrap,
+            collapsedHorz, collapsedVert;
+
+        if (owner.collapsed) {
+            if (owner.collapsedVertical()) {
+                collapsedVert = true;
+                ownerContext.measureDimensions = 1;
+            } else {
+                collapsedHorz = true;
+                ownerContext.measureDimensions = 2;
+            }
+        }
+
+        ownerContext.collapsedVert = collapsedVert;
+        ownerContext.collapsedHorz = collapsedHorz;
+
+        // If we are collapsed, we want to auto-layout using the placeholder/expander
+        // instead of the normal items/dockedItems. This must be done here since we could
+        // be in a box layout w/stretchmax which sets the width/heightModel to allow it to
+        // control the size.
+        if (collapsedVert) {
+            ownerContext.heightModel = shrinkWrap;
+        } else if (collapsedHorz) {
+            ownerContext.widthModel = shrinkWrap;
+        }
+    },
+
     beginLayout: function(ownerContext) {
         var me = this,
             owner = me.owner,
             docked = me.getLayoutItems(),
             layoutContext = ownerContext.context,
             dockedItemCount = docked.length,
-            collapsedVert = false,
-            collapsedHorz = false,
             dockedItems, i, item, itemContext, offsets,
             collapsed;
 
@@ -39985,8 +40418,7 @@ Ext.define('Ext.layout.component.Dock', {
         // Cache the children as ContextItems (like a Container). Also setup to handle
         // collapsed state:
         collapsed = owner.getCollapsed();
-        if (Ext.isDefined(me.lastCollapsedState) && (collapsed !== me.lastCollapsedState)) {
-
+        if (collapsed !== me.lastCollapsedState && Ext.isDefined(me.lastCollapsedState)) {
             // If we are collapsing...
             if (me.owner.collapsed) {
                 ownerContext.isCollapsingOrExpanding = 1;
@@ -40013,19 +40445,6 @@ Ext.define('Ext.layout.component.Dock', {
             dockedItems.push(itemContext);
         }
 
-        if (owner.collapsed) {
-            if (owner.collapsedVertical()) {
-                collapsedVert = true;
-                ownerContext.measureDimensions = 1;
-            } else {
-                collapsedHorz = true;
-                ownerContext.measureDimensions = 2;
-            }
-        }
-
-        ownerContext.collapsedVert = collapsedVert;
-        ownerContext.collapsedHorz = collapsedHorz;
-
         ownerContext.bodyContext = ownerContext.getEl('body');
     },
 
@@ -40040,19 +40459,8 @@ Ext.define('Ext.layout.component.Dock', {
 
         me.callParent(arguments);
 
-        // If we are collapsed, we want to auto-layout using the placeholder/expander
-        // instead of the normal items/dockedItems. This must be done here since we could
-        // be in a box layout w/stretchmax which sets the width/heightModel to allow it to
-        // control the size.
-        if (ownerContext.collapsedVert) {
-            ownerContext.heightModel = me.sizeModels.shrinkWrap;
-        } else if (ownerContext.collapsedHorz) {
-            ownerContext.widthModel = me.sizeModels.shrinkWrap;
-        }
-
         if (lastHeightModel && lastHeightModel.shrinkWrap &&
-            !ownerContext.heightModel.shrinkWrap &&
-            !me.owner.manageHeight) {
+                    !ownerContext.heightModel.shrinkWrap && !me.owner.manageHeight) {
             owner.body.dom.style.marginBottom = '';
         }
 
@@ -40170,12 +40578,10 @@ Ext.define('Ext.layout.component.Dock', {
             maxSize = owner['max' + sizePropCap],
             minSize = owner['min' + sizePropCap] || 0,
             hasMaxSize = maxSize != null, // exactly the same as "maxSize !== null && maxSize !== undefined"
-            constrainedSize = ownerContext.state['constrained' + sizePropCap],
-            isConstrainedSize = constrainedSize != null,
             setSize = 'set' + sizePropCap,
             border, bodyContext, frameSize, padding, end;
 
-        if (sizeModel.shrinkWrap && !isConstrainedSize) {
+        if (sizeModel.shrinkWrap) {
             // End position before adding docks around the content is content size plus the body borders in this axis.
             // If collapsed in this axis, the body borders will not be shown.
             if (collapsedAxis) {
@@ -40189,15 +40595,9 @@ Ext.define('Ext.layout.component.Dock', {
             frameSize = ownerContext.framingInfo;
             padding   = ownerContext.paddingInfo;
 
-            if (isConstrainedSize) {
-                end = constrainedSize;
-                sizeModel = this.sizeModels.calculated; // behave as if calculated
-                ownerContext[setSize](constrainedSize);
-            } else {
-                end = ownerContext.getProp(sizeProp);
-            }
-
+            end = ownerContext.getProp(sizeProp);
             end -= border[dockEnd] + padding[dockEnd] + frameSize[dockEnd];
+
             begin = border[dockBegin] + padding[dockBegin] + frameSize[dockBegin];
         }
 
@@ -40213,7 +40613,6 @@ Ext.define('Ext.layout.component.Dock', {
             ignoreFrameEnd: false,
             initialSize: end - begin,
             hasMinMaxConstraints: (minSize || hasMaxSize) && sizeModel.shrinkWrap,
-            isConstrainedSize: isConstrainedSize,
             minSize: minSize,
             maxSize: hasMaxSize ? maxSize : 1e9,
             bodyPosProp: this.owner.manageHeight ? posProp : ('margin-' + dockBegin), // 'margin-left' or 'margin-top'
@@ -40482,101 +40881,90 @@ Ext.define('Ext.layout.component.Dock', {
      * @private
      */
     finishConstraints: function (ownerContext, horz, vert) {
-        var horzTooSmall = horz.size < horz.minSize,
-            horzTooBig   = horz.size > horz.maxSize,
-            vertTooSmall = vert.size < vert.minSize,
-            vertTooBig   = vert.size > vert.maxSize,
-            state = ownerContext.state,
-            ret = true,
-            configured = this.sizeModels.configured,
-            dirty;
+        var sizeModels = this.sizeModels,
+            publishWidth = horz.shrinkWrap,
+            publishHeight = vert.shrinkWrap,
+            dirty, height, width, heightModel, widthModel, size;
 
-        // Analysis of the potential constraint feedback given the possibilities for the
-        // various constraints:
-        //
-        //   #1: h < min, v > max : (Expand width, Shrink height)
-        //          In general, making the panel wider could possibly cause the content to
-        //          be shorter thereby eliminating the need to reduce the height, but we
-        //          just measured the content width given effectively infinite space in
-        //          which to expand. This means it is very unlikey (if not impossible) for
-        //          the height to change given more width, so no special concerns.
-        //
-        //   #2: h < min, v < min : (Expand width, Expand height)
-        //          Making panel bigger in both directions has no concerns. Again, making
-        //          the panel wider could only reduce height, so the need to expand the
-        //          height would remain.
-        //
-        //   #3: h > max, v > max : (Shrink width, Shrink height)
-        //          Making the panel narrower cannot cause the maxHeight violation to go
-        //          away, so no special concerns.
-        //
-        //   #4: h > max, v < min : (Shrink width, Expand height)
-        //          Finally an interesting case! Shrinking the width can cause the height
-        //          to increase. We cannot know if it will increase enough to avoid the
-        //          minHeight violation, but if we apply the minHeight constraint, we will
-        //          not be able to tell that we should not have done so. Which means, in
-        //          this case, we must only apply the maxWidth constraint, allowing the
-        //          layout to rerun and perhaps apply the minHeight constraint next time.
+        if (publishWidth) {
+            size = horz.size;
 
-        // NOTE: if we are already applying a constraint on a given axis, that axis will
-        // *not* be in shrinkWrap mode.
-
-        if (horz.shrinkWrap && horzTooBig && vert.shrinkWrap && vertTooSmall) { // if (#4)
-            state.constrainedWidth = horz.maxSize;
-            ownerContext.widthModel = configured; // via maxWidth config
-            ret = false;
-        } else {
-            if (horz.shrinkWrap) {
-                if (horzTooBig) {
-                    state.constrainedWidth = horz.maxSize;
-                    ownerContext.widthModel = configured;
-                    ret = false;
-                } else if (horzTooSmall) {
-                    state.constrainedWidth = horz.minSize;
-                    ownerContext.widthModel = configured;
-                    ret = false;
-                }
-            }
-
-            if (vert.shrinkWrap) {
-                if (vertTooBig) {
-                    state.constrainedHeight = vert.maxSize;
-                    ownerContext.heightModel = configured;
-                    ret = false;
-                } else if (vertTooSmall) {
-                    state.constrainedHeight = vert.minSize;
-                    ownerContext.heightModel = configured;
-                    ret = false;
-                }
+            if (size < horz.minSize) {
+                widthModel = sizeModels.constrainedMin;
+                width = horz.minSize;
+            } else if (size > horz.maxSize) {
+                widthModel = sizeModels.constrainedMax;
+                width = horz.maxSize;
+            } else {
+                width = size;
             }
         }
 
-        if (ret) {
-            if (horz.shrinkWrap) {
-                ownerContext.setWidth(horz.size);
-            }
-            if (vert.shrinkWrap) {
+        if (publishHeight) {
+            size = vert.size;
+
+            if (size < vert.minSize) {
+                heightModel = sizeModels.constrainedMin;
+                height = vert.minSize;
+            } else if (size > vert.maxSize) {
+                heightModel = sizeModels.constrainedMax;
+                height = vert.maxSize;
+            } else {
                 if (!ownerContext.collapsedVert && !this.owner.manageHeight) {
-                    // height of the outerEl is provided by the height (including margins) of
-                    // the bodyEl, so this value does not need to be written to the DOM:
+                    // height of the outerEl is provided by the height (including margins)
+                    // of the bodyEl, so this value does not need to be written to the DOM
                     dirty = false;
 
                     // so long as we set top and bottom margins on the bodyEl!
                     ownerContext.bodyContext.setProp('margin-bottom', vert.dockedPixelsEnd);
                 }
 
-                ownerContext.setHeight(vert.size, dirty);
+                height = size;
             }
-        } else {
-            ownerContext.invalidate({
-                state: {
-                    constrainedWidth: state.constrainedWidth,
-                    constrainedHeight: state.constrainedHeight
-                }
-            });
         }
 
-        return ret;
+        // Handle the constraints...
+
+        if (widthModel || heightModel) {
+            // See ContextItem#init for an analysis of why this case is special. Basically,
+            // in this case, we only know the width and the height could be anything.
+            if (widthModel && heightModel &&
+                        widthModel.constrainedMax &&  heightModel.constrainedMin) {
+                ownerContext.invalidate({ widthModel: widthModel });
+                return false;
+            }
+
+            // To process a width or height other than that to which we have shrinkWrapped,
+            // we need to invalidate our component and carry forward w/these constrains...
+            // unless the ownerLayout wants these results and will invalidate us anyway.
+            if (!ownerContext.widthModel.calculatedFromShrinkWrap &&
+                        !ownerContext.heightModel.calculatedFromShrinkWrap) {
+                // nope, just us to handle the constraint...
+                ownerContext.invalidate({ widthModel: widthModel, heightModel: heightModel });
+                return false;
+            }
+
+            // We have a constraint to deal with, so we just adjust the size models and
+            // allow the ownerLayout to invalidate us with its contribution to our final
+            // size...
+        }
+
+        // we only publish the sizes if we are not invalidating the result...
+
+        if (publishWidth) {
+            ownerContext.setWidth(width);
+            if (widthModel) {
+                ownerContext.widthModel = widthModel; // important to the ownerLayout
+            }
+        }
+        if (publishHeight) {
+            ownerContext.setHeight(height, dirty);
+            if (heightModel) {
+                ownerContext.heightModel = heightModel; // important to the ownerLayout
+            }
+        }
+
+        return true;
     },
 
     /**
@@ -40967,6 +41355,12 @@ Ext.define('Ext.layout.component.FieldSet', {
 
     type: 'fieldset',
 
+    beforeLayoutCycle: function (ownerContext) {
+        if (ownerContext.target.collapsed) {
+            ownerContext.heightModel = this.sizeModels.shrinkWrap;
+        }
+    },
+
     /*beginLayout: function (ownerContext) {
         this.callParent(arguments);
 
@@ -40986,7 +41380,6 @@ Ext.define('Ext.layout.component.FieldSet', {
         // known contentHeight if we are collapsed:
         //
         if (target.collapsed) {
-            ownerContext.heightModel = this.sizeModels.shrinkWrap;
             ownerContext.setContentHeight(0);
 
             // If we are also shrinkWrap width, we must provide a contentWidth (since the
@@ -43444,7 +43837,7 @@ Ext.define('Ext.layout.container.Absolute', {
     /**
      * @cfg {Boolean} ignoreOnContentChange
      * True indicates that changes to one item in this layout do not effect the layout in
-     * general. This may need to be set to false if {@link Ext.AbstractComponent#autoScroll}
+     * general. This may need to be set to false if {@link Ext.Component#autoScroll}
      * is enabled for the container.
      */
     ignoreOnContentChange: true,
@@ -44269,108 +44662,179 @@ Ext.define('Ext.layout.container.Fit', {
         3: { setsWidth: 1, setsHeight: 1 }
     },
 
-    getItemSizePolicy: function (item) {
+    getItemSizePolicy: function (item, ownerSizeModel) {
         // this layout's sizePolicy is derived from its owner's sizeModel:
-        var sizeModel = this.owner.getSizeModel(),
+        var sizeModel = ownerSizeModel || this.owner.getSizeModel(),
             mode = (sizeModel.width.shrinkWrap ? 0 : 1) |
                    (sizeModel.height.shrinkWrap ? 0 : 2);
 
        return this.sizePolicies[mode];
     },
 
-    beginLayoutCycle: function(ownerContext, firstCycle) {
+    beginLayoutCycle: function (ownerContext, firstCycle) {
         var me = this,
-            widthModel = ownerContext.widthModel,
-            heightModel = ownerContext.heightModel,
-            childItems = ownerContext.childItems,
-            childWidthCalculated = !widthModel.shrinkWrap,
-            childHeightCalculated = !heightModel.shrinkWrap,
-            length = childItems.length,
-            clearItemSizes = (ownerContext.targetContext.el.dom.tagName.toUpperCase() === 'TD'),
-            i, invalidateOptions, itemContext, targetEl;
+            // determine these before the lastSizeModels get updated:
+            resetHeight = me.lastHeightModel && me.lastHeightModel.calculated,
+            resetWidth = me.lastWidthModel && me.lastWidthModel.calculated,
+            resetSizes = resetWidth || resetHeight,
+            maxChildMinHeight = 0, maxChildMinWidth = 0,
+            c, childItems, i, item, length, margins, minHeight, minWidth, style, undef;
 
         me.callParent(arguments);
 
+        // Clear any dimensions which we set before calculation, in case the current
+        // settings affect the available size. This particularly effects self-sizing
+        // containers such as fields, in which the target element is naturally sized,
+        // and should not be stretched by a sized child item.
+        if (resetSizes && ownerContext.targetContext.el.dom.tagName.toUpperCase() != 'TD') {
+            resetSizes = resetWidth = resetHeight = false;
+        }
+
+        childItems = ownerContext.childItems;
+        length = childItems.length;
+
         for (i = 0; i < length; ++i) {
-            itemContext = childItems[i];
+            item = childItems[i];
 
-            if (!firstCycle) {
-                if (itemContext.widthModel.calculated == childWidthCalculated) {
-                    invalidateOptions = null;
-                } else {
-                    invalidateOptions = {
-                        widthModel: childWidthCalculated ? me.sizeModels.calculated
-                                                         : itemContext.sizeModel.width
-                    };
-                }
+            // On the firstCycle, we determine the max of the minWidth/Height of the items
+            // since these can cause the container to grow scrollbars despite our attempts
+            // to fit the child to the container.
+            if (firstCycle) {
+                c = item.target;
+                minHeight = c.minHeight;
+                minWidth = c.minWidth;
 
-                if (itemContext.heightModel.calculated != childHeightCalculated) {
-                    (invalidateOptions || (invalidateOptions = {})).heightModel =
-                        childHeightCalculated ? me.sizeModels.calculated
-                                              : itemContext.sizeModel.height
-                }
+                if (minWidth || minHeight) {
+                    margins = item.marginInfo || item.getMarginInfo();
+                    // if the child item has undefined minWidth/Height, these will become
+                    // NaN by adding the margins...
+                    minHeight += margins.height;
+                    minWidth += margins.height;
 
-                if (invalidateOptions) {
-                    invalidateOptions.before = me.onBeforeInvalidateChild;
-                    itemContext.invalidate(invalidateOptions);
+                    // if the child item has undefined minWidth/Height, these comparisons
+                    // will evaluate to false... that is, "0 < NaN" == false...
+                    if (maxChildMinHeight < minHeight) {
+                        maxChildMinHeight = minHeight;
+                    }
+                    if (maxChildMinWidth < minWidth) {
+                        maxChildMinWidth = minWidth;
+                    }
                 }
             }
 
-            // Clear any dimensions which we set before calculation, in case the current
-            // settings affect the available size. This particularly effects self-sizing
-            // containers such as fields, in which the target element is naturally sized,
-            // and should not be stretched by a sized child item.
-            if (clearItemSizes) {
-                targetEl = itemContext.target.el.dom;
-                if (itemContext.heightModel.calculated) {
-                    targetEl.style.height = '';
+            if (resetSizes) {
+                style = item.el.dom.style;
+
+                if (resetHeight) {
+                    style.height = '';
                 }
-                if (itemContext.widthModel.calculated) {
-                    targetEl.style.width = '';
+                if (resetWidth) {
+                    style.width = '';
                 }
             }
         }
+
+        if (firstCycle) {
+            ownerContext.maxChildMinHeight = maxChildMinHeight;
+            ownerContext.maxChildMinWidth = maxChildMinWidth;
+        }
+
+        // Cache the overflowX/Y flags, but make them false in shrinkWrap mode (since we
+        // won't be triggering overflow in that case) and false if we have no minSize (so
+        // no child to trigger an overflow).
+        c = ownerContext.target;
+        ownerContext.overflowX = (!ownerContext.widthModel.shrinkWrap && 
+                                   ownerContext.maxChildMinWidth &&
+                                   (c.autoScroll || c.overflowX)) || undef;
+
+        ownerContext.overflowY = (!ownerContext.heightModel.shrinkWrap &&
+                                   ownerContext.maxChildMinHeight &&
+                                   (c.autoScroll || c.overflowY)) || undef;
     },
 
-    // @private
     calculate : function (ownerContext) {
         var me = this,
             childItems = ownerContext.childItems,
             length = childItems.length,
+            containerSize = me.getContainerSize(ownerContext),
             info = {
-                contentWidth: 0,
-                contentHeight: 0,
                 length: length,
                 ownerContext: ownerContext,
-                targetSize: me.getContainerSize(ownerContext)
+                targetSize: containerSize
             },
-            calcWidth = ownerContext.widthModel.shrinkWrap,
-            calcHeight = ownerContext.heightModel.shrinkWrap,
-            padWidth = 0,
-            padHeight = 0,
-            padding,
-            i;
+            shrinkWrapWidth = ownerContext.widthModel.shrinkWrap,
+            shrinkWrapHeight = ownerContext.heightModel.shrinkWrap,
+            overflowX = ownerContext.overflowX,
+            overflowY = ownerContext.overflowY,
+            scrollbars, scrollbarSize, padding, i, contentWidth, contentHeight;
 
+        if (overflowX || overflowY) {
+            // If we have children that have minHeight/Width, we may be forced to overflow
+            // and gain scrollbars. If so, we want to remove their space from the other
+            // axis so that we fit things inside the scrollbars rather than under them.
+            scrollbars = me.getScrollbarsNeeded(
+                    overflowX && containerSize.width, overflowY && containerSize.height,
+                    ownerContext.maxChildMinWidth, ownerContext.maxChildMinHeight);
+
+            if (scrollbars) {
+                scrollbarSize = Ext.getScrollbarSize();
+                if (scrollbars & 1) { // if we need the hscrollbar, remove its height
+                    containerSize.height -= scrollbarSize.height;
+                }
+                if (scrollbars & 2) { // if we need the vscrollbar, remove its width
+                    containerSize.width -= scrollbarSize.width;
+                }
+            }
+        }
+
+        // Size the child items to the container (if non-shrinkWrap):
         for (i = 0; i < length; ++i) {
             info.index = i;
             me.fitItem(childItems[i], info);
         }
         
-        if (calcHeight || calcWidth) {
+        if (shrinkWrapHeight || shrinkWrapWidth) {
             padding = ownerContext.targetContext.getPaddingInfo();
             
-            if (calcWidth) {
-                padWidth = padding.width;
+            if (shrinkWrapWidth) {
+                if (overflowY && !containerSize.gotHeight) {
+                    // if we might overflow vertically and don't have the container height,
+                    // we don't know if we will need a vscrollbar or not, so we must wait
+                    // for that height so that we can determine the contentWidth...
+                    me.done = false;
+                } else {
+                    contentWidth = info.contentWidth + padding.width;
+                    // the scrollbar flag (if set) will indicate that an overflow exists on
+                    // the horz(1) or vert(2) axis... if not set, then there could never be
+                    // an overflow...
+                    if (scrollbars & 2) { // if we need the vscrollbar, add its width
+                        contentWidth += scrollbarSize.width;
+                    }
+                    if (!ownerContext.setContentWidth(contentWidth)) {
+                        me.done = false;
+                    }
+                }
             }
-            
-            if (calcHeight) {
-                padHeight = padding.height;
-            }
-        }
 
-        // contentWidth and contentHeight include the margins
-        if (!ownerContext.setContentSize(info.contentWidth + padWidth, info.contentHeight + padHeight)) {
-            me.done = false;
+            if (shrinkWrapHeight) {
+                if (overflowX && !containerSize.gotWidth) {
+                    // if we might overflow horizontally and don't have the container width,
+                    // we don't know if we will need a hscrollbar or not, so we must wait
+                    // for that width so that we can determine the contentHeight...
+                    me.done = false;
+                } else {
+                    contentHeight = info.contentHeight + padding.height;
+                    // the scrollbar flag (if set) will indicate that an overflow exists on
+                    // the horz(1) or vert(2) axis... if not set, then there could never be
+                    // an overflow...
+                    if (scrollbars & 1) { // if we need the hscrollbar, add its height
+                        contentHeight += scrollbarSize.height;
+                    }
+                    if (!ownerContext.setContentHeight(contentHeight)) {
+                        me.done = false;
+                    }
+                }
+            }
         }
     },
 
@@ -44395,10 +44859,19 @@ Ext.define('Ext.layout.container.Fit', {
     },
 
     fitItemWidth: function (itemContext, info) {
+        var contentWidth, width;
         // Attempt to set only dimensions that are being controlled, not shrinkWrap dimensions
         if (info.ownerContext.widthModel.shrinkWrap) {
             // contentWidth must include the margins to be consistent with setItemWidth
-            info.contentWidth = Math.max(info.contentWidth, itemContext.getProp('width') + info.margins.width);
+            width = itemContext.getProp('width') + info.margins.width;
+            // because we add margins, width will be NaN or a number (not undefined)
+
+            contentWidth = info.contentWidth;
+            if (contentWidth === undefined) {
+                info.contentWidth = width;
+            } else {
+                info.contentWidth = Math.max(contentWidth, width);
+            }
         } else if (itemContext.widthModel.calculated) {
             ++info.needed;
             if (info.targetSize.gotWidth) {
@@ -44411,9 +44884,18 @@ Ext.define('Ext.layout.container.Fit', {
     },
 
     fitItemHeight: function (itemContext, info) {
+        var contentHeight, height;
         if (info.ownerContext.heightModel.shrinkWrap) {
             // contentHeight must include the margins to be consistent with setItemHeight
-            info.contentHeight = Math.max(info.contentHeight, itemContext.getProp('height') + info.margins.height);
+            height = itemContext.getProp('height') + info.margins.height;
+            // because we add margins, height will be NaN or a number (not undefined)
+
+            contentHeight = info.contentHeight;
+            if (contentHeight === undefined) {
+                info.contentHeight = height;
+            } else {
+                info.contentHeight = Math.max(contentHeight, height);
+            }
         } else if (itemContext.heightModel.calculated) {
             ++info.needed;
             if (info.targetSize.gotHeight) {
@@ -44423,17 +44905,6 @@ Ext.define('Ext.layout.container.Fit', {
         }
 
         this.positionItemY(itemContext, info);
-    },
-
-    onBeforeInvalidateChild: function (itemContext, options) {
-        ++itemContext.context.progressCount;
-
-        if (options.widthModel) {
-            itemContext.widthModel = options.widthModel;
-        }
-        if (options.heightModel) {
-            itemContext.heightModel = options.heightModel;
-        }
     },
 
     positionItemX: function (itemContext, info) {
@@ -44473,7 +44944,6 @@ Ext.define('Ext.layout.container.Fit', {
     }
 });
 
-
 /**
  * This layout manages multiple child Components, each fitted to the Container, where only a single child Component can be
  * visible at any given time.  This layout style is most commonly used for wizards, tab implementations, etc.
@@ -44487,7 +44957,8 @@ Ext.define('Ext.layout.container.Fit', {
  *
  * To change the active card of a container, call the setActiveItem method of its layout:
  *
- *     Ext.create('Ext.panel.Panel', {
+ *     @example
+ *     var p = Ext.create('Ext.panel.Panel', {
  *         layout: 'card',
  *         items: [
  *             { html: 'Card 1' },
@@ -47268,6 +47739,9 @@ Ext.define('Ext.draw.Draw', {
         };
     },
 
+    /**
+     * @private
+     */
     snapEnds: function (from, to, stepsMax, prettyNumbers) {
         if (Ext.isDate(from)) {
             return this.snapEndsByDate(from, to, stepsMax);
@@ -47574,12 +48048,14 @@ Ext.define('Ext.container.DockingContainer', {
         bottom: 1
     },
 
-/**
+    /**
      * Adds docked item(s) to the container.
+     *
      * @param {Object/Object[]} component The Component or array of components to add. The components
-     * must include a 'dock' parameter on each component to indicate where it should be docked ('top', 'right',
-     * 'bottom', 'left').
-     * @param {Number} pos (optional) The index at which the Component will be added
+     * must include a 'dock' parameter on each component to indicate where it should be docked
+     * ('top', 'right', 'bottom', 'left').
+     * @param {Number} [pos] The index at which the Component will be added
+     * @return {Ext.Component[]} The added components.
      */
     addDocked : function(items, pos) {
         var me = this,
@@ -47649,7 +48125,7 @@ Ext.define('Ext.container.DockingContainer', {
 
     /**
      * Finds a docked component by id, itemId or position. Also see {@link #getDockedItems}
-     * @param {String/Number} comp The id, itemId or position of the docked component (see {@link #getComponent} for details)
+     * @param {String/Number} comp The id, itemId or position of the docked component (see {@link Ext.panel.AbstractPanel#getComponent getComponent} for details)
      * @return {Ext.Component} The docked component (if found)
      */
     getDockedComponent: function(comp) {
@@ -50063,7 +50539,7 @@ Ext.enableFx = true;
  * Work done during layout falls into either a "read phase" or a "write phase" and it is
  * essential to always be aware of the current phase. Most methods in
  * {@link Ext.layout.Layout Layout} are called during a read phase:
- * {@link Ext.layout.Layout#calculate claculate},
+ * {@link Ext.layout.Layout#calculate calculate},
  * {@link Ext.layout.Layout#completeLayout completeLayout} and
  * {@link Ext.layout.Layout#finalizeLayout finalizeLayout}. The exceptions to this are
  * {@link Ext.layout.Layout#beginLayout beginLayout},
@@ -50331,8 +50807,6 @@ Ext.define('Ext.layout.Context', {
         'Ext.fx.Manager'
     ],
 
-    currentOwnerCtContext: null,
-
     remainingLayouts: 0,
 
     /**
@@ -50467,7 +50941,8 @@ Ext.define('Ext.layout.Context', {
 
     clearTriggers: function (layout, inDom) {
         var id = layout.id,
-            triggers = this.triggers[inDom ? 'dom' : 'data'][id],
+            collection = this.triggers[inDom ? 'dom' : 'data'],
+            triggers = collection && collection[id],
             length = (triggers && triggers.length) || 0,
             collection, i, item, trigger;
 
@@ -50477,21 +50952,6 @@ Ext.define('Ext.layout.Context', {
 
             collection = inDom ? item.domTriggers : item.triggers;
             delete collection[trigger.prop][id];
-        }
-    },
-
-    finishInvalidate: function (options, item, name) {
-        // When calling a callback, the currentLayout needs to be adjusted so
-        // that whichever layout caused the invalidate is the currentLayout...
-        if (options[name]) {
-            var me = this,
-                currentLayout = me.currentLayout;
-
-            me.currentLayout = options.layout || null;
-
-            options[name](item, options);
-
-            me.currentLayout = currentLayout;
         }
     },
 
@@ -50619,8 +51079,7 @@ Ext.define('Ext.layout.Context', {
                   (items[id] = new Ext.layout.ContextItem({
                                     context: this,
                                     target: target,
-                                    el: el,
-                                    ownerCtContext: this.currentOwnerCtContext
+                                    el: el
                                 }));
 
         return item;
@@ -50658,149 +51117,102 @@ Ext.define('Ext.layout.Context', {
      * @param {Boolean} full True if all properties should be invalidated, otherwise only
      *  those calculated by the component should be invalidated.
      */
-    invalidate: function (components, ownerCtContext, full) {
+    invalidate: function (components, full) {
         var me = this,
             isArray = !components.isComponent,
-            itemCache = me.items,
-            running = me.state > 0,
-            previousOwnerCtContext = me.currentOwnerCtContext,
-            componentChildrenDone, containerChildrenDone, containerLayoutDone, ownerCt,
-            firstTime, i, k, comp, item, items, length, componentLayout, layout, props,
-            invalidateData;
-
-        me.currentOwnerCtContext = ownerCtContext;
+            componentChildrenDone, containerChildrenDone, containerLayoutDone,
+            firstTime, i, comp, item, items, length, componentLayout, layout,
+            invalidateOptions, token;
 
         for (i = 0, length = isArray ? components.length : 1; i < length; ++i) {
             comp = isArray ? components[i] : components;
 
             if (comp.rendered && !comp.hidden) {
-                firstTime = !comp.componentLayout.ownerContext;
                 item = me.getCmp(comp);
-                if (firstTime) {
-                    // this must occur before we proceed since it can do many things (like
-                    // add children perhaps)
-                    if (comp.beforeLayout) {
-                        comp.beforeLayout();
-                    }
+                componentLayout = comp.componentLayout;
+                firstTime = !componentLayout.ownerContext;
+                layout = (comp.isContainer && !comp.collapsed) ? comp.layout : null;
 
-                    // Normally the firstTime we meet a component is before the context is
-                    // run, but it is possible for components to be added to a run already
-                    // in progress. If so, we have to lookup the ownerCtContext since the
-                    // odds are very high that the new component is a child of something
-                    // already in the run. It is currently unsupported to drag in the
-                    // owner of a running component (that would need to cleanup the
-                    // isTopLevel indicators as well as boxParent tracking).
-                    if (running && !ownerCtContext && (ownerCt = comp.ownerCt)) {
-                        ownerCtContext = itemCache[ownerCt.el.id];
-                    }
+                // Extract any invalidate() options for this item.
+                invalidateOptions = me.invalidateData[item.id];
+                delete me.invalidateData[item.id];
 
-                    item.init(ownerCtContext);
+                // We invalidate the contextItem's in a top-down manner so that SizeModel
+                // info for containers is available to their children. This is a critical
+                // optimization since sizeModel determination often requires knowing the
+                // sizeModel of the ownerCt. If this weren't cached as we descend, this
+                // would be an O(N^2) operation! (where N=number of components, or 300+/-
+                // in Themes)
+                token = item.init(full, invalidateOptions);
+
+                if (invalidateOptions) {
+                    me.processInvalidate(invalidateOptions, item, 'before');
                 }
+
+                // Allow the component layout a chance to effect its size model before we
+                // recurse down the component hierarchy (since children need to know the
+                // size model of their ownerCt).
+                if (componentLayout.beforeLayoutCycle) {
+                    componentLayout.beforeLayoutCycle(item);
+                }
+
+                // Finish up the item-level processing that is based on the size model of
+                // the component.
+                token = item.initContinue(token);
+
+                // Start these state variables at true, since that is the value we want if
+                // they do not apply (i.e., no work of this kind on which to wait).
                 componentChildrenDone = containerChildrenDone = containerLayoutDone = true;
 
-                // A ComponentLayout MUST implement getLayoutItems to allow its children to
-                // be collected. Ext.container.Container does this, but non-Container Components
-                // which manage Components as part of their structure (eg HtmlEditor) must
-                // return child Components through their own implementation of getLayoutItems.
-                componentLayout = comp.componentLayout;
-                componentLayout.ownerContext = item;
+                // A ComponentLayout MUST implement getLayoutItems to allow its children
+                // to be collected. Ext.container.Container does this, but non-Container
+                // Components which manage Components as part of their structure (e.g.,
+                // HtmlEditor) must still return child Components via getLayoutItems.
                 if (componentLayout.getLayoutItems) {
                     componentLayout.renderChildren();
 
                     items = componentLayout.getLayoutItems();
                     if (items.length) {
-                        me.invalidate(items, item, true);
+                        me.invalidate(items, true);
                         componentChildrenDone = false;
                     }
                 }
 
-                if (comp.isContainer && !comp.collapsed) {
-                    layout = comp.layout;
-                    layout.ownerContext = item;
-                    layout.renderChildren();
-
+                if (layout) {
                     containerLayoutDone = false;
+                    layout.renderChildren();
 
                     items = layout.getVisibleItems();
                     if (items.length) {
-                        me.invalidate(items, item, true);
+                        me.invalidate(items, true);
                         containerChildrenDone = false;
                     }
-                } else {
-                    layout = null;
                 }
 
-                if (firstTime){
-                    item.hasRawContent = true;
+                // Finish the processing that requires the size models of child items to
+                // be determined (and some misc other stuff).
+                item.initDone(token, componentChildrenDone, containerChildrenDone,
+                              containerLayoutDone);
 
-                    // we need to know how we will determine content size: containers can look at
-                    // the results of their items but non-containers or item-less containers with
-                    // raw markup need to be measured in the DOM:
-                    if (item.target.isContainer) {
-                        if (item.target.items.items.length || !item.target.getTargetEl().dom.firstChild) {
-                            item.hasRawContent = false;
-                        }
-                    }
-
-                } else {
-                    item.doInvalidate(full);
-
-                    // invalidate the elements owned by the component:
-                    items = item.children;
-                    for (k = items.length; k--; ) {
-                        items[k].doInvalidate(true);
-                    }
-                }
-
-                // These properties are only set when they are true:
-                props = item.props;
-                if (componentChildrenDone) {
-                    props.componentChildrenDone = true;
-                    if (containerChildrenDone) {
-                        props.childrenDone = true;
-                    }
-                }
-                if (containerChildrenDone) {
-                    props.containerChildrenDone = true;
-                }
-                if (containerLayoutDone) {
-                    props.containerLayoutDone = true;
-                }
-
-                invalidateData = me.invalidateData[item.id];
-                if (invalidateData) {
-                    delete me.invalidateData[item.id];
-                    if (invalidateData.state) {
-                        Ext.apply(item.state, invalidateData.state);
-                    }
-                    me.finishInvalidate(invalidateData, item, 'before');
-                }
-
+                // Inform the layouts that we are about to begin (or begin again) now that
+                // the size models of the component and its children are setup.
                 me.resetLayout(componentLayout, item, firstTime);
                 if (layout) {
                     me.resetLayout(layout, item, firstTime);
                 }
 
-                if (invalidateData) {
-                    me.finishInvalidate(invalidateData, item, 'after');
-                }
+                // This has to occur after the component layout has had a chance to begin
+                // so that we can determine what kind of animation might be needed. TODO-
+                // move this determination into the layout itself.
+                item.initAnimation();
 
-                if (item.boxChildren && item.widthModel.shrinkWrap) {
-                    // set a very large width to allow the children to measure their natural
-                    // widths (this is cleared once all children have been measured):
-                    item.el.setWidth(10000);
-
-                    // don't run layouts for this component until we clear this width...
-                    item.state.blocks = (item.state.blocks || 0) + 1;
-                }
-
-                if (firstTime) {
-                    item.initAnimatePolicy();
+                if (invalidateOptions) {
+                    me.processInvalidate(invalidateOptions, item, 'after');
                 }
             }
         }
 
-        me.currentOwnerCtContext = previousOwnerCtContext;
+        me.currentLayout = null;
     },
 
     layoutDone: function (layout) {
@@ -50846,6 +51258,21 @@ Ext.define('Ext.layout.Context', {
         return new Ext.util.Queue();
     },
 
+    processInvalidate: function (options, item, name) {
+        // When calling a callback, the currentLayout needs to be adjusted so
+        // that whichever layout caused the invalidate is the currentLayout...
+        if (options[name]) {
+            var me = this,
+                currentLayout = me.currentLayout;
+
+            me.currentLayout = options.layout || null;
+
+            options[name](item, options);
+
+            me.currentLayout = currentLayout;
+        }
+    },
+
     /**
      * Queues a ContextItem to have its {@link Ext.layout.ContextItem#flushAnimations} method called.
      *
@@ -50888,16 +51315,23 @@ Ext.define('Ext.layout.Context', {
     },
 
     chainFns: function (oldOptions, newOptions, funcName) {
-        var oldFn = oldOptions[funcName],
+        var me = this,
+            oldLayout = oldOptions.layout,
+            newLayout = newOptions.layout,
+            oldFn = oldOptions[funcName],
             newFn = newOptions[funcName];
 
         // Call newFn last so it can get the final word on things... also, the "this"
         // pointer will be passed correctly by createSequence with oldFn first.
         return function (contextItem) {
+            var prev = me.currentLayout;
             if (oldFn) {
+                me.currentLayout = oldLayout;
                 oldFn.call(oldOptions.scope || oldOptions, contextItem, oldOptions);
             }
+            me.currentLayout = newLayout;
             newFn.call(newOptions.scope || newOptions, contextItem, newOptions);
+            me.currentLayout = prev;
         };
     },
 
@@ -50922,6 +51356,8 @@ Ext.define('Ext.layout.Context', {
             comp = item.target;
         }
 
+        item.invalid = true;
+
         // See if comp is contained by any component already in the queue (ignore comp if
         // that is the case). Eliminate any components in the queue that are contained by
         // comp (by not adding them to newQueue).
@@ -50938,6 +51374,12 @@ Ext.define('Ext.layout.Context', {
                 if (!(oldOptions = old.options)) {
                     old.options = options;
                 } else if (options) {
+                    if (options.widthModel) {
+                        oldOptions.widthModel = options.widthModel;
+                    }
+                    if (options.heightModel) {
+                        oldOptions.heightModel = options.heightModel;
+                    }
                     if (!(oldState = oldOptions.state)) {
                         oldOptions.state = options.state;
                     } else if (options.state) {
@@ -51026,6 +51468,7 @@ Ext.define('Ext.layout.Context', {
             ++me.remainingLayouts;
             ++layout.layoutCount; // the number of whole layouts run for the layout
 
+            layout.ownerContext = ownerContext;
             layout.beginCount = 0; // the number of beginLayout calls
             layout.blockCount = 0; // the number of blocks set for the layout
             layout.calcCount = 0; // the number of times calculate is called
@@ -51272,7 +51715,7 @@ Ext.define('Ext.layout.Context', {
             contextItem = this.get(item);
             contextItem.setSize(width, height);
 
-            item = items[++i]; // this accomodation avoids making an array of 1 
+            item = items[++i]; // this accomodation avoids making an array of 1
         }
     }
 });
@@ -55200,7 +55643,7 @@ Ext.define('Ext.selection.Model', {
 
     /**
      * Sets the current selectionMode.
-     * @param {String} selModel 'SINGLE', 'MULTI' or 'SIMPLE'.
+     * @param {String} selMode 'SINGLE', 'MULTI' or 'SIMPLE'.
      */
     setSelectionMode: function(selMode) {
         selMode = selMode ? selMode.toUpperCase() : 'SINGLE';
@@ -57098,6 +57541,10 @@ Ext.define('Ext.AbstractComponent', {
 
         layoutSuspendCount: 0,
 
+        /**
+         * Cancels layout of a component.
+         * @param {Ext.Component} comp
+         */
         cancelLayout: function(comp) {
             var context = this.runningLayoutContext || this.pendingLayouts;
 
@@ -57106,6 +57553,11 @@ Ext.define('Ext.AbstractComponent', {
             }
         },
 
+        /**
+         * Performs all pending layouts that were sceduled while
+         * {@link Ext.AbstractComponent#suspendLayouts suspendLayouts} was in effect.
+         * @static
+         */
         flushLayouts: function () {
             var me = this,
                 context = me.pendingLayouts;
@@ -57129,6 +57581,15 @@ Ext.define('Ext.AbstractComponent', {
             }
         },
 
+        /**
+         * Resumes layout activity in the whole framework.
+         *
+         * {@link Ext#suspendLayouts} is alias of {@link Ext.AbstractComponent#suspendLayouts}.
+         *
+         * @param {Boolean} [flush=false] True to perform all the pending layouts. This can also be
+         * achieved by calling {@link Ext.AbstractComponent#flushLayouts flushLayouts} directly.
+         * @static
+         */
         resumeLayouts: function (flush) {
             if (this.layoutSuspendCount && ! --this.layoutSuspendCount) {
                 if (flush) {
@@ -57137,10 +57598,33 @@ Ext.define('Ext.AbstractComponent', {
             }
         },
 
+        /**
+         * Stops layouts from happening in the whole framework.
+         *
+         * It's useful to suspend the layout activity while updating multiple components and
+         * containers:
+         *
+         *     Ext.suspendLayouts();
+         *     // batch of updates...
+         *     Ext.resumeLayouts(true);
+         *
+         * {@link Ext#suspendLayouts} is alias of {@link Ext.AbstractComponent#suspendLayouts}.
+         *
+         * See also {@link Ext#batchLayouts} for more abstract way of doing this.
+         *
+         * @static
+         */
         suspendLayouts: function () {
             ++this.layoutSuspendCount;
         },
 
+        /**
+         * Updates layout of a component.
+         *
+         * @param {Ext.Component} comp The component to update.
+         * @param {Boolean} [defer=false] True to just queue the layout if this component.
+         * @static
+         */
         updateLayout: function (comp, defer) {
             var me = this,
                 running = me.runningLayoutContext,
@@ -57167,7 +57651,7 @@ Ext.define('Ext.AbstractComponent', {
      */
     isComponent: true,
 
-     /**
+    /**
      * @private
      */
     getAutoId: function() {
@@ -57404,7 +57888,7 @@ Ext.define('Ext.AbstractComponent', {
      *
      * When using this config, a call to render() is not required.
      *
-     * See `{@link #render}` also.
+     * See also: {@link #method-render}.
      */
 
     /**
@@ -57716,7 +58200,7 @@ Ext.define('Ext.AbstractComponent', {
      *
      * The specified HTML element is appended to the layout element of the component _after any configured
      * {@link #html HTML} has been inserted_, and so the document will not contain this element at the time
-     * the {@link #render} event is fired.
+     * the {@link #event-render} event is fired.
      *
      * The specified HTML element used will not participate in any **`{@link Ext.container.Container#layout layout}`**
      * scheme that the Component may use. It is just HTML. Layouts operate on child
@@ -57730,7 +58214,7 @@ Ext.define('Ext.AbstractComponent', {
      * @cfg {String/Object} [html='']
      * An HTML fragment, or a {@link Ext.DomHelper DomHelper} specification to use as the layout element content.
      * The HTML content is added after the component is rendered, so the document will not contain this HTML at the time
-     * the {@link #render} event is fired. This content is inserted into the body _before_ any configured {@link #contentEl}
+     * the {@link #event-render} event is fired. This content is inserted into the body _before_ any configured {@link #contentEl}
      * is appended.
      */
 
@@ -57787,7 +58271,7 @@ Ext.define('Ext.AbstractComponent', {
      * @cfg {Boolean/String/HTMLElement/Ext.Element} autoRender
      * This config is intended mainly for non-{@link #floating} Components which may or may not be shown. Instead of using
      * {@link #renderTo} in the configuration, and rendering upon construction, this allows a Component to render itself
-     * upon first _{@link #method-show}_. If {@link #floating} is true, the value of this config is omited as if it is `true`.
+     * upon first _{@link Ext.Component#method-show show}_. If {@link #floating} is true, the value of this config is omited as if it is `true`.
      *
      * Specify as `true` to have this Component render to the document body upon first show.
      *
@@ -57965,7 +58449,7 @@ Ext.define('Ext.AbstractComponent', {
             /**
              * @event beforerender
              * Fires before the component is {@link #rendered}. Return false from an event handler to stop the
-             * {@link #render}.
+             * {@link #method-render}.
              * @param {Ext.Component} this
              */
             'beforerender',
@@ -59713,7 +60197,7 @@ Ext.define('Ext.AbstractComponent', {
 
     /**
      * Returns true if layout is suspended for this component. This can come from direct
-     * suspension of this component's layout activity ({@link #suspendLayouts}) or if one
+     * suspension of this component's layout activity ({@link Ext.Container#suspendLayout}) or if one
      * of this component's containers is suspended.
      *
      * @return {Boolean} True layout of this component is suspended.
@@ -59780,21 +60264,27 @@ Ext.define('Ext.AbstractComponent', {
 
     /**
      * Returns an object that describes how this component's width and height are managed.
-     * These objects are shared and should not be modified.
+     * All of these objects are shared and should not be modified.
      *
      * @return {Object} The size model for this component.
-     * @return {Ext.layout.SizeModel} return.width The {@link Ext.layout.SizeModel size model} for the width.
-     * @return {Ext.layout.SizeModel} return.height The {@link Ext.layout.SizeModel size model} for the height.
+     * @return {Ext.layout.SizeModel} return.width The {@link Ext.layout.SizeModel size model}
+     * for the width.
+     * @return {Ext.layout.SizeModel} return.height The {@link Ext.layout.SizeModel size model}
+     * for the height.
      */
     getSizeModel: function (ownerCtSizeModel) {
         var me = this,
             models = Ext.layout.SizeModel,
-            ownerCtx = me.componentLayout.ownerContext,
+            ownerContext = me.componentLayout.ownerContext,
             hasWidth, hasHeight, heightModel, ownerLayout, policy, shrinkWrap, widthModel;
 
-        if (ownerCtx) {
-            widthModel = ownerCtx.widthModel;
-            heightModel = ownerCtx.heightModel;
+        if (ownerContext) {
+            // If we are in the middle of a running layout, always report the current,
+            // dynamic size model rather than recompute it. This is not (only) a time
+            // saving thing, but a correctness thing since we cannot get the right answer
+            // otherwise.
+            widthModel = ownerContext.widthModel;
+            heightModel = ownerContext.heightModel;
         }
 
         if (!widthModel || !heightModel) {
@@ -59868,10 +60358,9 @@ Ext.define('Ext.AbstractComponent', {
             }
         }
 
-        return {
-            width: widthModel,
-            height: heightModel
-        };
+        // We return one of the cached objects with the proper "width" and "height" as the
+        // sizeModels we have determined.
+        return widthModel.pairsByHeightOrdinal[heightModel.ordinal];
     },
 
     isDescendant: function(ancestor) {
@@ -59958,7 +60447,7 @@ Ext.define('Ext.AbstractComponent', {
     },
 
     /**
-     * Sets the left and top of the component. To set the page XY position instead, use {@link #setPagePosition}. This
+     * Sets the left and top of the component. To set the page XY position instead, use {@link Ext.Component#setPagePosition setPagePosition}. This
      * method fires the {@link #move} event.
      * @param {Number} left The new left
      * @param {Number} top The new top
@@ -60306,33 +60795,41 @@ Ext.define('Ext.AbstractComponent', {
         });
     }
 }, function() {
-    var abstractComponent = this;
+    var AbstractComponent = this;
 
-    abstractComponent.createAlias({
+    AbstractComponent.createAlias({
         on: 'addListener',
         prev: 'previousSibling',
         next: 'nextSibling'
     });
 
+    /**
+     * @inheritdoc Ext.AbstractComponent#resumeLayouts
+     * @member Ext
+     */
     Ext.resumeLayouts = function (flush) {
-        abstractComponent.resumeLayouts(flush);
-    };
-
-    Ext.suspendLayouts = function () {
-        abstractComponent.suspendLayouts();
+        AbstractComponent.resumeLayouts(flush);
     };
 
     /**
-     *
+     * @inheritdoc Ext.AbstractComponent#suspendLayouts
+     * @member Ext
+     */
+    Ext.suspendLayouts = function () {
+        AbstractComponent.suspendLayouts();
+    };
+
+    /**
      * Utility wrapper that suspends layouts of all components for the duration of a given function.
      * @param {Function} fn The function to execute.
-     * @param {Object} scope (Optional) The scope (`this` reference) in which the specified function is executed.
+     * @param {Object} [scope] The scope (`this` reference) in which the specified function is executed.
+     * @member Ext
      */
     Ext.batchLayouts = function(fn, scope) {
-        abstractComponent.suspendLayouts();
+        AbstractComponent.suspendLayouts();
         // Invoke the function
         fn.call(scope);
-        abstractComponent.resumeLayouts(true);
+        AbstractComponent.resumeLayouts(true);
     };
 });
 
@@ -60535,8 +61032,8 @@ Ext.define('Ext.Component', {
      *
      * Components such as {@link Ext.window.Window Window}s and {@link Ext.menu.Menu Menu}s are floating by default.
      *
-     * Floating Components that are programatically {@link Ext.Component#render rendered} will register themselves with
-     * the global {@link Ext.WindowManager ZIndexManager}
+     * Floating Components that are programatically {@link Ext.Component#method-render rendered} will register
+     * themselves with the global {@link Ext.WindowManager ZIndexManager}
      *
      * ### Floating Components as child items of a Container
      *
@@ -60584,7 +61081,7 @@ Ext.define('Ext.Component', {
      * z-index stack.
      *
      * This defaults to the global {@link Ext.WindowManager ZIndexManager} for floating Components that are
-     * programatically {@link Ext.Component#render rendered}.
+     * programatically {@link Ext.Component#method-render rendered}.
      *
      * For {@link #floating} Components which are added to a Container, the ZIndexManager is acquired from the first
      * ancestor Container found which is floating. If no floating ancestor is found, the global {@link Ext.WindowManager ZIndexManager} is
@@ -60598,7 +61095,7 @@ Ext.define('Ext.Component', {
      * @property {Ext.Container} floatParent
      * Only present for {@link #floating} Components which were inserted as child items of Containers.
      *
-     * Floating Components that are programatically {@link Ext.Component#render rendered} will not have a `floatParent`
+     * Floating Components that are programatically {@link Ext.Component#method-render rendered} will not have a `floatParent`
      * property.
      *
      * For {@link #floating} Components which are child items of a Container, the floatParent will be the owning Container.
@@ -60620,7 +61117,7 @@ Ext.define('Ext.Component', {
      * a {@link Ext.ZIndexManager ZIndexManager} which provides z-indexing services for all its descendant floating
      * Components.
      *
-     * Floating Components that are programatically {@link Ext.Component#render rendered} will not have a `zIndexParent`
+     * Floating Components that are programatically {@link Ext.Component#method-render rendered} will not have a `zIndexParent`
      * property.
      *
      * For example, the dropdown {@link Ext.view.BoundList BoundList} of a ComboBox which is in a Window will have the
@@ -60653,6 +61150,26 @@ Ext.define('Ext.Component', {
      *             delegate: 'h1'
      *         }
      *     }).show();
+     */
+    
+    /**
+     * @cfg {Boolean} [formBind=false]
+     * When inside FormPanel, any component configured with `formBind: true` will
+     * be enabled/disabled depending on the validity state of the form.
+     * See {@link Ext.form.Panel} for more information and example.
+     */
+
+    /**
+     * @cfg {String} [region=undefined]
+     * Defines the region inside {@link Ext.layout.container.Border border layout}.
+     *
+     * Possible values:
+     *
+     * - center
+     * - north
+     * - south
+     * - east
+     * - west
      */
 
     hideMode: 'display',
@@ -61137,18 +61654,13 @@ Ext.define('Ext.Component', {
             return [el.getLeft(true), el.getTop(true)];
         }
 
-        // Use our previously set x and y properties if possible.
-        if (me.x !== undefined && me.y !== undefined) {
-            xy = [me.x, me.y];
-        } else {
-            xy = me.el.getXY();
+        xy = me.el.getXY();
 
-            // Floating Components in an ownerCt have to have their positions made relative
-            if (isContainedFloater) {
-                floatParentBox = me.floatParent.getTargetEl().getViewRegion();
-                xy[0] -= floatParentBox.left;
-                xy[1] -= floatParentBox.top;
-            }
+        // Floating Components in an ownerCt have to have their positions made relative
+        if (isContainedFloater) {
+            floatParentBox = me.floatParent.getTargetEl().getViewRegion();
+            xy[0] -= floatParentBox.left;
+            xy[1] -= floatParentBox.top;
         }
         return xy;
     },
@@ -62552,7 +63064,7 @@ Ext.define('Ext.container.AbstractContainer', {
      *
      * For additional information see {@link Ext.util.MixedCollection#get}.
      *
-     * @return Ext.Component The component (if found).
+     * @return {Ext.Component} The component (if found).
      */
     getComponent : function(comp) {
         if (Ext.isObject(comp)) {
@@ -62890,7 +63402,7 @@ Ext.define('Ext.container.Container', {
     extend: 'Ext.container.AbstractContainer',
     alias: 'widget.container',
     alternateClassName: 'Ext.Container',
-    
+
     /*
      * For more information on the following methods, see the note for the
      * hierarchyEventSource observer defined in the class' callback
@@ -65015,6 +65527,7 @@ Ext.define('Ext.button.Button', {
     // private
     onRender: function() {
         var me = this,
+            addOnclick,
             btn,
             btnListeners;
 
@@ -65070,11 +65583,22 @@ Ext.define('Ext.button.Button', {
         if (me.repeat) {
             me.mon(new Ext.util.ClickRepeater(btn, Ext.isObject(me.repeat) ? me.repeat: {}), 'click', me.onRepeatClick, me);
         } else {
-            btnListeners[me.clickEvent] = me.onClick;
+
+            // If the activation event already has a handler, make a note to add the handler later
+            if (btnListeners[me.clickEvent]) {
+                addOnclick = true;
+            } else {
+                btnListeners[me.clickEvent] = me.onClick;
+            }
         }
 
         // Add whatever button listeners we need
         me.mon(btn, btnListeners);
+
+        // If the listeners object had an entry for our clickEvent, add a listener now
+        if (addOnclick) {
+            me.mon(btn, me.clickEvent, me.onClick, me);
+        }
 
         // Register the button in the toggle manager
         Ext.ButtonToggleManager.register(me);
@@ -65719,8 +66243,9 @@ Ext.define('Ext.button.Button', {
      */
     getPersistentPadding: function() {
         var me = this,
+            reset = Ext.scopeResetCSS,
             padding = me.persistentPadding,
-            btn, leftTop, btnEl, btnInnerEl;
+            btn, leftTop, btnEl, btnInnerEl, wrap;
 
         // Create auto-size button offscreen and measure its insides
         // Short-circuit IE as it sometimes gives false positive for padding
@@ -65733,6 +66258,11 @@ Ext.define('Ext.button.Button', {
                 });
                 btn.el = Ext.DomHelper.append(Ext.getBody(), btn.getRenderTree(), true);
                 btn.applyChildEls(btn.el);
+                if (reset) {
+                    wrap = btn.el.wrap({
+                        cls: Ext.resetCls
+                    });
+                }
                 btnEl = btn.btnEl;
                 btnInnerEl = btn.btnInnerEl;
                 btnEl.setSize(null, null); //clear any hard dimensions on the button el to see what it does naturally
@@ -65744,6 +66274,9 @@ Ext.define('Ext.button.Button', {
                 
                 btn.destroy();
                 btn.el.remove();
+                if (reset) {
+                    wrap.remove();
+                }
             }
         }
         return padding;
@@ -66496,9 +67029,6 @@ Ext.define('Ext.resizer.Splitter', {
      * A class to add to the splitter when it is collapsed. See {@link #collapsible}.
      */
 
-    width: 5,
-    height: 5,
-
     /**
      * @cfg {String/Ext.panel.Panel} collapseTarget
      * A string describing the relative position of the immediate sibling Panel to collapse. May be 'prev' or 'next'.
@@ -66537,10 +67067,20 @@ Ext.define('Ext.resizer.Splitter', {
     beforeRender: function() {
         var me = this,
             target = me.getCollapseTarget(),
-            collapseDir = me.getCollapseDirection();
+            collapseDir = me.getCollapseDirection(),
+            vertical = me.vertical,
+            fixedSizeProp = vertical ? 'width' : 'height',
+            stretchSizeProp = vertical ? 'height' : 'width';
 
         me.callParent();
-        
+
+        if (!me.hasOwnProperty(stretchSizeProp)) {
+            me[stretchSizeProp] = '100%';
+        }
+        if (!me.hasOwnProperty(fixedSizeProp)) {
+            me[fixedSizeProp] = 5;
+        }
+
         if (target.collapsed) {
             me.addCls(me.collapsedClsInternal);
         }
@@ -67654,7 +68194,6 @@ Ext.define('Ext.layout.container.boxOverflow.Menu', {
         var me = this,
             layout = me.layout,
             names = layout.getNames(),
-            methodName = 'get' + names.widthCap,
             plan = ownerContext.state.boxPlan,
             posArgs = [null, null];
 
@@ -67662,11 +68201,11 @@ Ext.define('Ext.layout.container.boxOverflow.Menu', {
 
         // Center the menuTrigger button.
         // TODO: Should we emulate align: 'middle' like this, or should we 'stretchmax' the menuTrigger?
-        posArgs[names.heightIndex] = (plan.maxSize - me.menuTrigger['get' + names.heightCap]()) / 2;
+        posArgs[names.heightIndex] = (plan.maxSize - me.menuTrigger[names.getHeight]()) / 2;
         me.menuTrigger.setPosition.apply(me.menuTrigger, posArgs);
 
         return {
-            reservedSpace: me.menuTrigger[methodName]()
+            reservedSpace: me.menuTrigger[names.getWidth]()
         };
     },
 
@@ -67681,6 +68220,8 @@ Ext.define('Ext.layout.container.boxOverflow.Menu', {
         }
     },
 
+    _asLayoutRoot: { isRoot: true },
+
     /**
      * @private
      * Called by the layout, when it determines that there is no overflow.
@@ -67693,7 +68234,8 @@ Ext.define('Ext.layout.container.boxOverflow.Menu', {
             item,
             i = 0,
             length = items.length,
-            owner = me.layout.owner;
+            owner = me.layout.owner,
+            asLayoutRoot = me._asLayoutRoot;
 
         owner.suspendLayouts();
         me.captureChildElements();
@@ -67707,7 +68249,7 @@ Ext.define('Ext.layout.container.boxOverflow.Menu', {
             // owner component. We need just the button to be added to the layout run.
             item.suspendLayouts();
             item.show();
-            item.resumeLayouts({ isRoot: true });
+            item.resumeLayouts(asLayoutRoot);
         }
 
         items.length = 0;
@@ -67737,7 +68279,7 @@ Ext.define('Ext.layout.container.boxOverflow.Menu', {
         // we force just the button to be invalidated and added to the current run.
         menuTrigger.suspendLayouts();
         menuTrigger.show();
-        menuTrigger.resumeLayouts({ isRoot: true });
+        menuTrigger.resumeLayouts(me._asLayoutRoot);
 
         available -= me.menuTrigger.getWidth();
 
@@ -67985,9 +68527,9 @@ Ext.define('Ext.layout.container.Box', {
      * Controls how the child items of the container are packed together. Acceptable configuration values for this
      * property are:
      *
-     *   - **start** - child items are packed together at **left** side of container (*default**)
-     *   - **center** - child items are packed together at **mid-width** of container
-     *   - **end** - child items are packed together at **right** side of container
+     *   - **start** - child items are packed together at **left** (HBox) or **top** (VBox) side of container (*default**)
+     *   - **center** - child items are packed together at **mid-width** (HBox) or **mid-height** (VBox) of container
+     *   - **end** - child items are packed together at **right** (HBox) or **bottom** (VBox) side of container
      */
     pack: 'start',
 
@@ -68087,24 +68629,52 @@ Ext.define('Ext.layout.container.Box', {
         return this.names;
     },
 
+    // Matches: <spaces>digits[.digits]<spaces>%<spaces>
+    // Captures: digits[.digits]
+    _percentageRe: /^\s*(\d+(?:\.\d*)?)\s*[%]\s*$/,
+
     getItemSizePolicy: function (item, ownerSizeModel) {
         var me = this,
             policy = me.sizePolicy,
             align = me.align,
+            flex = item.flex,
             key = align,
-            ownerHeightModel;
+            names = me.names,
+            width = item[names.width],
+            height = item[names.height],
+            percentageRe = me._percentageRe,
+            percentageWidth = percentageRe.test(width),
+            isStretch = (align == 'stretch');
             
-        if (align === 'stretch') {
-            ownerHeightModel = (ownerSizeModel || me.owner.getSizeModel())[me.names.height];
-            if (ownerHeightModel.shrinkWrap) {
-                key = 'stretchmax';
-            }
-        } else if (align !== 'stretchmax') {
-            key = '';
+        if ((isStretch || flex || percentageWidth) && !ownerSizeModel) {
+            ownerSizeModel = me.owner.getSizeModel();
         }
 
-        if (item.flex) {
-            policy = policy.flex;
+        if (isStretch) {
+            // If we are height.shrinkWrap, we behave as if we were stretchmax (for more
+            // details, see beginLayoutCycle)...
+            if (!percentageRe.test(height) && ownerSizeModel[names.height].shrinkWrap) {
+                key = 'stretchmax';
+                // We leave %age height as stretch since it will not participate in the
+                // stretchmax size calculation. This avoid running such a child in its
+                // shrinkWrap mode prior to supplying the calculated size.
+            }
+        } else if (align != 'stretchmax') {
+            if (percentageRe.test(height)) {
+                // Height %ages are calculated based on container size, so they are the
+                // same as align=stretch for this purpose...
+                key = 'stretch';
+            } else {
+                key = '';
+            }
+        }
+
+        if (flex || percentageWidth) {
+            // If we are width.shrinkWrap, we won't be flexing since that requires a
+            // container width...
+            if (!ownerSizeModel[names.width].shrinkWrap) {
+                policy = policy.flex; // both flex and %age width are calculated
+            }
         }
 
         return policy[key];
@@ -68176,6 +68746,8 @@ Ext.define('Ext.layout.container.Box', {
             style = me.innerCt.dom.style,
             names = me.getNames();
 
+        ownerContext.boxNames = names;
+
         // this must happen before callParent to allow the overflow handler to do its work
         // that can effect the childItems collection...
         me.overflowHandler.beginLayout(ownerContext);
@@ -68205,17 +68777,14 @@ Ext.define('Ext.layout.container.Box', {
         // Don't allow sizes burned on to the innerCt to influence measurements.
         style.width = '';
         style.height = '';
-
-        me.cacheFlexes(ownerContext);
     },
 
     beginLayoutCycle: function (ownerContext, firstCycle) {
         var me = this,
             align = me.align,
-            names = me.getNames(),
+            names = ownerContext.boxNames,
             pack = me.pack,
-            heightModelName = names.heightModel,
-            childItems, childContext, i, length, shrinkWrap;
+            heightModelName = names.heightModel;
 
         // this must happen before callParent to allow the overflow handler to do its work
         // that can effect the childItems collection...
@@ -68252,6 +68821,9 @@ Ext.define('Ext.layout.container.Box', {
             align.stretch = false;
         }
 
+        // This is handy for knowing that we might need to apply height %ages
+        align.nostretch = !(align.stretch || align.stretchmax);
+
         // In our example hbox, packing items to the right (end) or center can only work if
         // there is a container width. So, if we are shrinkWrap, we just turn off the pack
         // options for the run.
@@ -68260,31 +68832,7 @@ Ext.define('Ext.layout.container.Box', {
             pack.center = pack.end = false;
         }
 
-        // StretchMax
-        // ==========
-        // This fellow is more interesting than just about any other layout. Consider an
-        // hbox w/stretchmax. The idea is to first first allow the children to perform their
-        // natural (shrinkWrap) layout and then to set the height of all children to the
-        // the maximum height of any child. In terms of layout, this equates to starting
-        // with all children as heightModel.shrinkWrap or heightModel.configured.
-        //
-        // Then down in calculateStretcMax we flip the shrinkWrap children to layout-sized
-        // heightModel.calculated and set their height to the maxHeight. If we ever have to
-        // start over due to invalidate, we must restart back at the beginning (which is
-        // why this logic is not in beginLayout).
-
-        if (align.stretchmax) {
-            childItems = ownerContext.childItems;
-            length = childItems.length;
-            shrinkWrap = me.sizeModels.shrinkWrap;
-
-            for (i = 0; i < length; ++i) {
-                childContext = childItems[i];
-                if (!childContext[heightModelName].configured) {
-                    childContext[heightModelName] = shrinkWrap;
-                }
-            }
-        }
+        me.cacheFlexes(ownerContext);
     },
 
     /**
@@ -68294,50 +68842,69 @@ Ext.define('Ext.layout.container.Box', {
      * @protected
      */
     cacheFlexes: function (ownerContext) {
-        var names = this.getNames(),
+        var me = this,
+            names = ownerContext.boxNames,
             widthModelName = names.widthModel,
+            heightModelName = names.heightModel,
+            nostretch = ownerContext.boxOptions.align.nostretch,
             totalFlex = 0,
             childItems = ownerContext.childItems,
             i = childItems.length,
             flexedItems = [],
             minWidth = 0,
             minWidthName = names.minWidth,
-            child, childContext, flex;
+            percentageRe = me._percentageRe,
+            percentageWidths = 0,
+            percentageHeights = 0,
+            child, childContext, flex, match;
 
         while (i--) {
             childContext = childItems[i];
+            child = childContext.target;
 
-            // if the child has a flex it could be "accidental" (typically via "defaults"),
-            // so just check widthModel to see if we are the sizing layout. If so, copy
-            // the flex from the item to the contextItem and add it to totalFlex
+            // check widthModel to see if we are the sizing layout. If so, copy the flex
+            // from the item to the contextItem and add it to totalFlex
             //
             if (childContext[widthModelName].calculated) {
-                child = childContext.target;
                 childContext.flex = flex = child.flex;
                 if (flex) {
                     totalFlex += flex;
                     flexedItems.push(childContext);
                     minWidth += child[minWidthName] || 0;
+                } else { // a %age width...
+                    match = percentageRe.exec(child[names.width]);
+                    childContext.percentageParallel = parseFloat(match[1]) / 100;
+                    ++percentageWidths;
                 }
             }
             // the above means that "childContext.flex" is properly truthy/falsy, which is
             // often times quite convenient...
+
+            if (nostretch && childContext[heightModelName].calculated) {
+                // the only reason we would be calculated height in this case is due to a
+                // height %age...
+                match = percentageRe.exec(child[names.height]);
+                childContext.percentagePerpendicular = parseFloat(match[1]) / 100;
+                ++percentageHeights;
+            }
         }
 
         ownerContext.flexedItems = flexedItems;
         ownerContext.flexedMinSize = minWidth;
         ownerContext.totalFlex = totalFlex;
+        ownerContext.percentageWidths = percentageWidths;
+        ownerContext.percentageHeights = percentageHeights;
 
         // The flexed boxes need to be sorted in ascending order of maxSize to work properly
         // so that unallocated space caused by maxWidth being less than flexed width can be
         // reallocated to subsequent flexed boxes.
-        Ext.Array.sort(flexedItems, this.flexSortFn);
+        Ext.Array.sort(flexedItems, me.flexSortFn);
     },
 
     calculate: function(ownerContext) {
         var me = this,
             targetSize = me.getContainerSize(ownerContext),
-            names = me.getNames(),
+            names = ownerContext.boxNames,
             state = ownerContext.state,
             plan = state.boxPlan || (state.boxPlan = {}),
             extraWidth = Ext.getScrollbarSize()[names.width];
@@ -68407,7 +68974,6 @@ Ext.define('Ext.layout.container.Box', {
 
     calculateParallel: function(ownerContext, names, plan) {
         var me = this,
-            widthShrinkWrap = ownerContext.parallelSizeModel.shrinkWrap,
             widthName = names.width,
             childItems = ownerContext.childItems,
             leftName = names.left,
@@ -68418,33 +68984,53 @@ Ext.define('Ext.layout.container.Box', {
             flexedItemsLength = flexedItems.length,
             pack = ownerContext.boxOptions.pack,
             padding = me.padding,
+            containerWidth = plan.targetSize[widthName],
+            totalMargin = 0,
             left = padding[leftName],
             nonFlexWidth = left + padding[rightName] + me.scrollOffset +
                                     (me.reserveOffset ? me.availableSpaceOffset : 0),
             i, childMargins, remainingWidth, remainingFlex, childContext, flex, flexedWidth,
-            contentWidth;
+            contentWidth, childWidth, percentageSpace;
 
         // Gather the total size taken up by non-flexed items:
         for (i = 0; i < childItemsLength; ++i) {
             childContext = childItems[i];
             childMargins = childContext.marginInfo || childContext.getMarginInfo();
 
-            nonFlexWidth += childMargins[widthName];
+            totalMargin += childMargins[widthName];
 
-            if (!childContext.flex) {
+            if (!childContext[names.widthModel].calculated) {
                 nonFlexWidth += childContext.getProp(widthName); // min/maxWidth safe
                 if (isNaN(nonFlexWidth)) {
                     return false;
                 }
             }
         }
+
+        nonFlexWidth += totalMargin;
+        if (ownerContext.percentageWidths) {
+            percentageSpace = containerWidth - totalMargin;
+            if (isNaN(percentageSpace)) {
+                return false;
+            }
+
+            for (i = 0; i < childItemsLength; ++i) {
+                childContext = childItems[i];
+                if (childContext.percentageParallel) {
+                    childWidth = Math.ceil(percentageSpace * childContext.percentageParallel);
+                    childWidth = childContext.setWidth(childWidth);
+                    nonFlexWidth += childWidth;
+                }
+            }
+        }
+
         // if we get here, we have all the childWidths for non-flexed items...
 
-        if (widthShrinkWrap) {
+        if (ownerContext.parallelSizeModel.shrinkWrap) {
             plan.availableSpace = 0;
             plan.tooNarrow = false;
         } else {
-            plan.availableSpace = plan.targetSize[widthName] - nonFlexWidth;
+            plan.availableSpace = containerWidth - nonFlexWidth;
 
             // If we're going to need space for a parallel scrollbar, then we need to redo the perpendicular measurements
             plan.tooNarrow = plan.availableSpace < ownerContext.flexedMinSize;
@@ -68466,7 +69052,6 @@ Ext.define('Ext.layout.container.Box', {
             flex         = childContext.flex;
             flexedWidth  = me.roundFlex((flex / remainingFlex) * remainingWidth);
             flexedWidth  = childContext[setWidthName](flexedWidth); // constrained
-            // for shrinkWrap w/flex, the item will be reduced to minWidth (maybe 0)
 
             // due to minWidth constraints, it may be that flexedWidth > remainingWidth
 
@@ -68534,10 +69119,9 @@ Ext.define('Ext.layout.container.Box', {
             isStretchMax = align.stretchmax,
             isCenter     = align.center,
             maxHeight = 0,
+            hasPercentageSizes = 0,
             childTop, i, childHeight, childMargins, diff, height, childContext,
-            stretchMaxPartner,
-            scrollbarHeight,
-            stretchMaxChildren;
+            percentagePerpendicular, stretchMaxPartner, scrollbarHeight, stretchMaxChildren;
 
         if (isStretch || (isCenter && !heightShrinkWrap)) {
             if (isNaN(availHeight)) {
@@ -68558,11 +69142,25 @@ Ext.define('Ext.layout.container.Box', {
         } else {
             for (i = 0; i < childItemsLength; i++) {
                 childContext = childItems[i];
-                childMargins = childContext.marginInfo || childContext.getMarginInfo();
-                childHeight  = childContext.getProp(heightName);
+                childMargins = (childContext.marginInfo || childContext.getMarginInfo())[heightName];
+
+                if (!(percentagePerpendicular = childContext.percentagePerpendicular)) {
+                    childHeight = childContext.getProp(heightName);
+                } else {
+                    ++hasPercentageSizes;
+                    if (heightShrinkWrap) {
+                        // height %age items cannot contribute to maxHeight... they are going
+                        // to be a %age of that maxHeight!
+                        continue;
+                    } else {
+                        childHeight = percentagePerpendicular * availHeight - childMargins;
+                        childHeight = childContext.setHeight(childHeight);
+                    }
+                }
 
                 // Max perpendicular measurement (used for stretchmax) must take the min perpendicular size of each child into account in case any fall short.
-                if (isNaN(maxHeight = mmax(maxHeight, childHeight + childMargins[heightName], childContext.target[names.minHeight]||0))) {
+                if (isNaN(maxHeight = mmax(maxHeight, childHeight + childMargins,
+                                           childContext.target[names.minHeight] || 0))) {
                     return false; // heightShrinkWrap || isCenter || isStretchMax ??
                 }
             }
@@ -68588,7 +69186,7 @@ Ext.define('Ext.layout.container.Box', {
 
             if (isStretchMax) {
                 height = maxHeight;
-            } else if (isCenter) {
+            } else if (isCenter || hasPercentageSizes) {
                 height = heightShrinkWrap ? maxHeight : mmax(availHeight, maxHeight);
 
                 // When calculating a centered position within the content box of the innerCt,
@@ -68607,10 +69205,19 @@ Ext.define('Ext.layout.container.Box', {
 
             if (isStretch) {
                 childContext[setHeightName](height - childMargins[heightName]);
-            } else if (isCenter) {
-                diff = height - childContext.props[heightName];
-                if (diff > 0) {
-                    childTop = top + Math.round(diff / 2);
+            } else {
+                percentagePerpendicular = childContext.percentagePerpendicular;
+                if (heightShrinkWrap && percentagePerpendicular) {
+                    childMargins = childContext.marginInfo || childContext.getMarginInfo();
+                    childHeight = percentagePerpendicular * height - childMargins[heightName];
+                    childHeight = childContext.setHeight(childHeight);
+                }
+
+                if (isCenter) {
+                    diff = height - childContext.props[heightName];
+                    if (diff > 0) {
+                        childTop = top + Math.round(diff / 2);
+                    }
                 }
             }
 
@@ -68663,13 +69270,30 @@ Ext.define('Ext.layout.container.Box', {
     },
 
     completeLayout: function(ownerContext) {
-        var me = this;
+        var me = this,
+            names = ownerContext.boxNames,
+            el, overflow, prop;
 
         me.overflowHandler.completeLayout(ownerContext);
 
         // If we are scrolling parallel, restore the saved scroll position
         if (me.scrollParallel) {
-            me.owner.getTargetEl().dom[me.getNames().scrollLeft] = me.scrollPos;
+            me.owner.getTargetEl().dom[names.scrollLeft] = me.scrollPos;
+        }
+
+        if (ownerContext.invalidateScroll) {
+            el = ownerContext.el;
+            prop = names.overflowY;
+            overflow = el.getStyle(prop);
+
+            if (overflow == 'auto') {
+                // force the scrollbars to appear...
+                el.setStyle(prop, 'scroll');
+                // force a reflow of the element...
+                el.dom.scrollWidth;
+                // reset the overflow to the proper value
+                el.setStyle(prop, overflow);
+            }
         }
     },
 
@@ -68713,7 +69337,7 @@ Ext.define('Ext.layout.container.Box', {
 
     publishInnerCtSize: function(ownerContext, reservedSpace) {
         var me = this,
-            names = me.getNames(),
+            names = ownerContext.boxNames,
             heightName = names.height,
             widthName = names.width,
             align = ownerContext.boxOptions.align,
@@ -68727,7 +69351,8 @@ Ext.define('Ext.layout.container.Box', {
             innerCtWidth = (ownerContext.parallelSizeModel.shrinkWrap || (plan.tooNarrow && me.scrollParallel)
                     ? ownerContext.state.contentWidth
                     : targetSize[widthName]) - (reservedSpace || 0),
-            innerCtHeight;
+            innerCtHeight,
+            IEShrinkwrapParallelSize;
 
         if (align.stretch) {
             innerCtHeight = height;
@@ -68751,9 +69376,23 @@ Ext.define('Ext.layout.container.Box', {
             if (innerCtHeight > plan.targetSize[names.height]) {
                 ownerContext.setProp(parallelContentDim, ownerContext.state.contentWidth + ownerContext.state.additionalScrollbarWidth);
 
-                // Scrollbar does not stretch the container in IE6, 7 and quirks, so we must explicitly extend the container to accommodate the scrollbar, otherwise it "cuts into" the content.
-                if (Ext.isIE6 || Ext.isIE7 || Ext.isIEQuirks) {
-                    ownerContext[names.setWidth](ownerContext.props[parallelContentDim] + ownerContext.getPaddingInfo()[names.width] + ownerContext.getBorderInfo()[names.width]);
+                // Scrollbar does not stretch the container in IE, so we must explicitly
+                // extend the container to accommodate the scrollbar, otherwise it "cuts"
+                // into the content.
+                if (Ext.isIE && !(Ext.isIE9 && Ext.isStrict)) {
+                    IEShrinkwrapParallelSize = ownerContext.props[parallelContentDim] + 
+                                               ownerContext.getPaddingInfo()[names.width] +
+                                               ownerContext.getBorderInfo()[names.width];
+
+                    ownerContext[names.setWidth](IEShrinkwrapParallelSize);
+                    
+                    // It gets worse...
+                    // IE8 in what passes for "strict" mode will not create a scrollbar if 
+                    // there is just the *exactly correct* spare space created for it. We
+                    // have to force that to happen once all the styles have been flushed
+                    // to the DOM (see completeLayout):
+                    //
+                    ownerContext.invalidateScroll = (Ext.isStrict && Ext.isIE8);
                 }
             } else {
                 ownerContext.setProp(parallelContentDim, ownerContext.state.contentWidth);
@@ -71342,7 +71981,7 @@ Ext.define('Ext.grid.header.Container', {
     getVisibleHeaderClosestToIndex: function(index) {
         var result = this.getHeaderAtIndex(index);
         if (result && result.hidden) {
-            result = result.next(':not([hidden])') || result.next(':not([hidden])');
+            result = result.next(':not([hidden])') || result.prev(':not([hidden])');
         }
         return result;
     },
@@ -71580,6 +72219,12 @@ Ext.define('Ext.grid.column.Column', {
      * @cfg {Boolean} fixed
      * True to prevent the column from being resizable.
      * @deprecated
+     */
+
+    /**
+     * @cfg {Boolean} [locked=false]
+     * True to lock this column in place.  Implicitly enables locking on the grid.
+     * See also {@link Ext.grid.Panel#enableLocking}.
      */
 
     /**
@@ -72628,7 +73273,7 @@ Ext.define('Ext.grid.column.Action', {
                 if (type == 'click' || (key == e.ENTER || key == e.SPACE)) {
                     fn = item.handler || me.handler;
                     if (fn && !item.disabled) {
-                        fn.call(item.scope || me.scope || me, view, recordIndex, cellIndex, item, e, record, row);
+                        fn.call(item.scope || me.origScope || me, view, recordIndex, cellIndex, item, e, record, row);
                     }
                 } else if (type == 'mousedown' && item.stopSelection !== false) {
                     return false;
@@ -72932,7 +73577,7 @@ Ext.define('Ext.grid.plugin.Editing', {
 
     /**
      * @cfg {String} triggerEvent
-     * The event which triggers editing. Supercedes the {@link clicksToEdit} configuration. Maybe one of:
+     * The event which triggers editing. Supercedes the {@link #clicksToEdit} configuration. Maybe one of:
      *
      *  * cellclick
      *  * celldblclick
@@ -74226,7 +74871,10 @@ Ext.define('Ext.view.DragZone', {
     containerScroll: false,
 
     constructor: function(config) {
-        var me = this;
+        var me = this,
+            view,
+            ownerCt,
+            el;
 
         Ext.apply(me, config);
 
@@ -74246,7 +74894,16 @@ Ext.define('Ext.view.DragZone', {
         // We use the View's parent element to drag from. Ideally, we would use the internal structure, but that
         // is transient; DataView's recreate the internal structure dynamically as data changes.
         // TODO: Ext 5.0 DragDrop must allow multiple DD objects to share the same element.
-        me.callParent([me.view.el.dom.parentNode]);
+        view = me.view;
+        ownerCt = view.ownerCt;
+        // We don't just grab the parent el, since the parent el may be
+        // some el injected by the layout
+        if (ownerCt) {
+            el = ownerCt.getTargetEl().dom;
+        } else {
+            el = view.el.dom.parentNode;
+        }
+        me.callParent([el]);
 
         me.ddel = Ext.get(document.createElement('div'));
         me.ddel.addCls(Ext.baseCSSPrefix + 'grid-dd-wrap');
@@ -75402,7 +76059,7 @@ Ext.define('Ext.panel.Panel', {
     collapsible: false,
 
     /**
-     * @cfg {Boolean} collapseDirection
+     * @cfg {String} collapseDirection
      * The direction to collapse the Panel when the toggle button is clicked.
      *
      * Defaults to the {@link #headerPosition}
@@ -75703,6 +76360,9 @@ Ext.define('Ext.panel.Panel', {
         }
     },
 
+    /**
+     * Gets the {@link Ext.panel.Header Header} for this panel.
+     */
     getHeader: function() {
         return this.header;
     },
@@ -76320,6 +76980,10 @@ Ext.define('Ext.panel.Panel', {
         return dir == 'top' || dir == 'bottom';
     },
 
+    /**
+     * Returns the current collapsed state of the panel.
+     * @return {Boolean/String} False when not collapsed, otherwise the value of {@link #collapseDirection}.
+     */
     getCollapsed: function() {
         var me = this;
         // The collapsed flag, when the Panel is collapsed acts as the direction in which the collapse took
@@ -77001,7 +77665,7 @@ Ext.define('Ext.panel.Panel', {
     /**
      * Expands the panel body so that it becomes visible.  Fires the {@link #beforeexpand} event which will
      * cancel the expand action if it returns false.
-     * @param {Boolean} animate True to animate the transition, else false (defaults to the value of the
+     * @param {Boolean} [animate] True to animate the transition, else false (defaults to the value of the
      * {@link #animCollapse} panel config)
      * @return {Ext.panel.Panel} this
      */
@@ -78332,6 +78996,11 @@ Ext.define('Ext.panel.Table', {
     /**
      * @cfg {String} emptyText Default text (html tags are accepted) to display in the Panel body when the Store
      * is empty. When specified, and the Store is empty, the text will be rendered inside a DIV with the CSS class "x-grid-empty".
+     */
+    
+    /**
+     * @cfg {Boolean} [allowDeselect=false]
+     * True to allow deselecting a record. This config is forwarded to {@link Ext.selection.Model#allowDeselect}.
      */
 
     /**
@@ -80688,19 +81357,7 @@ Ext.define('Ext.LoadMask', {
             
         if (comp.floating) {
             listeners.move = me.sizeMask;
-            /*
-             *  if floating, set to restack and bind the component to the mask if it's
-             *  determined that the owning component isn't at the front of the stack
-             *
-             *  if there are multiple floating components, each could have its own zIndexManager,
-             *  so it's necessary to have a ref to the owning component to be able
-             *  to look up it's z-index and then adjust accordingly in me.setZIndex
-             *  - the restack simply acts as a flag to know to adjust the z-index in me.setZIndex
-             */
-            if (comp.zIndexManager.front !== comp) {
-                me.restack = true;
-                me.activeOwner = comp;
-            }
+            me.activeOwner = comp;
         } else if (comp.ownerCt) {
             me.onComponentAdded(comp.ownerCt);
         } else {
@@ -80954,13 +81611,14 @@ Ext.define('Ext.LoadMask', {
     },
 
     setZIndex: function(index) {
-        var me = this;
+        var me = this,
+            owner = me.activeOwner;
             
-        if (me.restack) {
+        if (owner) {
             // it seems silly to add 1 to have it subtracted in the call below,
             // but this allows the x-mask el to have the correct z-index (same as the component)
             // so instead of directly changing the zIndexStack just get the z-index of the owner comp
-            index = parseInt(me.activeOwner.el.getStyle('zIndex'), 10) + 1;
+            index = parseInt(owner.el.getStyle('zIndex'), 10) + 1;
         }
 
         me.getMaskEl().setStyle('zIndex', index - 1);
@@ -81289,7 +81947,10 @@ Ext.define('Ext.view.AbstractView', {
             cfg = {
                 msg: me.loadingText,
                 msgCls: me.loadingCls,
-                useMsg: me.loadingUseMsg
+                useMsg: me.loadingUseMsg,
+                // The store gets bound in initComponent, so while
+                // rendering let's push on the store
+                store: me.store
             };
 
         me.callParent(arguments);
@@ -81606,7 +82267,7 @@ Ext.define('Ext.view.AbstractView', {
             index,
             node;
 
-        if (me.rendered) {
+        if (me.viewReady) {
             index = me.store.indexOf(record);
             if (index > -1) {
                 node = me.bufferRender([record], index)[0];
@@ -81898,6 +82559,7 @@ Ext.define('Ext.view.AbstractView', {
      * @param {Ext.data.Model[]/Number} records An array of records or an index
      * @param {Boolean} keepExisting
      * @param {Boolean} suppressEvent Set to false to not fire a select event
+     * @deprecated 4.0 Use {@link Ext.selection.Model#select} instead.
      */
     select: function(records, keepExisting, suppressEvent) {
         this.selModel.select(records, keepExisting, suppressEvent);
@@ -81985,6 +82647,9 @@ Ext.define('Ext.view.AbstractView', {
      */
     indexOf: function(node) {
         node = this.getNode(node);
+        if (!node && node !== 0) {
+            return -1;
+        }
         if (Ext.isNumber(node.viewIndex)) {
             return node.viewIndex;
         }
@@ -82032,21 +82697,25 @@ Ext.define('Ext.view.AbstractView', {
              * @cfg {Boolean} [multiSelect=false]
              * True to allow selection of more than one item at a time, false to allow selection of only a single item
              * at a time or no selection at all, depending on the value of {@link #singleSelect}.
+             * @deprecated 4.0 Use {@link Ext.selection.Model#mode} 'MULTI' instead.
              */
             /**
              * @cfg {Boolean} [singleSelect=false]
              * True to allow selection of exactly one item at a time, false to allow no selection at all.
              * Note that if {@link #multiSelect} = true, this value will be ignored.
+             * @deprecated 4.0 Use {@link Ext.selection.Model#mode} 'SINGLE' instead.
              */
             /**
              * @cfg {Boolean} [simpleSelect=false]
              * True to enable multiselection by clicking on multiple items without requiring the user to hold Shift or Ctrl,
              * false to force the user to hold Ctrl or Shift to select more than on item.
+             * @deprecated 4.0 Use {@link Ext.selection.Model#mode} 'SIMPLE' instead.
              */
 
             /**
              * Gets the number of selected nodes.
              * @return {Number} The node count
+             * @deprecated 4.0 Use {@link Ext.selection.Model#getCount} instead.
              */
             getSelectionCount : function(){
                 if (Ext.global.console) {
@@ -82058,6 +82727,7 @@ Ext.define('Ext.view.AbstractView', {
             /**
              * Gets an array of the selected records
              * @return {Ext.data.Model[]} An array of {@link Ext.data.Model} objects
+             * @deprecated 4.0 Use {@link Ext.selection.Model#getSelection} instead.
              */
             getSelectedRecords : function(){
                 if (Ext.global.console) {
@@ -82074,6 +82744,10 @@ Ext.define('Ext.view.AbstractView', {
                 return sm.select.apply(sm, arguments);
             },
 
+            /**
+             * Deselects all selected records.
+             * @deprecated 4.0 Use {@link Ext.selection.Model#deselectAll} instead.
+             */
             clearSelections: function() {
                 if (Ext.global.console) {
                     Ext.global.console.warn("DataView: clearSelections will be removed, please access deselectAll through DataView's SelectionModel, ie: view.getSelectionModel().deselectAll()");
@@ -82093,7 +82767,7 @@ Ext.define('Ext.view.AbstractView', {
  * to reflect the changes. The view also provides built-in behavior for many common events that can
  * occur for its contained items including click, doubleclick, mouseover, mouseout, etc. as well as a
  * built-in selection model. **In order to use these features, an {@link #itemSelector} config must
- * be provided for the DataView to determine what nodes it will be working with.**
+ * be provided for the View to determine what nodes it will be working with.**
  *
  * The example below binds a View to a {@link Ext.data.Store} and renders it into an {@link Ext.panel.Panel}.
  *
@@ -82669,7 +83343,7 @@ Ext.define('Ext.view.View', {
     onBeforeContainerKeyDown: Ext.emptyFn,
 
     /**
-     * Highlights a given item in the DataView. This is called by the mouseover handler if {@link #overItemCls}
+     * Highlights a given item in the View. This is called by the mouseover handler if {@link #overItemCls}
      * and {@link #trackOver} are configured, but can also be called manually by other code, for instance to
      * handle stepping through the list via keyboard navigation.
      * @param {HTMLElement} item The item to highlight
@@ -82702,7 +83376,7 @@ Ext.define('Ext.view.View', {
             newNode,
             highlighted;
         
-        if (me.rendered) {
+        if (me.viewReady) {
             node = me.getNode(record);
             newNode = me.callParent(arguments);
             highlighted = me.highlightedItem;
@@ -82877,7 +83551,7 @@ Ext.define('Ext.view.Table', {
             destinationCellIdx = toIdx,
             colCount = me.getGridColumns().length,
             lastIdx = colCount - 1,
-            doFirstLastClasses = (me.firstCls || me.lastCls) && (toIdx == 0 || toIdx == colCount || fromIdx == 0 || fromIdx == lastIdx),
+            doFirstLastClasses = (me.firstCls || me.lastCls) && (toIdx === 0 || toIdx == colCount || fromIdx === 0 || fromIdx == lastIdx),
             i,
             j,
             rows, len, tr, headerRows;
@@ -83484,7 +84158,7 @@ Ext.define('Ext.view.Table', {
             columns, overItemCls,
             isHovered, row;
             
-        if (me.rendered) {
+        if (me.viewReady) {
             
             index = me.store.indexOf(record);
             columns = me.headerCt.getGridColumns();
@@ -85192,7 +85866,7 @@ Ext.define('Ext.grid.View', {
  * When configured {@link #stateful}, grids save their column state (order and width) encapsulated within the default
  * Panel state of changed width and height and collapsed/expanded state.
  *
- * Each {@link @columns column} of the grid may be configured with a {@link Ext.grid.column.Column#stateId stateId} which
+ * Each {@link #columns column} of the grid may be configured with a {@link Ext.grid.column.Column#stateId stateId} which
  * identifies that column locally within the grid.
  */
 Ext.define('Ext.grid.Panel', {
@@ -85883,6 +86557,9 @@ Ext.define('Ext.tree.View', {
         return rec.get('checked');
     },
 
+    /**
+     * @private
+     */
     createAnimWrap: function(record, index) {
         var thHtml = '',
             headerCt = this.panel.headerCt,
@@ -86016,13 +86693,11 @@ Ext.define('Ext.tree.View', {
     },
 
     beginBulkUpdate: function(){
-        this.bulkUpdate = true;
-        this.ownerCt.changingScrollbars = true;  
+        this.bulkUpdate = true;  
     },
 
     endBulkUpdate: function(){
         this.bulkUpdate = false;
-        this.ownerCt.changingScrollbars = true;  
     },
 
     onRemove : function(ds, record, index) {
@@ -86124,6 +86799,7 @@ Ext.define('Ext.tree.View', {
                     // Move all the nodes out of the anim wrap to their proper location
                     animWrap.el.insertSibling(targetEl.query(me.itemSelector), 'before');
                     animWrap.el.remove();
+                    me.refreshSize();
                     delete me.animWraps[animWrap.record.internalId];
                     delete queue[id];
                 }
@@ -86193,6 +86869,7 @@ Ext.define('Ext.tree.View', {
                 scope: me,
                 lastframe: function() {
                     animWrap.el.remove();
+                    me.refreshSize();
                     delete me.animWraps[animWrap.record.internalId];
                     delete queue[id];
                 }             
@@ -86682,7 +87359,7 @@ Ext.define('Ext.tree.Panel', {
             /**
              * @event checkchange
              * Fires when a node with a checkbox's checked property changes
-             * @param {Ext.data.Nodeinterface} node The node who's checked property was changed
+             * @param {Ext.data.NodeInterface} node The node who's checked property was changed
              * @param {Boolean} checked The node's new checked state
              */
             'checkchange',
@@ -86955,7 +87632,7 @@ Ext.define('Ext.ux.GroupTabPanel', {
                         if (node.previousSibling) {
                             cls += ' x-grouptab-prev';
                         }
-                        if (!node.get('expanded')) {
+                        if (!node.get('expanded') || node.firstChild == null) {
                             cls += ' x-grouptab-last';
                         }
                     } else if (node.nextSibling === null) {
@@ -87548,6 +88225,8 @@ Ext.define('Ext.window.Window', {
     ariaRole: 'alertdialog',
 
     itemCls: Ext.baseCSSPrefix + 'window-item',
+    
+    initialAlphaNum: /^[a-z0-9]/,
 
     overlapHeader: true,
 
@@ -87565,6 +88244,9 @@ Ext.define('Ext.window.Window', {
     // private
     initComponent: function() {
         var me = this;
+        // Explicitly set frame to false, since alwaysFramed is
+        // true, we only want to lookup framing in a specific instance
+        me.frame = false;
         me.callParent();
         me.addEvents(
             /**
@@ -87851,10 +88533,15 @@ Ext.define('Ext.window.Window', {
             // String is ID or CQ selector
             else if (Ext.isString(defaultComp)) {
                 selector = defaultComp;
-                if (selector.substr(0, 1) !== '#') {
-                    selector = '#' + selector;
+                
+                // Try id/itemId match if selector begins with alphanumeric
+                if (selector.match(me.initialAlphaNum)) {
+                    result = me.down('#' + selector);
                 }
-                result = me.down(selector);
+                // If not found, use as selector
+                if (!result) {
+                    result = me.down(selector);
+                }
             }
             // Otherwise, if it's got a focus method, use it
             else if (defaultComp.focus) {
@@ -88743,8 +89430,8 @@ Ext.define("Ext.form.Labelable", {
      * rendered and space to be reserved for it; this is useful if you want a field without a label to line up with
      * other labeled fields in the same form.
      *
-     * If you wish to unconditionall hide the label even if a non-empty fieldLabel is configured, then set the {@link
-     * #hideLabel} config to true.
+     * If you wish to unconditionall hide the label even if a non-empty fieldLabel is configured, then set the
+     * {@link #hideLabel} config to true.
      */
     hideEmptyLabel: true,
 
@@ -88847,7 +89534,9 @@ Ext.define("Ext.form.Labelable", {
         'labelAttrTpl'
     ],
 
-    labelableRenderProps: 'allowBlank,labelAlign,fieldBodyCls,baseBodyCls,clearCls,labelSeparator,msgTarget',
+    // This is an array to avoid a split on every call to Ext.copyTo
+    labelableRenderProps: [ 'allowBlank', 'id', 'labelAlign', 'fieldBodyCls', 'baseBodyCls',
+                            'clearCls', 'labelSeparator', 'msgTarget' ],
 
     /**
      * Performs initialization of this mixin. Component classes using this mixin should call this method during their
@@ -89719,13 +90408,23 @@ Ext.define('Ext.form.field.Base', {
      */
     setRawValue: function(value) {
         var me = this;
-        value = Ext.value(value, '');
+        value = Ext.value(me.transformRawValue(value), '');
         me.rawValue = value;
 
         // Some Field subclasses may not render an inputEl
         if (me.inputEl) {
             me.inputEl.dom.value = value;
         }
+        return value;
+    },
+    
+    /**
+     * Transform the raw value before it is set
+     * @protected
+     * @param {Object} value The value
+     * @return {Object} The value to set
+     */
+    transformRawValue: function(value) {
         return value;
     },
 
@@ -90544,11 +91243,11 @@ Ext.define('Ext.form.field.Text', {
         var key = e.getKey(),
             charCode = String.fromCharCode(e.getCharCode());
 
-        if(Ext.isGecko && (e.isNavKeyPress() || key === e.BACKSPACE || (key === e.DELETE && e.button === -1))){
+        if((Ext.isGecko || Ext.isOpera) && (e.isNavKeyPress() || key === e.BACKSPACE || (key === e.DELETE && e.button === -1))){
             return;
         }
 
-        if(!Ext.isGecko && e.isSpecialKey() && !charCode){
+        if((!Ext.isGecko && !Ext.isOpera) && e.isSpecialKey() && !charCode){
             return;
         }
         if(!this.maskRe.test(charCode)){
@@ -90794,6 +91493,11 @@ Ext.define('Ext.form.field.Text', {
  *
  * Some other useful configuration options when using {@link #grow} are {@link #growMin} and {@link #growMax}.
  * These allow you to set the minimum and maximum grow heights for the textarea.
+ * 
+ * **NOTE:** In some browsers, carriage returns ('\r', not to be confused with new lines)
+ * will be automatically stripped out the value is set to the textarea. Since we cannot
+ * use any reasonable method to attempt to re-insert these, they will automatically be
+ * stripped out to ensure the behaviour is consistent across browser.
  */
 Ext.define('Ext.form.field.TextArea', {
     extend:'Ext.form.field.Text',
@@ -90885,6 +91589,8 @@ Ext.define('Ext.form.field.TextArea', {
     componentLayout: 'textareafield',
     
     setGrowSizePolicy: Ext.emptyFn,
+    
+    returnRe: /\r/g,
 
     // private
     getSubTplData: function() {
@@ -90916,6 +91622,32 @@ Ext.define('Ext.form.field.TextArea', {
             me.inputEl.on('paste', me.onPaste, me);
         }
     },
+    
+    // The following overrides deal with an issue whereby some browsers
+    // will strip carriage returns from the textarea input, while others
+    // will not. Since there's no way to be sure where to insert returns,
+    // the best solution is to strip them out in all cases to ensure that
+    // the behaviour is consistent in a cross browser fashion. As such,
+    // we override in all cases when setting the value to control this.
+    transformRawValue: function(value){
+        return this.stripReturns(value);
+    },
+    
+    transformOriginalValue: function(value){
+        return this.stripReturns(value); 
+    },
+    
+    valueToRaw: function(value){
+        value = this.stripReturns(value);
+        return this.callParent([value]);
+    },
+    
+    stripReturns: function(value){
+        if (value) {
+            value = value.replace(this.returnRe, '');
+        }
+        return value;
+    },
 
     onPaste: function(e){
         var me = this;
@@ -90940,18 +91672,26 @@ Ext.define('Ext.form.field.TextArea', {
     // private
     fireKey: function(e) {
         var me = this,
+            key = e.getKey(),
             value;
             
-        if (e.isSpecialKey() && (me.enterIsSpecial || (e.getKey() !== e.ENTER || e.hasModifier()))) {
+        if (e.isSpecialKey() && (me.enterIsSpecial || (key !== e.ENTER || e.hasModifier()))) {
             me.fireEvent('specialkey', me, e);
         }
         
-        if (me.needsMaxCheck && e.getKey() !== e.BACKSPACE && !e.isNavKeyPress()) {
+        if (me.needsMaxCheck && key !== e.BACKSPACE && key !== e.DELETE && !e.isNavKeyPress() && !me.isCutCopyPasteSelectAll(e, key)) {
             value = me.getValue();
             if (value.length >= me.maxLength) {
                 e.stopEvent();
             }
         }
+    },
+    
+    isCutCopyPasteSelectAll: function(e, key) {
+        if (e.CTRL) {
+            return key === e.A || key === e.C || key === e.V || key === e.X;
+        }
+        return false;
     },
 
     /**
@@ -91898,7 +92638,8 @@ Ext.define('Ext.window.MessageBox', {
      *
      * @param {String} title The title bar text
      * @param {String} msg The message box body text
-     * @param {Function} [fn] The callback function invoked after the message box is closed
+     * @param {Function} [fn] The callback function invoked after the message box is closed.
+     * See {@link #method-show} method for details.
      * @param {Object} [scope=window] The scope (`this` reference) in which the callback is executed.
      * @return {Ext.window.MessageBox} this
      */
@@ -91924,7 +92665,8 @@ Ext.define('Ext.window.MessageBox', {
      *
      * @param {String} title The title bar text
      * @param {String} msg The message box body text
-     * @param {Function} [fn] The callback function invoked after the message box is closed
+     * @param {Function} [fn] The callback function invoked after the message box is closed.
+     * See {@link #method-show} method for details.
      * @param {Object} [scope=window] The scope (`this` reference) in which the callback is executed.
      * @param {Boolean/Number} [multiline=false] True to create a multiline textbox using the defaultTextHeight
      * property, or the height in pixels to create the textbox/
@@ -91981,7 +92723,8 @@ Ext.define('Ext.window.MessageBox', {
      *
      * @param {String} title The title bar text
      * @param {String} msg The message box body text
-     * @param {Function} [fn] The callback function invoked after the message box is closed
+     * @param {Function} [fn] The callback function invoked after the message box is closed.
+     * See {@link #method-show} method for details.
      * @param {Object} [scope=window] The scope (<code>this</code> reference) in which the callback is executed.
      * @return {Ext.window.MessageBox} this
      */
@@ -92082,10 +92825,10 @@ Ext.define('Ext.window.MessageBox', {
  *                     // Submit the Ajax request and handle the response
  *                     form.submit({
  *                         success: function(form, action) {
- *                            Ext.Msg.alert('Success', action.result.msg);
+ *                            Ext.Msg.alert('Success', action.result.message);
  *                         },
  *                         failure: function(form, action) {
- *                             Ext.Msg.alert('Failed', action.result ? action.result.msg : 'No response');
+ *                             Ext.Msg.alert('Failed', action.result ? action.result.message : 'No response');
  *                         }
  *                     });
  *                 }
@@ -92248,21 +92991,20 @@ Ext.define('Ext.form.Basic', {
 
     /**
      * @cfg {Object} api
-     * If specified, load and submit actions will be handled
-     * with {@link Ext.form.action.DirectLoad} and {@link Ext.form.action.DirectLoad}.
-     * Methods which have been imported by {@link Ext.direct.Manager} can be specified here to load and submit
-     * forms. API methods may also be specified as strings. See {@link Ext.data.proxy.Direct#directFn}.
-     * Such as the following:
+     * If specified, load and submit actions will be handled with {@link Ext.form.action.DirectLoad DirectLoad}
+     * and {@link Ext.form.action.DirectSubmit DirectSubmit}.  Methods which have been imported by
+     * {@link Ext.direct.Manager} can be specified here to load and submit forms. API methods may also be
+     * specified as strings. See {@link Ext.data.proxy.Direct#directFn}.  Such as the following:
      *
      *     api: {
      *         load: App.ss.MyProfile.load,
      *         submit: App.ss.MyProfile.submit
      *     }
      *
-     * Load actions can use {@link #paramOrder} or {@link #paramsAsHash}
-     * to customize how the load method is invoked.
-     * Submit actions will always use a standard form submit. The `formHandler` configuration must
-     * be set on the associated server-side method which has been imported by {@link Ext.direct.Manager}.
+     * Load actions can use {@link #paramOrder} or {@link #paramsAsHash} to customize how the load method
+     * is invoked.  Submit actions will always use a standard form submit. The `formHandler` configuration
+     * (see Ext.direct.RemotingProvider#action) must be set on the associated server-side method which has
+     * been imported by {@link Ext.direct.Manager}.
      */
 
     /**
@@ -92905,7 +93647,10 @@ Ext.define('Ext.form.Basic', {
      * @param {Boolean} [asString=false] If true, will return the key/value collection as a single
      * URL-encoded param string.
      * @param {Boolean} [dirtyOnly=false] If true, only fields that are dirty will be included in the result.
-     * @param {Boolean} [includeEmptyText=false]] If true, the configured emptyText of empty fields will be used.
+     * @param {Boolean} [includeEmptyText=false] If true, the configured emptyText of empty fields will be used.
+     * @param {Boolean} [useDataValues=false] If true, the {@link Ext.form.field.Field#getModelData getModelData}
+     * method is used to retrieve values from fields, otherwise the {@link Ext.form.field.Field#getSubmitData getSubmitData}
+     * method is used.
      * @return {String/Object}
      */
     getValues: function(asString, dirtyOnly, includeEmptyText, useDataValues) {
@@ -94617,7 +95362,7 @@ Ext.define('Ext.draw.CompositeSprite', {
      * Iterates through all sprites calling `setAttributes` on each one. For more information {@link Ext.draw.Sprite}
      * provides a description of the attributes that can be set with this method.
      * @param {Object} attrs Attributes to be changed on the sprite.
-     * @param {Boolean} redraw Flag to immediatly draw the change.
+     * @param {Boolean} redraw Flag to immediately draw the change.
      * @return {Ext.draw.CompositeSprite} this
      */
     setAttributes: function(attrs, redraw) {
@@ -94634,7 +95379,7 @@ Ext.define('Ext.draw.CompositeSprite', {
     /**
      * Hides all sprites. If the first parameter of the method is true
      * then a redraw will be forced for each sprite.
-     * @param {Boolean} redraw Flag to immediatly draw the change.
+     * @param {Boolean} redraw Flag to immediately draw the change.
      * @return {Ext.draw.CompositeSprite} this
      */
     hide: function(redraw) {
@@ -94651,7 +95396,7 @@ Ext.define('Ext.draw.CompositeSprite', {
     /**
      * Shows all sprites. If the first parameter of the method is true
      * then a redraw will be forced for each sprite.
-     * @param {Boolean} redraw Flag to immediatly draw the change.
+     * @param {Boolean} redraw Flag to immediately draw the change.
      * @return {Ext.draw.CompositeSprite} this
      */
     show: function(redraw) {
@@ -95302,7 +96047,7 @@ Ext.define('Ext.draw.Surface', {
      *         y: 100
      *     });
      *
-     * @param {Ext.draw.Sprite[]/Ext.draw.Sprite...} args One or more Sprite objects of configs.
+     * @param {Ext.draw.Sprite[]/Ext.draw.Sprite...} args One or more Sprite objects or configs.
      * @return {Ext.draw.Sprite[]/Ext.draw.Sprite} The sprites added.
      */
     add: function() {
@@ -97965,7 +98710,6 @@ Ext.define('Ext.chart.Legend', {
  *                 type: 'Time',
  *                 position: 'bottom',
  *                 fields: ['date'],
- *                 groupBy: 'hour',
  *                 dateFormat: 'ga'
  *             }
  *         ]
@@ -97977,8 +98721,7 @@ Ext.define('Ext.chart.Legend', {
  * 
  * The horizontal axis is a {@link Ext.chart.axis.Time Time Axis} and is positioned on the bottom edge of the Chart.
  * It represents the bounds of the data contained in the "WeatherPoint" Model's "date" field.
- * The {@link Ext.chart.axis.Time#cfg-groupBy groupBy} configuration is used to specify that this axis
- * will group times in one-hour increments, and the {@link Ext.chart.axis.Time#cfg-dateFormat dateFormat}
+ * The {@link Ext.chart.axis.Time#cfg-dateFormat dateFormat}
  * configuration tells the Time Axis how to format it's labels.
  * 
  * Here's what the Chart looks like now that it has its Axes configured:
@@ -99115,17 +99858,17 @@ Ext.define('Ext.chart.axis.Axis', {
                 // If the series explicitly exclude current Axis, then exit.
                 continue;
             }
-            
+
             if (seriesClasses.Bar && series[i] instanceof seriesClasses.Bar && !series[i].column) {
                 // If this is a horizontal bar series, then flip xField and yField.
                 fields = vertical ? Ext.Array.from(series[i].xField) : Ext.Array.from(series[i].yField);
             } else {
                 fields = vertical ? Ext.Array.from(series[i].yField) : Ext.Array.from(series[i].xField);
             }
-            
+
             if (me.fields.length) {
                 for (j = 0, ln2 = fields.length; j < ln2; j++) {
-                    if(allFields[fields[j]]) {
+                    if (allFields[fields[j]]) {
                         break;
                     }
                 }
@@ -99134,7 +99877,7 @@ Ext.define('Ext.chart.axis.Axis', {
                     continue;
                 }
             }
-            
+
             if (aggregates = series[i].stacked) {
                 // If this is a bar/column series, then it will be aggregated if it is of the same direction of the axis.
                 if (seriesClasses.Bar && series[i] instanceof seriesClasses.Bar) {
@@ -99215,12 +99958,14 @@ Ext.define('Ext.chart.axis.Axis', {
                 }
             }
         }
+
         if (!isFinite(max)) {
             max = me.prevMax || 0;
         }
         if (!isFinite(min)) {
             min = me.prevMin || 0;
         }
+
         //normalize min max for snapEnds.
         if (min != max && (max != Math.floor(max))) {
             max = Math.floor(max) + 1;
@@ -99234,13 +99979,17 @@ Ext.define('Ext.chart.axis.Axis', {
             max = me.maximum;
         }
 
+        if (min >= max) {
+            // snapEnds will return NaN if max >= min;
+            max = min + 1;
+        }
+
         return {min: min, max: max};
     },
 
     // @private creates a structure with start, end and step points.
     calcEnds: function () {
         var me = this,
-            fields = me.fields,
             range = me.getRange(),
             min = range.min,
             max = range.max,
@@ -99276,7 +100025,7 @@ Ext.define('Ext.chart.axis.Axis', {
             out.to = Math.ceil(out.to / out.step) * out.step;
             out.steps = (out.to - out.from) / out.step;
         }
-        
+
         if (me.adjustMinimumByMajorUnit) {
             out.from = Math.floor(out.from / out.step) * out.step;
             out.steps = (out.to - out.from) / out.step;
@@ -99292,7 +100041,7 @@ Ext.define('Ext.chart.axis.Axis', {
      */
     drawAxis: function (init) {
         var me = this,
-            i, j,
+            i, 
             x = me.x,
             y = me.y,
             gutterX = me.chart.maxGutter[0],
@@ -99313,7 +100062,6 @@ Ext.define('Ext.chart.axis.Axis', {
             currentX,
             currentY,
             path,
-            prev,
             dashesX,
             dashesY,
             delta;
@@ -99446,7 +100194,6 @@ Ext.define('Ext.chart.axis.Axis', {
             position = me.position,
             gutter = me.chart.maxGutter,
             width = me.width - 2,
-            vert = false,
             point, prevPoint,
             i = 1,
             path = [], styles, lineWidth, dlineWidth,
@@ -99635,17 +100382,14 @@ Ext.define('Ext.chart.axis.Axis', {
             inflections = me.inflections,
             ln = inflections.length,
             labels = me.labels,
-            labelGroup = me.labelGroup,
             maxHeight = 0,
             ratio,
-            gutterY = me.chart.maxGutter[1],
-            ubbox, bbox, point, prevX, prevLabel, prevLabelId,
-            projectedWidth = 0,
+            bbox, point, prevLabel, prevLabelId,
             adjustEnd = me.adjustEnd,
             hasLeft = axes.findIndex('position', 'left') != -1,
             hasRight = axes.findIndex('position', 'right') != -1,
-            textLabel, attr, textRight, text,
-            label, last, x, y, i, firstLabel;
+            textLabel, text,
+            last, x, y, i, firstLabel;
 
         last = ln - 1;
         //get a reference to the first text label dimensions
@@ -99713,16 +100457,14 @@ Ext.define('Ext.chart.axis.Axis', {
             ceil = Math.ceil,
             axes = me.chart.axes,
             gutterY = me.chart.maxGutter[1],
-            ubbox, bbox, point, prevLabel, prevLabelId,
-            projectedWidth = 0,
+            bbox, point, prevLabel, prevLabelId,
             hasTop = axes.findIndex('position', 'top') != -1,
             hasBottom = axes.findIndex('position', 'bottom') != -1,
             adjustEnd = me.adjustEnd,
-            textLabel, attr, textRight, text,
-            label, last, x, y, i;
+            textLabel, text,
+            last = ln - 1, x, y, i;
 
-        last = ln;
-        for (i = 0; i < last; i++) {
+        for (i = 0; i < ln; i++) {
             point = inflections[i];
             text = me.label.renderer(labels[i]);
             textLabel = me.getOrCreateLabel(i, text);
@@ -99731,7 +100473,7 @@ Ext.define('Ext.chart.axis.Axis', {
             maxWidth = max(maxWidth, bbox.width + me.dashSize + me.label.padding);
             y = point[1];
             if (adjustEnd && gutterY < bbox.height / 2) {
-                if (i == last - 1 && !hasTop) {
+                if (i == last && !hasTop) {
                     y = Math.max(y, me.y - me.length + ceil(bbox.height / 2) - insetPadding);
                 }
                 else if (i == 0 && !hasBottom) {
@@ -99751,7 +100493,7 @@ Ext.define('Ext.chart.axis.Axis', {
             }, me.label), true);
             // Skip label if there isn't available minimum space
             if (i != 0 && me.intersect(textLabel, prevLabel)) {
-                if (i === last - 1 && prevLabelId !== 0) {
+                if (i === last && prevLabelId !== 0) {
                     prevLabel.hide(true);
                 } else {
                     textLabel.hide(true);
@@ -99797,33 +100539,6 @@ Ext.define('Ext.chart.axis.Axis', {
         if (Ext.isString(me.title)) {
             me.drawTitle(maxWidth, maxHeight);
         }
-    },
-
-    // @private creates the elipsis for the text.
-    elipsis: function (sprite, text, desiredWidth, minWidth, center) {
-        var bbox,
-            x;
-
-        if (desiredWidth < minWidth) {
-            sprite.hide(true);
-            return false;
-        }
-        while (text.length > 4) {
-            text = text.substr(0, text.length - 4) + "...";
-            sprite.setAttributes({
-                text: text
-            }, true);
-            bbox = sprite.getBBox();
-            if (bbox.width < desiredWidth) {
-                if (typeof center == 'number') {
-                    sprite.setAttributes({
-                        x: Math.floor(center - (bbox.width / 2))
-                    }, true);
-                }
-                break;
-            }
-        }
-        return true;
     },
 
     /**
@@ -101091,7 +101806,7 @@ Ext.define('Ext.chart.axis.Numeric', {
         me.callParent([config]);
         label = me.label;
 
-        if(config.constrain == null){
+        if (config.constrain == null) {
             me.constrain = (config.minimum != null && config.maximum != null);
         }
 
@@ -101130,7 +101845,7 @@ Ext.define('Ext.chart.axis.Numeric', {
      * Default's true if maximum and minimum is specified.
      */
     constrain: true,
-    
+
     /**
      * The number of decimals to round the value to.
      *
@@ -101146,9 +101861,9 @@ Ext.define('Ext.chart.axis.Numeric', {
      * @private
      */
     scale: "linear",
-    
+
     // @private constrains to datapoints between minimum and maximum only
-    doConstrain: function () {
+    doConstrain: function() {
         var me = this,
             store = me.chart.store,
             items = store.data.items,
@@ -101156,31 +101871,29 @@ Ext.define('Ext.chart.axis.Numeric', {
             series = me.chart.series.items,
             fields = me.fields,
             ln = fields.length,
-            range = me.getRange(),
-            min = range.min, max = range.max, i, l, excludes = [],
+            range = me.calcEnds(),
+            min = range.from, max = range.to, i, l,
             useAcum = false,
             value, data = [],
             addRecord;
 
         for (i = 0, l = series.length; i < l; i++) {
-            excludes[i] = series[i].__excludes;
-            useAcum = useAcum || series[i].stacked;
+            if (series[i].type === 'bar' && series[i].stacked) {
+                // Do not constrain stacked bar chart.
+                return;
+            }
         }
+
         for (d = 0, dLen = items.length; d < dLen; d++) {
             addRecord = true;
             record = items[d];
             for (i = 0; i < ln; i++) {
-                addRecord = true;
-                if (excludes[i]) {
-                    continue;
-                }
                 value = record.get(fields[i]);
-
-                if (!useAcum && +value < +min) {
+                if (+value < +min) {
                     addRecord = false;
                     break;
                 }
-                if (!useAcum && +value > +max) {
+                if (+value > +max) {
                     addRecord = false;
                     break;
                 }
@@ -101213,16 +101926,16 @@ Ext.define('Ext.chart.axis.Numeric', {
      * @property {Boolean} adjustMinimumByMajorUnit
      */
     adjustMinimumByMajorUnit: false,
-    
+
     // applying constraint
-    processView: function () {
+    processView: function() {
         var me = this,
             constrain = me.constrain;
-        if(constrain){
+        if (constrain) {
             me.doConstrain();
         }
     },
-    
+
     // @private apply data.
     applyData: function() {
         this.callParent();
@@ -102177,8 +102890,6 @@ Ext.define('Ext.util.CSS', (function() {
     };
 }()));
 /**
- * @singleton
- *
  * Provides a registry of available Plugin classes indexed by a mnemonic code known as the Plugin's ptype.
  *
  * A plugin may be specified simply as a *config object* as long as the correct `ptype` is specified:
@@ -102194,8 +102905,7 @@ Ext.define('Ext.util.CSS', (function() {
  *
  * Alternatively you can instantiate the plugin with Ext.create:
  *
- *     Ext.create('Ext.view.plugin.AutoComplete', {
- *         ptype: 'gridviewdragdrop',
+ *     Ext.create('Ext.grid.plugin.DragDrop', {
  *         dragText: 'Drag and drop to reorganize'
  *     })
  */
@@ -102806,8 +103516,18 @@ Ext.define('Ext.panel.Tool', {
 
     baseCls: Ext.baseCSSPrefix + 'tool',
     disabledCls: Ext.baseCSSPrefix + 'tool-disabled',
+    
+    /**
+     * @cfg
+     * @private
+     */
     toolPressedCls: Ext.baseCSSPrefix + 'tool-pressed',
+    /**
+     * @cfg
+     * @private
+     */
     toolOverCls: Ext.baseCSSPrefix + 'tool-over',
+
     ariaRole: 'button',
 
     childEls: [
@@ -104184,7 +104904,6 @@ Ext.define('Ext.menu.Item', {
     /**
      * @cfg {String} activeCls
      * The CSS class added to the menu item when the item is activated (focused/mouseover).
-     * Defaults to `Ext.baseCSSPrefix + 'menu-item-active'`.
      */
     activeCls: Ext.baseCSSPrefix + 'menu-item-active',
 
@@ -104196,98 +104915,93 @@ Ext.define('Ext.menu.Item', {
 
     /**
      * @cfg {Boolean} canActivate
-     * Whether or not this menu item can be activated when focused/mouseovered. Defaults to `true`.
+     * Whether or not this menu item can be activated when focused/mouseovered.
      */
     canActivate: true,
 
     /**
      * @cfg {Number} clickHideDelay
      * The delay in milliseconds to wait before hiding the menu after clicking the menu item.
-     * This only has an effect when `hideOnClick: true`. Defaults to `1`.
+     * This only has an effect when `hideOnClick: true`.
      */
     clickHideDelay: 1,
 
     /**
      * @cfg {Boolean} destroyMenu
-     * Whether or not to destroy any associated sub-menu when this item is destroyed. Defaults to `true`.
+     * Whether or not to destroy any associated sub-menu when this item is destroyed.
      */
     destroyMenu: true,
 
     /**
      * @cfg {String} disabledCls
      * The CSS class added to the menu item when the item is disabled.
-     * Defaults to `Ext.baseCSSPrefix + 'menu-item-disabled'`.
      */
     disabledCls: Ext.baseCSSPrefix + 'menu-item-disabled',
 
     /**
-     * @cfg {String} href
-     * The href attribute to use for the underlying anchor link. Defaults to `#`.
-     * @markdown
+     * @cfg {String} [href='#']
+     * The href attribute to use for the underlying anchor link.
      */
 
-     /**
-      * @cfg {String} hrefTarget
-      * The target attribute to use for the underlying anchor link. Defaults to `undefined`.
-      * @markdown
-      */
+    /**
+     * @cfg {String} hrefTarget
+     * The target attribute to use for the underlying anchor link.
+     */
 
     /**
      * @cfg {Boolean} hideOnClick
-     * Whether to not to hide the owning menu when this item is clicked. Defaults to `true`.
-     * @markdown
+     * Whether to not to hide the owning menu when this item is clicked.
      */
     hideOnClick: true,
 
     /**
      * @cfg {String} icon
-     * The path to an icon to display in this item. Defaults to `Ext.BLANK_IMAGE_URL`.
-     * @markdown
+     * The path to an icon to display in this item.
+     *
+     * Defaults to `Ext.BLANK_IMAGE_URL`.
      */
 
     /**
      * @cfg {String} iconCls
-     * A CSS class that specifies a `background-image` to use as the icon for this item. Defaults to `undefined`.
-     * @markdown
+     * A CSS class that specifies a `background-image` to use as the icon for this item.
      */
 
     isMenuItem: true,
 
     /**
-     * @cfg {Mixed} menu
+     * @cfg {Ext.menu.Menu/Object} menu
      * Either an instance of {@link Ext.menu.Menu} or a config object for an {@link Ext.menu.Menu}
      * which will act as a sub-menu to this item.
-     * @markdown
+     */
+
+    /**
      * @property {Ext.menu.Menu} menu The sub-menu associated with this item, if one was configured.
      */
 
     /**
      * @cfg {String} menuAlign
      * The default {@link Ext.Element#getAlignToXY Ext.Element.getAlignToXY} anchor position value for this
-     * item's sub-menu relative to this item's position. Defaults to `'tl-tr?'`.
-     * @markdown
+     * item's sub-menu relative to this item's position.
      */
     menuAlign: 'tl-tr?',
 
     /**
      * @cfg {Number} menuExpandDelay
-     * The delay in milliseconds before this item's sub-menu expands after this item is moused over. Defaults to `200`.
-     * @markdown
+     * The delay in milliseconds before this item's sub-menu expands after this item is moused over.
      */
     menuExpandDelay: 200,
 
     /**
      * @cfg {Number} menuHideDelay
-     * The delay in milliseconds before this item's sub-menu hides after this item is moused out. Defaults to `200`.
-     * @markdown
+     * The delay in milliseconds before this item's sub-menu hides after this item is moused out.
      */
     menuHideDelay: 200,
 
     /**
      * @cfg {Boolean} plain
-     * Whether or not this item is plain text/html with no icon or visual activation. Defaults to `false`.
-     * @markdown
+     * Whether or not this item is plain text/html with no icon or visual activation.
      */
+
     /**
      * @cfg {String/Object} tooltip
      * The tooltip for the button - can be a string to be used as innerHTML (html tags are accepted) or
@@ -104322,8 +105036,7 @@ Ext.define('Ext.menu.Item', {
 
     /**
      * @cfg {String} text
-     * The text/html to display in this item. Defaults to `undefined`.
-     * @markdown
+     * The text/html to display in this item.
      */
 
     /**
@@ -104560,7 +105273,7 @@ Ext.define('Ext.menu.Item', {
     },
     
     /**
-     * Set a child menu for this item. See the {@link #menu} configuration.
+     * Set a child menu for this item. See the {@link #cfg-menu} configuration.
      * @param {Ext.menu.Menu/Object} menu A menu, or menu configuration. null may be
      * passed to remove the menu.
      * @param {Boolean} [destroyMenu] True to destroy any existing menu. False to
@@ -105194,9 +105907,7 @@ Ext.define('Ext.draw.Matrix', {
         if (y == null) {
             y = x;
         }
-        me.add(1, 0, 0, 1, cx, cy);
-        me.add(x, 0, 0, y, 0, 0);
-        me.add(1, 0, 0, 1, -cx, -cy);
+        me.add(x, 0, 0, y, cx * (1 - x), cy * (1 - y));
     },
 
     rotate: function(a, x, y) {
@@ -105204,8 +105915,7 @@ Ext.define('Ext.draw.Matrix', {
         var me = this,
             cos = +Math.cos(a).toFixed(9),
             sin = +Math.sin(a).toFixed(9);
-        me.add(cos, sin, -sin, cos, x, y);
-        me.add(1, 0, 0, 1, -x, -y);
+        me.add(cos, sin, -sin, cos, x - cos * x + sin * y, -(sin * x) + y - cos * y);
     },
 
     x: function(x, y) {
@@ -108255,7 +108965,7 @@ Ext.define('Ext.menu.Menu', {
         delete me.ownerButton;
         if (me.rendered) {
             me.el.un(me.mouseMonitor);
-            me.keyNav.destroy();
+            Ext.destroy(me.keyNav);
             delete me.keyNav;
         }
         me.callParent(arguments);
@@ -110607,7 +111317,7 @@ Ext.define('Ext.form.field.Spinner', {
 
         me.callParent(arguments);
         triggers = me.triggerEl;
-
+        
         /**
          * @property {Ext.Element} spinUpEl
          * The spinner up button element
@@ -110618,6 +111328,8 @@ Ext.define('Ext.form.field.Spinner', {
          * The spinner down button element
          */
         me.spinDownEl = triggers.item(1);
+        
+        me.triggerCell = me.spinUpEl.parent(); 
 
         // Set initial enabled/disabled states
         me.setSpinUpEnabled(me.spinUpEnabled);
@@ -111478,7 +112190,7 @@ Ext.define('Ext.draw.Sprite', {
     /**
      * Change the attributes of the sprite.
      * @param {Object} attrs attributes to be changed on the sprite.
-     * @param {Boolean} redraw Flag to immediatly draw the change.
+     * @param {Boolean} redraw Flag to immediately draw the change.
      * @return {Ext.draw.Sprite} this
      */
     setAttributes: function(attrs, redraw) {
@@ -111614,7 +112326,7 @@ Ext.define('Ext.draw.Sprite', {
 
     /**
      * Hides the sprite.
-     * @param {Boolean} redraw Flag to immediatly draw the change.
+     * @param {Boolean} redraw Flag to immediately draw the change.
      * @return {Ext.draw.Sprite} this
      */
     hide: function(redraw) {
@@ -111626,7 +112338,7 @@ Ext.define('Ext.draw.Sprite', {
 
     /**
      * Shows the sprite.
-     * @param {Boolean} redraw Flag to immediatly draw the change.
+     * @param {Boolean} redraw Flag to immediately draw the change.
      * @return {Ext.draw.Sprite} this
      */
     show: function(redraw) {
@@ -114328,6 +115040,45 @@ Ext.define('Ext.view.BoundListKeyNav', {
  * 
  * If you have a local store that is already filtered, you can use the {@link #lastQuery} config option
  * to prevent the store from having the filter being cleared on first expand.
+ *
+ * ## Customized combobox
+ *
+ * Both the text shown in dropdown menu and text field can be easily customized:
+ *
+ *     @example
+ *     var states = Ext.create('Ext.data.Store', {
+ *         fields: ['abbr', 'name'],
+ *         data : [
+ *             {"abbr":"AL", "name":"Alabama"},
+ *             {"abbr":"AK", "name":"Alaska"},
+ *             {"abbr":"AZ", "name":"Arizona"}
+ *         ]
+ *     });
+ *
+ *     Ext.create('Ext.form.ComboBox', {
+ *         fieldLabel: 'Choose State',
+ *         store: states,
+ *         queryMode: 'local',
+ *         valueField: 'abbr',
+ *         renderTo: Ext.getBody(),
+ *         // Template for the dropdown menu.
+ *         // Note the use of "x-boundlist-item" class,
+ *         // this is required to make the items selectable.
+ *         tpl: Ext.create('Ext.XTemplate',
+ *             '<tpl for=".">',
+ *                 '<div class="x-boundlist-item">{abbr} - {name}</div>',
+ *             '</tpl>'
+ *         ),
+ *         // template for the content inside text field
+ *         displayTpl: Ext.create('Ext.XTemplate',
+ *             '<tpl for=".">',
+ *                 '{abbr} - {name}',
+ *             '</tpl>'
+ *         )
+ *     });
+ *
+ * See also the {@link #listConfig} option for additional configuration of the dropdown.
+ *
  */
 Ext.define('Ext.form.field.ComboBox', {
     extend:'Ext.form.field.Picker',
@@ -114354,6 +115105,11 @@ Ext.define('Ext.form.field.ComboBox', {
      * will not be created unless a hiddenName is specified.
      */
     hiddenName: '',
+    
+    /**
+     * @property {Ext.Element} hiddenDataEl
+     * @private
+     */
 
     /**
      * @private
@@ -114657,16 +115413,16 @@ Ext.define('Ext.form.field.ComboBox', {
      * An optional set of configuration properties that will be passed to the {@link Ext.view.BoundList}'s constructor.
      * Any configuration that is valid for BoundList can be included. Some of the more useful ones are:
      *
-     *   - {@link Ext.view.BoundList#cls} - defaults to empty
-     *   - {@link Ext.view.BoundList#emptyText} - defaults to empty string
-     *   - {@link Ext.view.BoundList#itemSelector} - defaults to the value defined in BoundList
-     *   - {@link Ext.view.BoundList#loadingText} - defaults to `'Loading...'`
-     *   - {@link Ext.view.BoundList#minWidth} - defaults to `70`
-     *   - {@link Ext.view.BoundList#maxWidth} - defaults to `undefined`
-     *   - {@link Ext.view.BoundList#maxHeight} - defaults to `300`
-     *   - {@link Ext.view.BoundList#resizable} - defaults to `false`
-     *   - {@link Ext.view.BoundList#shadow} - defaults to `'sides'`
-     *   - {@link Ext.view.BoundList#width} - defaults to `undefined` (automatically set to the width of the ComboBox
+     *   - {@link Ext.view.BoundList#cls cls} - defaults to empty
+     *   - {@link Ext.view.BoundList#emptyText emptyText} - defaults to empty string
+     *   - {@link Ext.view.BoundList#itemSelector itemSelector} - defaults to the value defined in BoundList
+     *   - {@link Ext.view.BoundList#loadingText loadingText} - defaults to `'Loading...'`
+     *   - {@link Ext.view.BoundList#minWidth minWidth} - defaults to `70`
+     *   - {@link Ext.view.BoundList#maxWidth maxWidth} - defaults to `undefined`
+     *   - {@link Ext.view.BoundList#maxHeight maxHeight} - defaults to `300`
+     *   - {@link Ext.view.BoundList#resizable resizable} - defaults to `false`
+     *   - {@link Ext.view.BoundList#shadow shadow} - defaults to `'sides'`
+     *   - {@link Ext.view.BoundList#width width} - defaults to `undefined` (automatically set to the width of the ComboBox
      *     field if {@link #matchFieldWidth} is true)
      */
 

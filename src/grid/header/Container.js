@@ -886,7 +886,7 @@ Ext.define('Ext.grid.header.Container', {
     getVisibleHeaderClosestToIndex: function(index) {
         var result = this.getHeaderAtIndex(index);
         if (result && result.hidden) {
-            result = result.next(':not([hidden])') || result.next(':not([hidden])');
+            result = result.next(':not([hidden])') || result.prev(':not([hidden])');
         }
         return result;
     },

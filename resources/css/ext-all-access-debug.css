@@ -5,18 +5,15 @@ Copyright (c) 2011-2012 Sencha Inc
 
 Contact:  http://www.sencha.com/contact
 
-GNU General Public License Usage
-This file may be used under the terms of the GNU General Public License version 3.0 as
-published by the Free Software Foundation and appearing in the file LICENSE included in the
-packaging of this file.
+Pre-release code in the Ext repository is intended for development purposes only and will
+not always be stable. 
 
-Please review the following information to ensure the GNU General Public License version 3.0
-requirements will be met: http://www.gnu.org/copyleft/gpl.html.
+Use of pre-release code is permitted with your application at your own risk under standard
+Ext license terms. Public redistribution is prohibited.
 
-If you are unsure which license is appropriate for your use, please contact the sales department
-at http://www.sencha.com/contact.
+For early licensing, please contact us at licensing@sencha.com
 
-Build date: 2012-04-20 14:10:47 (19f55ab932145a3443b228045fa80950dfeaf9cc)
+Build date: 2012-05-12 20:31:37 (0c4e02828abd5db4a2b0b2aa79030ddecedbb3f4)
 */
 /* line 3, ../sass/ext-all-access.scss */
 body {
@@ -4145,7 +4142,11 @@ browsers will do whacky things with it.
   font: normal 15px tahoma, arial, verdana, sans-serif;
   color: white; }
 
-/* line 11, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
+/* line 10, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
+.prefixform-item-hidden {
+  margin: 0; }
+
+/* line 15, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
 .x-form-text,
 textarea.x-form-field {
   padding: 1px 3px;
@@ -4155,21 +4156,21 @@ textarea.x-form-field {
   background-image: url('../../resources/themes/images/access/form/text-bg.gif');
   border-color: #737b8c; }
 
-/* line 27, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
+/* line 32, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
 .x-form-text {
   height: 20px;
-  line-height: 20px;
+  line-height: 17px;
   vertical-align: top; }
 
-/* line 34, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
+/* line 39, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
 .x-ie8m .x-form-text {
   line-height: 17px; }
 
-/* line 39, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
+/* line 44, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
 .x-border-box .x-form-text {
   height: 26px; }
 
-/* line 43, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
+/* line 48, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
 textarea.x-form-field {
   color: white;
   overflow: auto;
@@ -4180,20 +4181,20 @@ textarea.x-form-field {
   background-image: url('../../resources/themes/images/access/form/text-bg.gif');
   resize: none; }
 
-/* line 56, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
+/* line 61, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
 .x-border-box textarea.x-form-field {
   height: auto; }
 
-/* line 61, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
+/* line 66, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
 .x-safari.x-mac textarea.x-form-field {
   margin-bottom: -2px; }
 
-/* line 67, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
+/* line 72, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
 .x-form-focus,
 textarea.x-form-focus {
   border-color: #ff9c33; }
 
-/* line 72, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
+/* line 77, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
 .x-form-invalid-field,
 textarea.x-form-invalid-field {
   background-color: #15171a;
@@ -4202,19 +4203,19 @@ textarea.x-form-invalid-field {
   background-position: bottom;
   border-color: #cc3300; }
 
-/* line 82, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
+/* line 87, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
 .x-form-item {
   font: normal 15px tahoma, arial, verdana, sans-serif; }
 
-/* line 86, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
+/* line 91, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
 .x-form-empty-field, textarea.x-form-empty-field {
   color: gray; }
 
-/* line 91, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
-.x-webkit .x-form-empty-field {
-  line-height: 15px; }
-
 /* line 96, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
+.x-webkit .x-form-empty-field {
+  line-height: 17px; }
+
+/* line 101, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
 .x-form-display-field {
   padding-top: 3px; }
 
@@ -4228,27 +4229,27 @@ textarea.x-form-invalid-field {
 
         Since we can't specifically target a specific version of Windows via CSS, we default to fixing it the XP way, for now.
         */
-/* line 112, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
+/* line 117, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
 .x-quirks .x-ie9p .x-form-text,
 .x-ie7m .x-form-text {
   margin-top: -1px;
   margin-bottom: -1px; }
 
-/* line 117, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
+/* line 122, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
 .x-ie .x-form-file {
   height: 27px;
   line-height: 18px;
   vertical-align: middle; }
 
-/* line 126, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
+/* line 131, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
 .x-field-default-toolbar .x-form-text {
   height: 18px; }
 
-/* line 130, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
+/* line 135, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
 .x-border-box .x-field-default-toolbar .x-form-text {
   height: 24px; }
 
-/* line 134, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
+/* line 139, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
 .x-field-default-toolbar .x-form-item-label-left {
   padding-left: 4px; }
 

@@ -1,6 +1,4 @@
 /**
- * @class Ext.app.Controller
- *
  * Controllers are the glue that binds an application together. All they really do is listen for events (usually from
  * views) and take some action. Here's how we might create a Controller to manage Users:
  *
@@ -47,7 +45,7 @@
  * functions. The overall effect is that whenever any component that matches our selector fires a 'render' event, our
  * onPanelRendered function is called.
  *
- * <u>Using refs</u>
+ * ## Using refs
  *
  * One of the most useful parts of Controllers is the new ref system. These use the new {@link Ext.ComponentQuery} to
  * make it really easy to get references to Views on your page. Let's look at an example of this now:
@@ -98,7 +96,7 @@
  * your Controller as you go. For an example of real-world usage of Controllers see the Feed Viewer example in the
  * examples/app/feed-viewer folder in the SDK download.
  *
- * <u>Generated getter methods</u>
+ * ## Generated getter methods
  *
  * Refs aren't the only thing that generate convenient getter methods. Controllers often have to deal with Models and
  * Stores so the framework offers a couple of easy ways to get access to those too. Let's look at another example:
@@ -124,7 +122,7 @@
  * Of course, you could do anything in this function but in this case we just did something simple to demonstrate the
  * functionality.
  *
- * <u>Further Reading</u>
+ * ## Further Reading
  *
  * For more information about writing Ext JS 4 applications, please see the
  * [application architecture guide](#/guide/application_architecture). Also see the {@link Ext.app.Application} documentation.
@@ -154,14 +152,21 @@ Ext.define('Ext.app.Controller', {
      * 
      *     Ext.define("MyApp.controller.Foo", {
      *         extend: "Ext.app.Controller",
-     *         requires: ['MyApp.model.User', 'MyApp.model.Vehicle']
+     *         requires: ['MyApp.model.User', 'MyApp.model.Vehicle'],
+     *         getUserModel: function() {
+     *             return this.getModel("User");
+     *         },
+     *         getVehicleModel: function() {
+     *             return this.getModel("Vehicle");
+     *         }
      *     });
      * 
      */
 
     /**
      * @cfg {String[]} views
-     * Array of views to require from AppName.view namespace. For example:
+     * Array of views to require from AppName.view namespace and to generate getter methods for.
+     * For example:
      * 
      *     Ext.define("MyApp.controller.Foo", {
      *         extend: "Ext.app.Controller",
@@ -172,14 +177,21 @@ Ext.define('Ext.app.Controller', {
      * 
      *     Ext.define("MyApp.controller.Foo", {
      *         extend: "Ext.app.Controller",
-     *         requires: ['MyApp.view.List', 'MyApp.view.Detail']
+     *         requires: ['MyApp.view.List', 'MyApp.view.Detail'],
+     *         getListView: function() {
+     *             return this.getView("List");
+     *         },
+     *         getDetailView: function() {
+     *             return this.getView("Detail");
+     *         }
      *     });
-     * 
+     *
      */
 
     /**
      * @cfg {String[]} stores
-     * Array of stores to require from AppName.store namespace. For example:
+     * Array of stores to require from AppName.store namespace and to generate getter methods for.
+     * For example:
      * 
      *     Ext.define("MyApp.controller.Foo", {
      *         extend: "Ext.app.Controller",
@@ -191,8 +203,14 @@ Ext.define('Ext.app.Controller', {
      *     Ext.define("MyApp.controller.Foo", {
      *         extend: "Ext.app.Controller",
      *         requires: ['MyApp.store.Users', 'MyApp.store.Vehicles']
+     *         getUsersStore: function() {
+     *             return this.getView("Users");
+     *         },
+     *         getVehiclesStore: function() {
+     *             return this.getView("Vehicles");
+     *         }
      *     });
-     * 
+     *
      */
 
     /**

@@ -25,6 +25,12 @@ Ext.define('Ext.layout.component.FieldSet', {
 
     type: 'fieldset',
 
+    beforeLayoutCycle: function (ownerContext) {
+        if (ownerContext.target.collapsed) {
+            ownerContext.heightModel = this.sizeModels.shrinkWrap;
+        }
+    },
+
     /*beginLayout: function (ownerContext) {
         this.callParent(arguments);
 
@@ -44,7 +50,6 @@ Ext.define('Ext.layout.component.FieldSet', {
         // known contentHeight if we are collapsed:
         //
         if (target.collapsed) {
-            ownerContext.heightModel = this.sizeModels.shrinkWrap;
             ownerContext.setContentHeight(0);
 
             // If we are also shrinkWrap width, we must provide a contentWidth (since the

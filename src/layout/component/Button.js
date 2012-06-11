@@ -257,5 +257,15 @@ Ext.define('Ext.layout.component.Button', {
         }
 
         me.callParent(arguments);
+    },
+    
+    finishedLayout: function(){
+        var owner = this.owner;
+        this.callParent(arguments);
+        // Fixes issue EXTJSIV-5989. Looks like a browser repaint bug
+        // This hack can be removed once it is resolved.
+        if (Ext.isWebKit) {
+            owner.el.dom.offsetWidth;
+        }
     }
 });

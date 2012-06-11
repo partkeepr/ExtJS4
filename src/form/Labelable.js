@@ -282,8 +282,8 @@ Ext.define("Ext.form.Labelable", {
      * rendered and space to be reserved for it; this is useful if you want a field without a label to line up with
      * other labeled fields in the same form.
      *
-     * If you wish to unconditionall hide the label even if a non-empty fieldLabel is configured, then set the {@link
-     * #hideLabel} config to true.
+     * If you wish to unconditionall hide the label even if a non-empty fieldLabel is configured, then set the
+     * {@link #hideLabel} config to true.
      */
     hideEmptyLabel: true,
 
@@ -386,7 +386,9 @@ Ext.define("Ext.form.Labelable", {
         'labelAttrTpl'
     ],
 
-    labelableRenderProps: 'allowBlank,labelAlign,fieldBodyCls,baseBodyCls,clearCls,labelSeparator,msgTarget',
+    // This is an array to avoid a split on every call to Ext.copyTo
+    labelableRenderProps: [ 'allowBlank', 'id', 'labelAlign', 'fieldBodyCls', 'baseBodyCls',
+                            'clearCls', 'labelSeparator', 'msgTarget' ],
 
     /**
      * Performs initialization of this mixin. Component classes using this mixin should call this method during their

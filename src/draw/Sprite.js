@@ -322,7 +322,7 @@ Ext.define('Ext.draw.Sprite', {
     /**
      * Change the attributes of the sprite.
      * @param {Object} attrs attributes to be changed on the sprite.
-     * @param {Boolean} redraw Flag to immediatly draw the change.
+     * @param {Boolean} redraw Flag to immediately draw the change.
      * @return {Ext.draw.Sprite} this
      */
     setAttributes: function(attrs, redraw) {
@@ -458,7 +458,7 @@ Ext.define('Ext.draw.Sprite', {
 
     /**
      * Hides the sprite.
-     * @param {Boolean} redraw Flag to immediatly draw the change.
+     * @param {Boolean} redraw Flag to immediately draw the change.
      * @return {Ext.draw.Sprite} this
      */
     hide: function(redraw) {
@@ -470,7 +470,7 @@ Ext.define('Ext.draw.Sprite', {
 
     /**
      * Shows the sprite.
-     * @param {Boolean} redraw Flag to immediatly draw the change.
+     * @param {Boolean} redraw Flag to immediately draw the change.
      * @return {Ext.draw.Sprite} this
      */
     show: function(redraw) {

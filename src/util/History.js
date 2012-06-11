@@ -17,7 +17,7 @@ Ext.define('Ext.util.History', {
     },
 
     /**
-     * @cfg {Boolean} useTopWindow
+     * @property
      * True to use `window.top.location.hash` or false to use `window.location.hash`.
      */
     useTopWindow: true,

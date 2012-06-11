@@ -128,7 +128,7 @@ Ext.define('Ext.grid.feature.Grouping', {
     groupHeaderTpl: '{columnName}: {name}',
     
     /**
-     * @cfg {Number} depthToIndent
+     * @cfg {Number} [depthToIndent=17]
      * Number of pixels to indent per grouping level
      */
     depthToIndent: 17,
@@ -138,40 +138,40 @@ Ext.define('Ext.grid.feature.Grouping', {
 
     //<locale>
     /**
-     * @cfg
+     * @cfg {String} [groupByText="Group by this field"]
      * Text displayed in the grid header menu for grouping by header.
      */
-    groupByText : 'Group By This Field',
+    groupByText : 'Group by this field',
     //</locale>
     //<locale>
     /**
-     * @cfg
+     * @cfg {String} [showGroupsText="Show in groups"]
      * Text displayed in the grid header for enabling/disabling grouping.
      */
-    showGroupsText : 'Show in Groups',
+    showGroupsText : 'Show in groups',
     //</locale>
 
     /**
-     * @cfg
+     * @cfg {Boolean} [hideGroupedHeader=false]
      * True to hide the header that is currently grouped.
      */
     hideGroupedHeader : false,
 
     /**
-     * @cfg
+     * @cfg {Boolean} [startCollapsed=false]
      * True to start all groups collapsed.
      */
     startCollapsed : false,
 
     /**
-     * @cfg
+     * @cfg {Boolean} [enableGroupingMenu=true]
      * True to enable the grouping control in the header menu.
      */
     enableGroupingMenu : true,
 
     /**
-     * @cfg
-     * True  to allow the user to turn off grouping.
+     * @cfg {Boolean} [enableNoGroups=true]
+     * True to allow the user to turn off grouping.
      */
     enableNoGroups : true,
 
@@ -218,14 +218,14 @@ Ext.define('Ext.grid.feature.Grouping', {
     },
 
     refreshIf: function() {
+        var ownerCt = this.grid.ownerCt;
+            
         if (this.blockRefresh !== true) {
 
             // We are one side of a lockable grid, so refresh the locking view
-            if (this.grid.ownerCt && this.grid.ownerCt.lockable) {
-                this.grid.ownerCt.view.refresh();
-            }
-            // Refresh our view
-            else {
+            if (ownerCt && ownerCt.lockable) {
+                ownerCt.view.refresh();
+            } else {
                 this.view.refresh();
             }
         }
@@ -236,9 +236,9 @@ Ext.define('Ext.grid.feature.Grouping', {
         return [
             '<tpl if="typeof rows !== \'undefined\'">',
                 // group row tpl
-                '<tr id="{groupHeaderId}" class="' + Ext.baseCSSPrefix + 'grid-group-hd ' + (me.startCollapsed ? me.hdCollapsedCls : '') + ' {hdCollapsedCls}"><td class="' + Ext.baseCSSPrefix + 'grid-cell" colspan="' + parent.columns.length + '" {[this.indentByDepth(values)]}><div class="' + Ext.baseCSSPrefix + 'grid-cell-inner"><div class="' + Ext.baseCSSPrefix + 'grid-group-title">{collapsed}{[this.renderGroupHeaderTpl(values)]}</div></div></td></tr>',
+                '<tr id="{groupHeaderId}" class="' + Ext.baseCSSPrefix + 'grid-group-hd {hdCollapsedCls}"><td class="' + Ext.baseCSSPrefix + 'grid-cell" colspan="' + parent.columns.length + '" {[this.indentByDepth(values)]}><div class="' + Ext.baseCSSPrefix + 'grid-cell-inner"><div class="' + Ext.baseCSSPrefix + 'grid-group-title">{collapsed}{[this.renderGroupHeaderTpl(values)]}</div></div></td></tr>',
                 // this is the rowbody
-                '<tr id="{groupBodyId}" class="' + Ext.baseCSSPrefix + 'grid-group-body ' + (me.startCollapsed ? me.collapsedCls : '') + ' {collapsedCls}"><td colspan="' + parent.columns.length + '">{[this.recurse(values)]}</td></tr>',
+                '<tr id="{groupBodyId}" class="' + Ext.baseCSSPrefix + 'grid-group-body {collapsedCls}"><td colspan="' + parent.columns.length + '">{[this.recurse(values)]}</td></tr>',
             '</tpl>'
         ].join('');
     },
@@ -791,8 +791,18 @@ Ext.define('Ext.grid.feature.Grouping', {
     collectData: function(records, preppedRecords, startIndex, fullWidth, o) {
         var me    = this,
             store = me.view.store,
+            collapsedState = me.collapsedState,
+            collapseGroups,
             g,
             groups, gLen, group;
+            
+        if (me.startCollapsed) {
+            // If we start collapse, we'll set the state of the groups here
+            // and unset the flag so any subsequent expand/collapse is
+            // managed by the feature
+            me.startCollapsed = false;
+            collapseGroups = true;
+        }
 
         if (!me.disabled && store.isGrouped()) {
             groups = store.getGroups();
@@ -800,6 +810,10 @@ Ext.define('Ext.grid.feature.Grouping', {
 
             for (g = 0; g < gLen; g++) {
                 group = groups[g];
+                
+                if (collapseGroups) {
+                    collapsedState[group.name] = true;
+                }
 
                 me.getGroupRows(group, records, preppedRecords, fullWidth);
             }

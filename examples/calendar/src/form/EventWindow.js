@@ -33,6 +33,8 @@ Ext.define('Ext.calendar.form.EventWindow', {
                 name: Ext.calendar.data.EventMappings.Title.name,
                 fieldLabel: 'Title',
                 xtype: 'textfield',
+                allowBlank: false,
+                emptyText: 'Event Title',
                 anchor: '100%'
             },
             {
@@ -165,14 +167,6 @@ Ext.define('Ext.calendar.form.EventWindow', {
         this.dateRangeField = this.down('#date-range');
         this.calendarField = this.down('#calendar');
         this.deleteButton = this.down('#delete-btn');
-
-        this.titleField.isValid = function() {
-                                        var valid = this.getValue().length > 0;
-                                        if (!valid) {
-                                            this.focus();
-                                        }
-                                        return valid;
-                                    };
     },
     
     // private

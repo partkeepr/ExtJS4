@@ -5,18 +5,15 @@ Copyright (c) 2011-2012 Sencha Inc
 
 Contact:  http://www.sencha.com/contact
 
-GNU General Public License Usage
-This file may be used under the terms of the GNU General Public License version 3.0 as
-published by the Free Software Foundation and appearing in the file LICENSE included in the
-packaging of this file.
+Pre-release code in the Ext repository is intended for development purposes only and will
+not always be stable. 
 
-Please review the following information to ensure the GNU General Public License version 3.0
-requirements will be met: http://www.gnu.org/copyleft/gpl.html.
+Use of pre-release code is permitted with your application at your own risk under standard
+Ext license terms. Public redistribution is prohibited.
 
-If you are unsure which license is appropriate for your use, please contact the sales department
-at http://www.sencha.com/contact.
+For early licensing, please contact us at licensing@sencha.com
 
-Build date: 2012-04-20 14:10:47 (19f55ab932145a3443b228045fa80950dfeaf9cc)
+Build date: 2012-05-12 20:31:37 (0c4e02828abd5db4a2b0b2aa79030ddecedbb3f4)
 */
 
 
@@ -533,7 +530,7 @@ Ext.globalEval = Ext.global.execScript
 (function() {
 
 
-var version = '4.1.0', Version;
+var version = '4.1.1.0RC', Version;
     Ext.Version = Version = Ext.extend(Object, {
 
         
@@ -6161,7 +6158,7 @@ Ext.JSON = (new(function() {
         } else if (Ext.isDate(o)) {
             return Ext.JSON.encodeDate(o);
         } else if (Ext.isString(o)) {
-            return encodeString(o);
+            return Ext.JSON.encodeString(o);
         } else if (typeof o == "number") {
             
             return isFinite(o) ? String(o) : "null";
@@ -6206,7 +6203,7 @@ Ext.JSON = (new(function() {
             len = o.length,
             i;
         for (i = 0; i < len; i += 1) {
-            a.push(doEncode(o[i]), ',');
+            a.push(Ext.JSON.encodeValue(o[i]), ',');
         }
         
         a[a.length - 1] = ']';
@@ -6219,13 +6216,16 @@ Ext.JSON = (new(function() {
             i;
         for (i in o) {
             if (!useHasOwn || o.hasOwnProperty(i)) {
-                a.push(doEncode(i), ":", doEncode(o[i]), ',');
+                a.push(Ext.JSON.encodeValue(i), ":", Ext.JSON.encodeValue(o[i]), ',');
             }
         }
         
         a[a.length - 1] = '}';
         return a.join("");
     };
+    
+    
+    me.encodeString = encodeString;
 
     
     me.encodeValue = doEncode;
@@ -10865,6 +10865,7 @@ Ext.define('Ext.dom.AbstractElement', {
 }, function() {
     var AbstractElement = this;
 
+    
     Ext.getDetachedBody = function () {
         var detachedEl = AbstractElement.detachedBodyEl;
 
@@ -10877,6 +10878,7 @@ Ext.define('Ext.dom.AbstractElement', {
         return detachedEl;
     };
 
+    
     Ext.getElementById = function (id) {
         var el = document.getElementById(id),
             detachedBodyEl;

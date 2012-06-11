@@ -26,7 +26,7 @@ Ext.define('Ext.grid.plugin.Editing', {
 
     /**
      * @cfg {String} triggerEvent
-     * The event which triggers editing. Supercedes the {@link clicksToEdit} configuration. Maybe one of:
+     * The event which triggers editing. Supercedes the {@link #clicksToEdit} configuration. Maybe one of:
      *
      *  * cellclick
      *  * celldblclick

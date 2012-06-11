@@ -218,6 +218,8 @@ Ext.define('Ext.window.Window', {
     ariaRole: 'alertdialog',
 
     itemCls: Ext.baseCSSPrefix + 'window-item',
+    
+    initialAlphaNum: /^[a-z0-9]/,
 
     overlapHeader: true,
 
@@ -235,6 +237,9 @@ Ext.define('Ext.window.Window', {
     // private
     initComponent: function() {
         var me = this;
+        // Explicitly set frame to false, since alwaysFramed is
+        // true, we only want to lookup framing in a specific instance
+        me.frame = false;
         me.callParent();
         me.addEvents(
             /**
@@ -521,10 +526,15 @@ Ext.define('Ext.window.Window', {
             // String is ID or CQ selector
             else if (Ext.isString(defaultComp)) {
                 selector = defaultComp;
-                if (selector.substr(0, 1) !== '#') {
-                    selector = '#' + selector;
+                
+                // Try id/itemId match if selector begins with alphanumeric
+                if (selector.match(me.initialAlphaNum)) {
+                    result = me.down('#' + selector);
                 }
-                result = me.down(selector);
+                // If not found, use as selector
+                if (!result) {
+                    result = me.down(selector);
+                }
             }
             // Otherwise, if it's got a focus method, use it
             else if (defaultComp.focus) {

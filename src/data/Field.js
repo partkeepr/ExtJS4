@@ -92,6 +92,8 @@
 Ext.define('Ext.data.Field', {
     requires: ['Ext.data.Types', 'Ext.data.SortTypes'],
     alias: 'data.field',
+
+    isField: true,
     
     constructor : function(config) {
         if (Ext.isString(config)) {
@@ -119,13 +121,10 @@ Ext.define('Ext.data.Field', {
 
         // Reference this type's default converter if we did not recieve one in configuration.
         if (!config.hasOwnProperty('convert')) {
-            this.convert = this.type.convert;
-        }
-        
-        
-        // If the converter has been nulled out, and we have not been configured
-        // with a field-specific defaultValue, then coerce the inherited defaultValue into our data type.
-        else if (!this.convert && !config.hasOwnProperty('defaultValue')) {
+            this.convert = this.type.convert; // this may be undefined (e.g., AUTO)
+        } else if (!this.convert && this.type.convert && !config.hasOwnProperty('defaultValue')) {
+            // If the converter has been nulled out, and we have not been configured
+            // with a field-specific defaultValue, then coerce the inherited defaultValue into our data type.
             this.defaultValue = this.type.convert(this.defaultValue);
         }
     },

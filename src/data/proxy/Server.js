@@ -190,7 +190,7 @@ Ext.define('Ext.data.proxy.Server', {
         //copy any sorters, filters etc into the params so they can be sent over the wire
         params = Ext.applyIf(params, me.getParams(operation));
 
-        if (operation.id && !params.id) {
+        if (operation.id !== undefined && params.id === undefined) {
             params.id = operation.id;
         }
 

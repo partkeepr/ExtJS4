@@ -182,7 +182,7 @@ Ext.define('Ext.layout.Layout', {
     /**
      * This method is called after all layouts are complete and their calculations flushed
      * to the DOM. No further layouts will be run and this method is only called once per
-     * layout run. The base component layout caches {@link #lastComponentSize}.
+     * layout run. The base component layout caches `lastComponentSize`.
      * 
      * This is a write phase and DOM reads should be avoided if possible when overridding
      * this method.
@@ -565,7 +565,9 @@ Ext.define('Ext.layout.Layout', {
     }
 }, function () {
     var Layout = this,
-        sizeModels = {};
+        sizeModels = {},
+        sizeModelsArray = [],
+        i, j, n, pairs, sizeModel;
 
     Layout.prototype.sizeModels = Layout.sizeModels = sizeModels;
 
@@ -601,6 +603,14 @@ Ext.define('Ext.layout.Layout', {
         SizeModel[name] = sizeModels[name] = me;
 
         me.fixed = !(me.auto = me.natural || me.shrinkWrap);
+
+        /**
+         * @prop {Number} ordinal
+         * The 0-based ordinal for this `SizeModel` instance.
+         * @readonly
+         */
+        me.ordinal = sizeModelsArray.length;
+        sizeModelsArray.push(me);
     };
 
     Ext.layout.SizeModel = SizeModel;
@@ -758,4 +768,38 @@ Ext.define('Ext.layout.Layout', {
         constrained: true,
         names: { width: 'minWidth', height: 'minHeight' }
     });
+
+    for (i = 0, n = sizeModelsArray.length; i < n; ++i) {
+        sizeModel = sizeModelsArray[i];
+        /**
+         * An array of objects indexed by the {@link #ordinal} of a height `SizeModel` on
+         * a width `SizeModel` to yield an object describing both height and width size
+         * models.
+         * 
+         * Used like this:
+         *
+         *      widthModel.pairsByHeightOrdinal[heightModel.ordinal]
+         *
+         * This provides a reusable object equivalent to the following:
+         * 
+         *      {
+         *          width: widthModel,
+         *          height: heightModel
+         *      }
+         *
+         * @property {Object[]} pairsByHeightOrdinal
+         * @property {Ext.layout.SizeModel} pairsByHeightOrdinal.width The `SizeModel` for
+         * the width.
+         * @property {Ext.layout.SizeModel} pairsByHeightOrdinal.height The `SizeModel` for
+         * the height.
+         */
+        sizeModel.pairsByHeightOrdinal = pairs = [];
+
+        for (j = 0; j < n; ++j) {
+            pairs.push({
+                width: sizeModel,
+                height: sizeModelsArray[j]
+            });
+        }
+    }
 });

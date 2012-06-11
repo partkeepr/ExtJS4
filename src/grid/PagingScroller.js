@@ -92,7 +92,9 @@ Ext.define('Ext.grid.PagingScroller', {
 
         // If we need unbinding...
         if (me.view) {
-            me.view.el.un('scroll', me.onViewScroll, me); // un does not understand the element options
+            if (me.view.el) {
+                me.view.el.un('scroll', me.onViewScroll, me); // un does not understand the element options
+            }
             me.view.un(viewListeners);
             me.store.un(storeListeners);
             if (me.grid) {

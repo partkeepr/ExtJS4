@@ -154,7 +154,7 @@ Ext.define('Ext.view.Table', {
             destinationCellIdx = toIdx,
             colCount = me.getGridColumns().length,
             lastIdx = colCount - 1,
-            doFirstLastClasses = (me.firstCls || me.lastCls) && (toIdx == 0 || toIdx == colCount || fromIdx == 0 || fromIdx == lastIdx),
+            doFirstLastClasses = (me.firstCls || me.lastCls) && (toIdx === 0 || toIdx == colCount || fromIdx === 0 || fromIdx == lastIdx),
             i,
             j,
             rows, len, tr, headerRows;
@@ -763,7 +763,7 @@ Ext.define('Ext.view.Table', {
             columns, overItemCls,
             isHovered, row;
             
-        if (me.rendered) {
+        if (me.viewReady) {
             
             index = me.store.indexOf(record);
             columns = me.headerCt.getGridColumns();

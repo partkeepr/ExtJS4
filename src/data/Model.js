@@ -253,7 +253,8 @@ Ext.define('Ext.data.Model', {
 
                 validations = data.validations || [],
                 fields = data.fields || [],
-                associations = data.associations || [],
+                field,
+                associationsConfigs = data.associations || [],
                 addAssociations = function(items, type) {
                     var i = 0,
                         len,
@@ -270,7 +271,7 @@ Ext.define('Ext.data.Model', {
                             }
 
                             item.type = type;
-                            associations.push(item);
+                            associationsConfigs.push(item);
                         }
                     }
                 },
@@ -284,7 +285,7 @@ Ext.define('Ext.data.Model', {
                 superFields = superCls.fields,
                 superAssociations = superCls.associations,
 
-                association, i, ln,
+                associationConfig, i, ln,
                 dependencies = [],
                 idProperty = data.idProperty || cls.prototype.idProperty,
 
@@ -345,7 +346,8 @@ Ext.define('Ext.data.Model', {
             });  
 
             for (i = 0, ln = fields.length; i < ln; ++i) {
-                fieldsMixedCollection.add(new Ext.data.Field(fields[i]));
+                field = fields[i];
+                fieldsMixedCollection.add(field.isField ? field : new Ext.data.Field(field));
             }
             if (!fieldsMixedCollection.get(idProperty)) {
                 fieldsMixedCollection.add(new Ext.data.Field(idProperty));
@@ -374,11 +376,11 @@ Ext.define('Ext.data.Model', {
             delete data.hasOne;
 
             if (superAssociations) {
-                associations = superAssociations.items.concat(associations);
+                associationsConfigs = superAssociations.items.concat(associationsConfigs);
             }
 
-            for (i = 0, ln = associations.length; i < ln; ++i) {
-                dependencies.push('association.' + associations[i].type.toLowerCase());
+            for (i = 0, ln = associationsConfigs.length; i < ln; ++i) {
+                dependencies.push('association.' + associationsConfigs[i].type.toLowerCase());
             }
 
             // If we have not been supplied with a Proxy *instance*, then add the proxy type to our dependency list
@@ -389,18 +391,24 @@ Ext.define('Ext.data.Model', {
             Ext.require(dependencies, function() {
                 Ext.ModelManager.registerType(name, cls);
 
-                for (i = 0, ln = associations.length; i < ln; ++i) {
-                    association = associations[i];
-
-                    Ext.apply(association, {
-                        ownerModel: name,
-                        associatedModel: association.model
-                    });
-
-                    if (Ext.ModelManager.getModel(association.model) === undefined) {
-                        Ext.ModelManager.registerDeferredAssociation(association);
+                for (i = 0, ln = associationsConfigs.length; i < ln; ++i) {
+                    associationConfig = associationsConfigs[i];
+                    if (associationConfig.isAssociation) {
+                        associationConfig = Ext.applyIf({
+                            ownerModel: name,
+                            associatedModel: associationConfig.model
+                        }, associationConfig.initialConfig);
                     } else {
-                        associationsMixedCollection.add(Ext.data.association.Association.create(association));
+                        Ext.apply(associationConfig, {
+                            ownerModel: name,
+                            associatedModel: associationConfig.model
+                        });
+                    }
+
+                    if (Ext.ModelManager.getModel(associationConfig.model) === undefined) {
+                        Ext.ModelManager.registerDeferredAssociation(associationConfig);
+                    } else {
+                        associationsMixedCollection.add(Ext.data.association.Association.create(associationConfig));
                     }
                 }
 

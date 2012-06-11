@@ -106,7 +106,6 @@ Ext.define('Ext.layout.container.boxOverflow.Menu', {
         var me = this,
             layout = me.layout,
             names = layout.getNames(),
-            methodName = 'get' + names.widthCap,
             plan = ownerContext.state.boxPlan,
             posArgs = [null, null];
 
@@ -114,11 +113,11 @@ Ext.define('Ext.layout.container.boxOverflow.Menu', {
 
         // Center the menuTrigger button.
         // TODO: Should we emulate align: 'middle' like this, or should we 'stretchmax' the menuTrigger?
-        posArgs[names.heightIndex] = (plan.maxSize - me.menuTrigger['get' + names.heightCap]()) / 2;
+        posArgs[names.heightIndex] = (plan.maxSize - me.menuTrigger[names.getHeight]()) / 2;
         me.menuTrigger.setPosition.apply(me.menuTrigger, posArgs);
 
         return {
-            reservedSpace: me.menuTrigger[methodName]()
+            reservedSpace: me.menuTrigger[names.getWidth]()
         };
     },
 
@@ -133,6 +132,8 @@ Ext.define('Ext.layout.container.boxOverflow.Menu', {
         }
     },
 
+    _asLayoutRoot: { isRoot: true },
+
     /**
      * @private
      * Called by the layout, when it determines that there is no overflow.
@@ -145,7 +146,8 @@ Ext.define('Ext.layout.container.boxOverflow.Menu', {
             item,
             i = 0,
             length = items.length,
-            owner = me.layout.owner;
+            owner = me.layout.owner,
+            asLayoutRoot = me._asLayoutRoot;
 
         owner.suspendLayouts();
         me.captureChildElements();
@@ -159,7 +161,7 @@ Ext.define('Ext.layout.container.boxOverflow.Menu', {
             // owner component. We need just the button to be added to the layout run.
             item.suspendLayouts();
             item.show();
-            item.resumeLayouts({ isRoot: true });
+            item.resumeLayouts(asLayoutRoot);
         }
 
         items.length = 0;
@@ -189,7 +191,7 @@ Ext.define('Ext.layout.container.boxOverflow.Menu', {
         // we force just the button to be invalidated and added to the current run.
         menuTrigger.suspendLayouts();
         menuTrigger.show();
-        menuTrigger.resumeLayouts({ isRoot: true });
+        menuTrigger.resumeLayouts(me._asLayoutRoot);
 
         available -= me.menuTrigger.getWidth();
 

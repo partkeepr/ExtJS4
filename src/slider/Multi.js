@@ -308,7 +308,8 @@ Ext.define('Ext.slider.Multi', {
                 value       : value,
                 slider      : me,
                 index       : me.thumbs.length,
-                constrain   : me.constrainThumbs
+                constrain   : me.constrainThumbs,
+                disabled    : !!me.readOnly
             });
 
         me.thumbs.push(thumb);
@@ -812,6 +813,26 @@ Ext.define('Ext.slider.Multi', {
         me.clearInvalid();
         // delete here so we reset back to the original state
         delete me.wasValid;
+    },
+    
+    setReadOnly: function(readOnly){
+        var me = this,
+            thumbs = me.thumbs,
+            len = thumbs.length,
+            i = 0;
+            
+        me.callParent(arguments); 
+        readOnly = me.readOnly;
+        
+        for (; i < len; ++i) {
+            if (readOnly) {
+                thumbs[i].disable();
+            } else {
+                thumbs[i].enable();
+            }
+            
+        }
+           
     },
 
     // private

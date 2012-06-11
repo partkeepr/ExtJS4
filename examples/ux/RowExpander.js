@@ -175,27 +175,29 @@ Ext.define('Ext.ux.RowExpander', {
     },
 
     toggleRow: function(rowIdx) {
-        var rowNode = this.view.getNode(rowIdx),
+        var view = this.view,
+            rowNode = view.getNode(rowIdx),
             row = Ext.get(rowNode),
             nextBd = Ext.get(row).down(this.rowBodyTrSelector),
-            record = this.view.getRecord(rowNode),
+            record = view.getRecord(rowNode),
             grid = this.getCmp();
 
         if (row.hasCls(this.rowCollapsedCls)) {
             row.removeCls(this.rowCollapsedCls);
             nextBd.removeCls(this.rowBodyHiddenCls);
             this.recordsExpanded[record.internalId] = true;
-            this.view.fireEvent('expandbody', rowNode, record, nextBd.dom);
+            view.refreshSize();
+            view.fireEvent('expandbody', rowNode, record, nextBd.dom);
         } else {
             row.addCls(this.rowCollapsedCls);
             nextBd.addCls(this.rowBodyHiddenCls);
             this.recordsExpanded[record.internalId] = false;
-            this.view.fireEvent('collapsebody', rowNode, record, nextBd.dom);
+            view.refreshSize();
+            view.fireEvent('collapsebody', rowNode, record, nextBd.dom);
         }
     },
 
     onDblClick: function(view, cell, rowIdx, cellIndex, e) {
-
         this.toggleRow(rowIdx);
     },
 

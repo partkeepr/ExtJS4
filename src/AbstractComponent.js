@@ -45,6 +45,10 @@ Ext.define('Ext.AbstractComponent', {
 
         layoutSuspendCount: 0,
 
+        /**
+         * Cancels layout of a component.
+         * @param {Ext.Component} comp
+         */
         cancelLayout: function(comp) {
             var context = this.runningLayoutContext || this.pendingLayouts;
 
@@ -53,6 +57,11 @@ Ext.define('Ext.AbstractComponent', {
             }
         },
 
+        /**
+         * Performs all pending layouts that were sceduled while
+         * {@link Ext.AbstractComponent#suspendLayouts suspendLayouts} was in effect.
+         * @static
+         */
         flushLayouts: function () {
             var me = this,
                 context = me.pendingLayouts;
@@ -76,6 +85,15 @@ Ext.define('Ext.AbstractComponent', {
             }
         },
 
+        /**
+         * Resumes layout activity in the whole framework.
+         *
+         * {@link Ext#suspendLayouts} is alias of {@link Ext.AbstractComponent#suspendLayouts}.
+         *
+         * @param {Boolean} [flush=false] True to perform all the pending layouts. This can also be
+         * achieved by calling {@link Ext.AbstractComponent#flushLayouts flushLayouts} directly.
+         * @static
+         */
         resumeLayouts: function (flush) {
             if (this.layoutSuspendCount && ! --this.layoutSuspendCount) {
                 if (flush) {
@@ -84,10 +102,33 @@ Ext.define('Ext.AbstractComponent', {
             }
         },
 
+        /**
+         * Stops layouts from happening in the whole framework.
+         *
+         * It's useful to suspend the layout activity while updating multiple components and
+         * containers:
+         *
+         *     Ext.suspendLayouts();
+         *     // batch of updates...
+         *     Ext.resumeLayouts(true);
+         *
+         * {@link Ext#suspendLayouts} is alias of {@link Ext.AbstractComponent#suspendLayouts}.
+         *
+         * See also {@link Ext#batchLayouts} for more abstract way of doing this.
+         *
+         * @static
+         */
         suspendLayouts: function () {
             ++this.layoutSuspendCount;
         },
 
+        /**
+         * Updates layout of a component.
+         *
+         * @param {Ext.Component} comp The component to update.
+         * @param {Boolean} [defer=false] True to just queue the layout if this component.
+         * @static
+         */
         updateLayout: function (comp, defer) {
             var me = this,
                 running = me.runningLayoutContext,
@@ -114,7 +155,7 @@ Ext.define('Ext.AbstractComponent', {
      */
     isComponent: true,
 
-     /**
+    /**
      * @private
      */
     getAutoId: function() {
@@ -351,7 +392,7 @@ Ext.define('Ext.AbstractComponent', {
      *
      * When using this config, a call to render() is not required.
      *
-     * See `{@link #render}` also.
+     * See also: {@link #method-render}.
      */
 
     /**
@@ -663,7 +704,7 @@ Ext.define('Ext.AbstractComponent', {
      *
      * The specified HTML element is appended to the layout element of the component _after any configured
      * {@link #html HTML} has been inserted_, and so the document will not contain this element at the time
-     * the {@link #render} event is fired.
+     * the {@link #event-render} event is fired.
      *
      * The specified HTML element used will not participate in any **`{@link Ext.container.Container#layout layout}`**
      * scheme that the Component may use. It is just HTML. Layouts operate on child
@@ -677,7 +718,7 @@ Ext.define('Ext.AbstractComponent', {
      * @cfg {String/Object} [html='']
      * An HTML fragment, or a {@link Ext.DomHelper DomHelper} specification to use as the layout element content.
      * The HTML content is added after the component is rendered, so the document will not contain this HTML at the time
-     * the {@link #render} event is fired. This content is inserted into the body _before_ any configured {@link #contentEl}
+     * the {@link #event-render} event is fired. This content is inserted into the body _before_ any configured {@link #contentEl}
      * is appended.
      */
 
@@ -734,7 +775,7 @@ Ext.define('Ext.AbstractComponent', {
      * @cfg {Boolean/String/HTMLElement/Ext.Element} autoRender
      * This config is intended mainly for non-{@link #floating} Components which may or may not be shown. Instead of using
      * {@link #renderTo} in the configuration, and rendering upon construction, this allows a Component to render itself
-     * upon first _{@link #method-show}_. If {@link #floating} is true, the value of this config is omited as if it is `true`.
+     * upon first _{@link Ext.Component#method-show show}_. If {@link #floating} is true, the value of this config is omited as if it is `true`.
      *
      * Specify as `true` to have this Component render to the document body upon first show.
      *
@@ -912,7 +953,7 @@ Ext.define('Ext.AbstractComponent', {
             /**
              * @event beforerender
              * Fires before the component is {@link #rendered}. Return false from an event handler to stop the
-             * {@link #render}.
+             * {@link #method-render}.
              * @param {Ext.Component} this
              */
             'beforerender',
@@ -2666,7 +2707,7 @@ Ext.define('Ext.AbstractComponent', {
 
     /**
      * Returns true if layout is suspended for this component. This can come from direct
-     * suspension of this component's layout activity ({@link #suspendLayouts}) or if one
+     * suspension of this component's layout activity ({@link Ext.Container#suspendLayout}) or if one
      * of this component's containers is suspended.
      *
      * @return {Boolean} True layout of this component is suspended.
@@ -2733,21 +2774,27 @@ Ext.define('Ext.AbstractComponent', {
 
     /**
      * Returns an object that describes how this component's width and height are managed.
-     * These objects are shared and should not be modified.
+     * All of these objects are shared and should not be modified.
      *
      * @return {Object} The size model for this component.
-     * @return {Ext.layout.SizeModel} return.width The {@link Ext.layout.SizeModel size model} for the width.
-     * @return {Ext.layout.SizeModel} return.height The {@link Ext.layout.SizeModel size model} for the height.
+     * @return {Ext.layout.SizeModel} return.width The {@link Ext.layout.SizeModel size model}
+     * for the width.
+     * @return {Ext.layout.SizeModel} return.height The {@link Ext.layout.SizeModel size model}
+     * for the height.
      */
     getSizeModel: function (ownerCtSizeModel) {
         var me = this,
             models = Ext.layout.SizeModel,
-            ownerCtx = me.componentLayout.ownerContext,
+            ownerContext = me.componentLayout.ownerContext,
             hasWidth, hasHeight, heightModel, ownerLayout, policy, shrinkWrap, widthModel;
 
-        if (ownerCtx) {
-            widthModel = ownerCtx.widthModel;
-            heightModel = ownerCtx.heightModel;
+        if (ownerContext) {
+            // If we are in the middle of a running layout, always report the current,
+            // dynamic size model rather than recompute it. This is not (only) a time
+            // saving thing, but a correctness thing since we cannot get the right answer
+            // otherwise.
+            widthModel = ownerContext.widthModel;
+            heightModel = ownerContext.heightModel;
         }
 
         if (!widthModel || !heightModel) {
@@ -2821,10 +2868,9 @@ Ext.define('Ext.AbstractComponent', {
             }
         }
 
-        return {
-            width: widthModel,
-            height: heightModel
-        };
+        // We return one of the cached objects with the proper "width" and "height" as the
+        // sizeModels we have determined.
+        return widthModel.pairsByHeightOrdinal[heightModel.ordinal];
     },
 
     isDescendant: function(ancestor) {
@@ -2911,7 +2957,7 @@ Ext.define('Ext.AbstractComponent', {
     },
 
     /**
-     * Sets the left and top of the component. To set the page XY position instead, use {@link #setPagePosition}. This
+     * Sets the left and top of the component. To set the page XY position instead, use {@link Ext.Component#setPagePosition setPagePosition}. This
      * method fires the {@link #move} event.
      * @param {Number} left The new left
      * @param {Number} top The new top
@@ -3259,32 +3305,40 @@ Ext.define('Ext.AbstractComponent', {
         });
     }
 }, function() {
-    var abstractComponent = this;
+    var AbstractComponent = this;
 
-    abstractComponent.createAlias({
+    AbstractComponent.createAlias({
         on: 'addListener',
         prev: 'previousSibling',
         next: 'nextSibling'
     });
 
+    /**
+     * @inheritdoc Ext.AbstractComponent#resumeLayouts
+     * @member Ext
+     */
     Ext.resumeLayouts = function (flush) {
-        abstractComponent.resumeLayouts(flush);
-    };
-
-    Ext.suspendLayouts = function () {
-        abstractComponent.suspendLayouts();
+        AbstractComponent.resumeLayouts(flush);
     };
 
     /**
-     *
+     * @inheritdoc Ext.AbstractComponent#suspendLayouts
+     * @member Ext
+     */
+    Ext.suspendLayouts = function () {
+        AbstractComponent.suspendLayouts();
+    };
+
+    /**
      * Utility wrapper that suspends layouts of all components for the duration of a given function.
      * @param {Function} fn The function to execute.
-     * @param {Object} scope (Optional) The scope (`this` reference) in which the specified function is executed.
+     * @param {Object} [scope] The scope (`this` reference) in which the specified function is executed.
+     * @member Ext
      */
     Ext.batchLayouts = function(fn, scope) {
-        abstractComponent.suspendLayouts();
+        AbstractComponent.suspendLayouts();
         // Invoke the function
         fn.call(scope);
-        abstractComponent.resumeLayouts(true);
+        AbstractComponent.resumeLayouts(true);
     };
 });

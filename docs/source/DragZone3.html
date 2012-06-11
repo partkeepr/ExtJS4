@@ -23,7 +23,10 @@ Ext.define('Ext.view.DragZone', {
     containerScroll: false,
 
     constructor: function(config) {
-        var me = this;
+        var me = this,
+            view,
+            ownerCt,
+            el;
 
         Ext.apply(me, config);
 
@@ -43,7 +46,16 @@ Ext.define('Ext.view.DragZone', {
         // We use the View's parent element to drag from. Ideally, we would use the internal structure, but that
         // is transient; DataView's recreate the internal structure dynamically as data changes.
         // TODO: Ext 5.0 DragDrop must allow multiple DD objects to share the same element.
-        me.callParent([me.view.el.dom.parentNode]);
+        view = me.view;
+        ownerCt = view.ownerCt;
+        // We don't just grab the parent el, since the parent el may be
+        // some el injected by the layout
+        if (ownerCt) {
+            el = ownerCt.getTargetEl().dom;
+        } else {
+            el = view.el.dom.parentNode;
+        }
+        me.callParent([el]);
 
         me.ddel = Ext.get(document.createElement('div'));
         me.ddel.addCls(Ext.baseCSSPrefix + 'grid-dd-wrap');

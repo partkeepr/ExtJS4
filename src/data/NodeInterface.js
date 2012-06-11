@@ -167,7 +167,7 @@ Ext.define('Ext.data.NodeInterface', {
          */
         decorate: function(modelClass) {
             var idName, idType;
-
+            
             // get the reference to the model class, in case the argument was a string or a record
             if (typeof modelClass == 'string') {
                 modelClass = Ext.ModelManager.getModel(modelClass);
@@ -260,7 +260,8 @@ Ext.define('Ext.data.NodeInterface', {
                          * @param {Ext.data.NodeInterface} this This node
                          * @param {Ext.data.NodeInterface} node The removed node
                          * @param {Boolean} isMove `true` if the child node is being removed so it can be moved to another position in the tree.
-                         * (a side effect of calling {@link #appendChild} or {@link #insertBefore} with a node that already has a parentNode 
+                         * (a side effect of calling {@link Ext.data.NodeInterface#appendChild appendChild} or
+                         * {@link Ext.data.NodeInterface#insertBefore insertBefore} with a node that already has a parentNode)
                          */
                         "remove",
 
@@ -297,7 +298,8 @@ Ext.define('Ext.data.NodeInterface', {
                          * @param {Ext.data.NodeInterface} this This node
                          * @param {Ext.data.NodeInterface} node The child node to be removed
                          * @param {Boolean} isMove `true` if the child node is being removed so it can be moved to another position in the tree.
-                         * (a side effect of calling {@link #appendChild} or {@link #insertBefore} with a node that already has a parentNode 
+                         * (a side effect of calling {@link Ext.data.NodeInterface#appendChild appendChild} or
+                         * {@link Ext.data.NodeInterface#insertBefore insertBefore} with a node that already has a parentNode)
                          */
                         "beforeremove",
 
@@ -365,6 +367,19 @@ Ext.define('Ext.data.NodeInterface', {
                 createNode: function(node) {
                     if (Ext.isObject(node) && !node.isModel) {
                         node = Ext.ModelManager.create(node, this.modelName);
+                    }
+                    // The node may already decorated, but may not have been
+                    // so when the model constructor was called. If not,
+                    // setup defaults here
+                    if (!node.childNodes) {
+                        Ext.applyIf(node, {
+                            firstChild: null,
+                            lastChild: null,
+                            parentNode: null,
+                            previousSibling: null,
+                            nextSibling: null,
+                            childNodes: []
+                        });
                     }
                     return node;
                 },

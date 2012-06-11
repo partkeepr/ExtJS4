@@ -210,6 +210,7 @@ Ext.define('Ext.form.FieldSet', {
         }
         if (me.title || me.checkboxToggle || me.collapsible) {
             me.addCls(baseCls + '-with-legend');
+            me.legend = Ext.widget(me.createLegendCt())
         }
     },
 
@@ -365,10 +366,8 @@ Ext.define('Ext.form.FieldSet', {
             legend, tree;
 
         // Create the Legend component if needed
-        if (me.title || me.checkboxToggle || me.collapsible) {
-            me.legend = legend = Ext.widget(me.createLegendCt());
-
-            legend.ownerLayout.configureItem(legend);
+        if (me.legend) {
+            me.legend.ownerLayout.configureItem(me.legend);
             tree = me.legend.getRenderTree();
 
             Ext.DomHelper.generateMarkup(tree, out);

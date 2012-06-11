@@ -197,8 +197,8 @@ Ext.define('Ext.Component', {
      *
      * Components such as {@link Ext.window.Window Window}s and {@link Ext.menu.Menu Menu}s are floating by default.
      *
-     * Floating Components that are programatically {@link Ext.Component#render rendered} will register themselves with
-     * the global {@link Ext.WindowManager ZIndexManager}
+     * Floating Components that are programatically {@link Ext.Component#method-render rendered} will register
+     * themselves with the global {@link Ext.WindowManager ZIndexManager}
      *
      * ### Floating Components as child items of a Container
      *
@@ -246,7 +246,7 @@ Ext.define('Ext.Component', {
      * z-index stack.
      *
      * This defaults to the global {@link Ext.WindowManager ZIndexManager} for floating Components that are
-     * programatically {@link Ext.Component#render rendered}.
+     * programatically {@link Ext.Component#method-render rendered}.
      *
      * For {@link #floating} Components which are added to a Container, the ZIndexManager is acquired from the first
      * ancestor Container found which is floating. If no floating ancestor is found, the global {@link Ext.WindowManager ZIndexManager} is
@@ -260,7 +260,7 @@ Ext.define('Ext.Component', {
      * @property {Ext.Container} floatParent
      * Only present for {@link #floating} Components which were inserted as child items of Containers.
      *
-     * Floating Components that are programatically {@link Ext.Component#render rendered} will not have a `floatParent`
+     * Floating Components that are programatically {@link Ext.Component#method-render rendered} will not have a `floatParent`
      * property.
      *
      * For {@link #floating} Components which are child items of a Container, the floatParent will be the owning Container.
@@ -282,7 +282,7 @@ Ext.define('Ext.Component', {
      * a {@link Ext.ZIndexManager ZIndexManager} which provides z-indexing services for all its descendant floating
      * Components.
      *
-     * Floating Components that are programatically {@link Ext.Component#render rendered} will not have a `zIndexParent`
+     * Floating Components that are programatically {@link Ext.Component#method-render rendered} will not have a `zIndexParent`
      * property.
      *
      * For example, the dropdown {@link Ext.view.BoundList BoundList} of a ComboBox which is in a Window will have the
@@ -315,6 +315,26 @@ Ext.define('Ext.Component', {
      *             delegate: 'h1'
      *         }
      *     }).show();
+     */
+    
+    /**
+     * @cfg {Boolean} [formBind=false]
+     * When inside FormPanel, any component configured with `formBind: true` will
+     * be enabled/disabled depending on the validity state of the form.
+     * See {@link Ext.form.Panel} for more information and example.
+     */
+
+    /**
+     * @cfg {String} [region=undefined]
+     * Defines the region inside {@link Ext.layout.container.Border border layout}.
+     *
+     * Possible values:
+     *
+     * - center
+     * - north
+     * - south
+     * - east
+     * - west
      */
 
     hideMode: 'display',
@@ -799,18 +819,13 @@ Ext.define('Ext.Component', {
             return [el.getLeft(true), el.getTop(true)];
         }
 
-        // Use our previously set x and y properties if possible.
-        if (me.x !== undefined && me.y !== undefined) {
-            xy = [me.x, me.y];
-        } else {
-            xy = me.el.getXY();
+        xy = me.el.getXY();
 
-            // Floating Components in an ownerCt have to have their positions made relative
-            if (isContainedFloater) {
-                floatParentBox = me.floatParent.getTargetEl().getViewRegion();
-                xy[0] -= floatParentBox.left;
-                xy[1] -= floatParentBox.top;
-            }
+        // Floating Components in an ownerCt have to have their positions made relative
+        if (isContainedFloater) {
+            floatParentBox = me.floatParent.getTargetEl().getViewRegion();
+            xy[0] -= floatParentBox.left;
+            xy[1] -= floatParentBox.top;
         }
         return xy;
     },
