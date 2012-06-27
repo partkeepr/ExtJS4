@@ -127,20 +127,16 @@ Ext.define('Ext.view.BoundList', {
 
     /**
      * @private
-     * Boundlist-specific implementation of the up ComponentQuery method.
-     * This links first to the owning input field so that the FocusManager, when receiving notification of a hide event,
+     * Boundlist-specific implementation of the getBubbleTarget used by {@link Ext.AbstractComponent#up} method.
+     * This links to the owning input field so that the FocusManager, when receiving notification of a hide event,
      * can find a focusable parent.
      */
-    up: function(selector) {
-        var result = this.pickerField;
-        if (selector) {
-            for (; result; result = result.ownerCt) {
-                if (Ext.ComponentQuery.is(result, selector)) {
-                    return result;
-                }
-            }
-        }
-        return result;
+    getBubbleTarget: function() {
+        return this.pickerField;
+    },
+
+    getRefItems: function() {
+        return this.pagingToolbar ? [ this.pagingToolbar ] : [];
     },
 
     createPagingToolbar: function() {
@@ -148,7 +144,9 @@ Ext.define('Ext.view.BoundList', {
             id: this.id + '-paging-toolbar',
             pageSize: this.pageSize,
             store: this.store,
-            border: false
+            border: false,
+            ownerCt: this,
+            ownerLayout: this.getComponentLayout()
         });
     },
 
@@ -171,7 +169,7 @@ Ext.define('Ext.view.BoundList', {
         me.callParent();
         // The view removes the targetEl from the DOM before updating the template
         // Ensure the toolbar goes to the end
-        if (me.rendered && toolbar && !me.preserveScrollOnRefresh) {
+        if (me.rendered && toolbar && toolbar.rendered && !me.preserveScrollOnRefresh) {
             me.el.appendChild(toolbar.el);
         }  
     },

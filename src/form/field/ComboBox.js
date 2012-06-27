@@ -208,12 +208,12 @@ Ext.define('Ext.form.field.ComboBox', {
      */
     multiSelect: false,
 
+    //<locale>
     /**
      * @cfg {String} delimiter
      * The character(s) used to separate the {@link #displayField display values} of multiple selected items when
      * `{@link #multiSelect} = true`.
      */
-    //<locale>
     delimiter: ', ',
     //</locale>
 
@@ -670,8 +670,11 @@ Ext.define('Ext.form.field.ComboBox', {
 
     // invoked when a different store is bound to this combo
     // than the original
-    resetToDefault: function() {
-
+    resetToDefault: Ext.emptyFn,
+    
+    beforeReset: function() {
+        this.callParent();
+        this.clearFilter();    
     },
     
     onUnbindStore: function(store) {
@@ -679,6 +682,7 @@ Ext.define('Ext.form.field.ComboBox', {
         if (!store && picker) {
             picker.bindStore(null);
         }
+        this.clearFilter();
     },
     
     onBindStore: function(store, initial) {

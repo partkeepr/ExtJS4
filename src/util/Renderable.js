@@ -215,8 +215,8 @@ Ext.define('Ext.util.Renderable', {
     onBoxReady: Ext.emptyFn,
 
     /**
-     * Sets references to elements inside the component. This applies {@link Ext.AbstractComponent#renderSelectors renderSelectors}
-     * as well as {@link Ext.AbstractComponent#childEls childEls}.
+     * Sets references to elements inside the component. This applies {@link Ext.AbstractComponent#cfg-renderSelectors renderSelectors}
+     * as well as {@link Ext.AbstractComponent#cfg-childEls childEls}.
      * @private
      */
     applyRenderSelectors: function() {
@@ -466,7 +466,6 @@ Ext.define('Ext.util.Renderable', {
             frameInfo = me.getFrameInfo(),
             config = {
                 tag: 'div',
-                id: me.id,
                 tpl: frameInfo ? me.initFramingTpl(frameInfo.table) : me.initRenderTpl()
             },
             i, frameElNames, len, suffix, frameGenId;
@@ -480,6 +479,9 @@ Ext.define('Ext.util.Renderable', {
         } else {
             Ext.apply(config, autoEl); // harmless if !autoEl
         }
+
+        // It's important to assign the id here as an autoEl.id could have been (wrongly) applied and this would get things out of sync
+        config.id = me.id;
 
         if (config.tpl) {
             // Use the framingTpl as the main content creating template. It will call out to this.applyRenderTpl(out, values)
@@ -661,19 +663,26 @@ Ext.define('Ext.util.Renderable', {
             x = me.x,
             y = me.y,
             lastBox, width, height,
-            el = me.el;
+            el = me.el,
+            body = Ext.getBody().dom;
 
-        // After the container property has been collected, we can wrap the Component in a reset wraper if necessary
+        // Wrap this Component in a reset wraper if necessary
         if (Ext.scopeResetCSS && !me.ownerCt) {
             // If this component's el is the body element, we add the reset class to the html tag
-            if (el.dom == Ext.getBody().dom) {
+            if (el.dom === body) {
                 el.parent().addCls(Ext.resetCls);
             }
+            // Otherwise, we ensure that there is a wrapper which has the reset class
             else {
+                // Floaters rendered into the body can all be bumped into the common reset element
+                if (me.floating && me.el.dom.parentNode === body) {
+                    Ext.resetElement.appendChild(me.el);
+                }
                 // Else we wrap this element in an element that adds the reset class.
-                me.resetEl = el.wrap({
-                    cls: Ext.resetCls
-                });
+                else {
+                    // Wrap this Component's DOM with a reset structure as determined in EventManager's initExtCss closure.
+                    me.resetEl = el.wrap(Ext.resetElementSpec, false, Ext.supports.CSS3LinearGradient ? undefined : '*');
+                }
             }
         }
 
@@ -810,7 +819,7 @@ Ext.define('Ext.util.Renderable', {
         }
 
         if (comp.container.isDetachedBody) {
-            comp.container = body = Ext.getBody();
+            comp.container = body = Ext.resetElement;
             body.appendChild(comp.el.dom);
             if (runLayout) {
                 comp.updateLayout();
@@ -1037,7 +1046,7 @@ Ext.define('Ext.util.Renderable', {
      * This is because child item rendering takes place in a detached div which, being not part of the document, has no styling.
      */
     getStyleProxy: function(cls) {
-        var result = this.styleProxyEl || (Ext.AbstractComponent.prototype.styleProxyEl = Ext.getBody().createChild({
+        var result = this.styleProxyEl || (Ext.AbstractComponent.prototype.styleProxyEl = Ext.resetElement.createChild({
                 style: {
                     position: 'absolute',
                     top: '-10000px'

@@ -98,6 +98,7 @@ Ext.define('Ext.form.field.Text', {
      */
     growMax : 800,
 
+    //<locale>
     /**
      * @cfg {String} growAppend
      * A string that will be appended to the field's current value for the purposes of calculating the target field
@@ -105,7 +106,6 @@ Ext.define('Ext.form.field.Text', {
      * common fonts) to leave enough space for the next typed character and avoid the field value shifting before the
      * width is adjusted.
      */
-    //<locale>
     growAppend: 'W',
     //</locale>
 
@@ -117,7 +117,7 @@ Ext.define('Ext.form.field.Text', {
     /**
      * @cfg {RegExp} maskRe An input mask regular expression that will be used to filter keystrokes (character being
      * typed) that do not match.
-     * Note: It dose not filter characters already in the input.
+     * Note: It does not filter characters already in the input.
      */
 
     /**
@@ -161,11 +161,11 @@ Ext.define('Ext.form.field.Text', {
     minLengthText : 'The minimum length for this field is {0}',
     //</locale>
 
+    //<locale>
     /**
      * @cfg {String} maxLengthText
      * Error text to display if the **{@link #maxLength maximum length}** validation fails
      */
-    //<locale>
     maxLengthText : 'The maximum length for this field is {0}',
     //</locale>
 
@@ -174,11 +174,11 @@ Ext.define('Ext.form.field.Text', {
      * true to automatically select any existing field text when the field receives input focus
      */
 
+    //<locale>
     /**
      * @cfg {String} blankText
      * The error text to display if the **{@link #allowBlank}** validation fails
      */
-    //<locale>
     blankText : 'This field is required',
     //</locale>
 
@@ -581,7 +581,7 @@ Ext.define('Ext.form.field.Text', {
      *     If the `{@link #validator}` has not halted validation,
      *     basic validation proceeds as follows:
      *
-     *     - `{@link #allowBlank}` : (Invalid message = `{@link #emptyText}`)
+     *     - `{@link #allowBlank}` : (Invalid message = `{@link #blankText}`)
      *
      *         Depending on the configuration of `{@link #allowBlank}`, a
      *         blank field will cause validation to halt at this step and return

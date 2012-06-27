@@ -159,8 +159,8 @@ Ext.define('Ext.Shadow', {
             me.el.dom.style.filter = &quot;progid:DXImageTransform.Microsoft.alpha(opacity=&quot; + me.opacity + &quot;) progid:DXImageTransform.Microsoft.Blur(pixelradius=&quot; + (me.offset) + &quot;)&quot;;
         }
         me.realign(
-            target.getLeft(true),
-            target.getTop(true),
+            target.getLocalX(),
+            target.getLocalY(),
             target.dom.offsetWidth,
             target.dom.offsetHeight
         );

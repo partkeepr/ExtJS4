@@ -70,7 +70,7 @@ Ext.define('Ext.ux.CheckColumn', {
             mousedown = type == 'mousedown';
 
         if (mousedown || (key == e.ENTER || key == e.SPACE)) {
-            var record = view.panel.store.getAt(recordIndex),
+            var record = view.getRecordByRowIndex(recordIndex),
                 dataIndex = me.dataIndex,
                 checked = !record.get(dataIndex);
 

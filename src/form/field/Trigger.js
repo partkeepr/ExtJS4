@@ -79,6 +79,12 @@ Ext.define('Ext.form.field.Trigger', {
     triggerWrapCls: Ext.baseCSSPrefix + 'form-trigger-wrap',
 
     /**
+     * @cfg {String} [triggerWrapCls='x-form-trigger-noedit']
+     * The CSS class that is added to the text field when component is read-only or not editable.
+     */
+    triggerNoEditCls: Ext.baseCSSPrefix + 'trigger-noedit',
+
+    /**
      * @cfg {Boolean} hideTrigger
      * true to hide the trigger element and display only the base text field
      */
@@ -147,7 +153,7 @@ Ext.define('Ext.form.field.Trigger', {
             editable = me.editable !== false;
         
         return Ext.apply(data, {
-            editableCls: (readOnly || !editable) ? ' ' + Ext.baseCSSPrefix + 'trigger-noedit' : '',
+            editableCls: (readOnly || !editable) ? ' ' + me.triggerNoEditCls : '',
             readOnly: !editable || readOnly
         });  
     },
@@ -209,7 +215,7 @@ Ext.define('Ext.form.field.Trigger', {
             
         // Measure width of a trigger element.
         if (!me.triggerWidth) {
-            tempEl = Ext.getBody().createChild({
+            tempEl = Ext.resetElement.createChild({
                 style: 'position: absolute;', 
                 cls: Ext.baseCSSPrefix + 'form-trigger'
             });
@@ -301,7 +307,7 @@ Ext.define('Ext.form.field.Trigger', {
                 preventDefault: true,
                 handler: me.onTriggerWrapClick,
                 listeners: {
-                    mouseup: me.onTriggerWrapMousup,
+                    mouseup: me.onTriggerWrapMouseup,
                     scope: me
                 },
                 scope: me
@@ -309,7 +315,7 @@ Ext.define('Ext.form.field.Trigger', {
         } else {
             me.mon(triggerWrap, {
                 click: me.onTriggerWrapClick,
-                mouseup: me.onTriggerWrapMousup,
+                mouseup: me.onTriggerWrapMouseup,
                 scope: me
             });
         }
@@ -443,7 +449,7 @@ Ext.define('Ext.form.field.Trigger', {
     // private
     // Handle trigger mouse up gesture. To be implemented in subclasses.
     // Currently the Spinner subclass refocuses the input element upon end of spin.
-    onTriggerWrapMousup: Ext.emptyFn,
+    onTriggerWrapMouseup: Ext.emptyFn,
 
     /**
      * @method onTriggerClick

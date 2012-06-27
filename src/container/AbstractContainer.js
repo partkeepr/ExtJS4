@@ -721,11 +721,17 @@ Ext.define('Ext.container.AbstractContainer', {
 
         autoDestroy = autoDestroy === true || (autoDestroy !== false && me.autoDestroy);
         me.items.remove(component);
-        component.onRemoved(destroying);
 
+        // Inform ownerLayout of removal before deleting the ownerLayout & ownerCt references in the onRemoved call
         if (hasLayout) {
-            layout.onRemove(component);
+            // Removing a component from a running layout has to cancel the layout
+            if (layout.running) {
+                Ext.AbstractComponent.cancelLayout(component, destroying);
+            }
+            layout.onRemove(component, destroying);
         }
+
+        component.onRemoved(destroying);
 
         me.onRemove(component, destroying);
 
@@ -999,6 +1005,8 @@ Ext.define('Ext.container.AbstractContainer', {
                 item.enable();
             }
         }
+
+        return this;
     },
 
     // Inherit docs
@@ -1019,6 +1027,8 @@ Ext.define('Ext.container.AbstractContainer', {
                 item.resetDisable = true;
             }
         }
+
+        return this;
     },
     
     /**

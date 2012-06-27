@@ -1,7 +1,4 @@
 /**
- * @class Ext.chart.axis.Time
- * @extends Ext.chart.axis.Axis
- *
  * A type of axis whose units are measured in time values. Use this axis
  * for listing dates that you will want to group or dynamically change.
  * If you just want to display dates as categories then use the
@@ -15,8 +12,6 @@
  *         fields: 'date',
  *         title: 'Day',
  *         dateFormat: 'M d',
- *         groupBy: 'year,month,day',
- *         aggregateOp: 'sum',
  *
  *         constrain: true,
  *         fromDate: new Date('1/1/11'),

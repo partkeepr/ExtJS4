@@ -131,7 +131,13 @@ Ext.define('Ext.ux.form.MultiSelect', {
      */
     
     ignoreSelectChange: 0,
-    
+
+<span id='Ext-ux-form-MultiSelect-cfg-listConfig'>    /**
+</span>     * @cfg {Object} listConfig
+     * An optional set of configuration properties that will be passed to the {@link Ext.view.BoundList}'s constructor.
+     * Any configuration that is valid for BoundList can be included.
+     */
+
     initComponent: function(){
         var me = this;
 
@@ -157,13 +163,13 @@ Ext.define('Ext.ux.form.MultiSelect', {
     setupItems: function() {
         var me = this;
         
-        me.boundList = Ext.create('Ext.view.BoundList', {
+        me.boundList = Ext.create('Ext.view.BoundList', Ext.apply({
             deferInitialRefresh: false,
             multiSelect: true,
             store: me.store,
             displayField: me.displayField,
             disabled: me.disabled
-        });
+        }, me.listConfig));
         
         me.boundList.getSelectionModel().on('selectionchange', me.onSelectChange, me);
         return {

@@ -49,6 +49,13 @@ Ext.define('Ext.data.proxy.Server', {
     groupParam: 'group',
 
     /**
+     * @cfg {String} groupDirectionParam
+     * The name of the direction parameter to send in a request. **This is only used when simpleGroupMode is set to
+     * true.** Defaults to 'groupDir'.
+     */
+    groupDirectionParam: 'groupDir',
+
+    /**
      * @cfg {String} sortParam
      * The name of the 'sort' parameter to send in a request. Defaults to 'sort'. Set this to undefined if you don't
      * want to send a sort parameter.
@@ -72,10 +79,18 @@ Ext.define('Ext.data.proxy.Server', {
     /**
      * @cfg {Boolean} simpleSortMode
      * Enabling simpleSortMode in conjunction with remoteSort will only send one sort property and a direction when a
-     * remote sort is requested. The directionParam and sortParam will be sent with the property name and either 'ASC'
-     * or 'DESC'.
+     * remote sort is requested. The {@link #directionParam} and {@link #sortParam} will be sent with the property name
+     * and either 'ASC' or 'DESC'.
      */
     simpleSortMode: false,
+
+    /**
+     * @cfg {Boolean} simpleGroupMode
+     * Enabling simpleGroupMode in conjunction with remoteGroup will only send one group property and a direction when a
+     * remote group is requested. The {@link #groupDirectionParam} and {@link #groupParam} will be sent with the property name and either 'ASC'
+     * or 'DESC'.
+     */
+    simpleGroupMode: false,
 
     /**
      * @cfg {Boolean} noCache
@@ -349,13 +364,13 @@ Ext.define('Ext.data.proxy.Server', {
             page = operation.page,
             start = operation.start,
             limit = operation.limit,
-
             simpleSortMode = me.simpleSortMode,
-
+            simpleGroupMode = me.simpleGroupMode,
             pageParam = me.pageParam,
             startParam = me.startParam,
             limitParam = me.limitParam,
             groupParam = me.groupParam,
+            groupDirectionParam = me.groupDirectionParam,
             sortParam = me.sortParam,
             filterParam = me.filterParam,
             directionParam = me.directionParam;
@@ -374,7 +389,12 @@ Ext.define('Ext.data.proxy.Server', {
 
         if (groupParam && groupers && groupers.length > 0) {
             // Grouper is a subclass of sorter, so we can just use the sorter method
-            params[groupParam] = me.encodeSorters(groupers);
+            if (simpleGroupMode) {
+                params[groupParam] = groupers[0].property;
+                params[groupDirectionParam] = groupers[0].direction || 'ASC';
+            } else {
+                params[groupParam] = me.encodeSorters(groupers);
+            }
         }
 
         if (sortParam && sorters && sorters.length > 0) {
@@ -450,6 +470,8 @@ Ext.define('Ext.data.proxy.Server', {
      * Optional callback function which can be used to clean up after a request has been completed.
      * @param {Ext.data.Request} request The Request object
      * @param {Boolean} success True if the request was successful
+     * @protected
+     * @template
      * @method
      */
     afterRequest: Ext.emptyFn,

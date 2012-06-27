@@ -45,7 +45,6 @@ Ext.define('Ext.tree.Panel', {
     deferRowRender: false,
 
     /**
-     * @private
      * @cfg {Boolean} rowLines
      * False so that rows are not separated by lines.
      */
@@ -202,18 +201,18 @@ Ext.define('Ext.tree.Panel', {
         me.relayEvents(me.store, [
             /**
              * @event beforeload
-             * @inheritdoc Ext.data.Store#beforeload
+             * @inheritdoc Ext.data.TreeStore#beforeload
              */
             'beforeload',
 
             /**
              * @event load
-             * @inheritdoc Ext.data.Store#load
+             * @inheritdoc Ext.data.TreeStore#load
              */
             'load'
         ]);
 
-        me.store.on({
+        me.mon(me.store, {
             /**
              * @event itemappend
              * @inheritdoc Ext.data.TreeStore#append

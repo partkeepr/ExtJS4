@@ -59,7 +59,7 @@ Ext.define('Ext.layout.component.Dock', {
             oldBorders = me.borders,
             opposites = me.dockOpposites,
             currentGeneration = owner.dockedItems.generation,
-            i, ln, item, dock, side,
+            i, ln, item, dock, side, borderItem,
             collapsed = me.collapsed;
 
         if (me.initializedBorders == currentGeneration || (owner.border && !owner.manageBodyBorders)) {
@@ -108,7 +108,10 @@ Ext.define('Ext.layout.component.Dock', {
                     ln = oldBorders[side].length;
                     if (!owner.manageBodyBorders) {
                         for (i = 0; i < ln; i++) {
-                            oldBorders[side][i].removeCls(Ext.baseCSSPrefix + 'docked-noborder-' + side);
+                            borderItem = oldBorders[side][i];
+                            if (!borderItem.isDestroyed) {
+                                borderItem.removeCls(Ext.baseCSSPrefix + 'docked-noborder-' + side);
+                            }
                         }
                         if (!oldBorders[side].satisfied && !owner.bodyBorder) {
                             owner.removeBodyCls(Ext.baseCSSPrefix + 'docked-noborder-' + side);
@@ -206,12 +209,14 @@ Ext.define('Ext.layout.component.Dock', {
 
         for (i = 0; i < dockedItemCount; i++) {
             item = docked[i];
-            itemContext = layoutContext.getCmp(item);
-            itemContext.dockedAt = { x: 0, y: 0 };
-            itemContext.offsets = offsets = Ext.Element.parseBox(item.offsets || {});
-            offsets.width = offsets.left + offsets.right;
-            offsets.height = offsets.top + offsets.bottom;
-            dockedItems.push(itemContext);
+            if (item.rendered) {
+                itemContext = layoutContext.getCmp(item);
+                itemContext.dockedAt = { x: 0, y: 0 };
+                itemContext.offsets = offsets = Ext.Element.parseBox(item.offsets || {});
+                offsets.width = offsets.left + offsets.right;
+                offsets.height = offsets.top + offsets.bottom;
+                dockedItems.push(itemContext);
+            }
         }
 
         ownerContext.bodyContext = ownerContext.getEl('body');
@@ -800,13 +805,14 @@ Ext.define('Ext.layout.component.Dock', {
      */
     getDockedItems: function(order, beforeBody) {
         var me = this,
-            all = me.owner.dockedItems.items,
+            renderedOnly = (order === 'visual'),
+            all = renderedOnly ? Ext.ComponentQuery.query('[rendered]', me.owner.dockedItems.items) : me.owner.dockedItems.items,
             sort = all && all.length && order !== false,
             renderOrder,
             dock, dockedItems, i, isBefore, length;
 
         if (beforeBody == null) {
-            dockedItems = sort ? all.slice() : all;
+            dockedItems = sort && !renderedOnly ? all.slice() : all;
         } else {
             dockedItems = [];
 
@@ -935,7 +941,6 @@ Ext.define('Ext.layout.component.Dock', {
             dockedItemCount = items.length,
             itemIndex = 0,
             correctPosition = 0,
-            item,
             staticNodeCount = 0,
             targetNodes = me.getRenderTarget().dom.childNodes,
             targetChildCount = targetNodes.length,

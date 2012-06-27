@@ -59,7 +59,7 @@
  *
  *     Option    Default   Description
  *     --------- --------  ---------------------------------------------
- *     {@link Ext.fx.Anim#duration duration}  .35       The duration of the animation in seconds
+ *     {@link Ext.fx.Anim#duration duration}  350       The duration of the animation in milliseconds
  *     {@link Ext.fx.Anim#easing easing}    easeOut   The easing method
  *     {@link Ext.fx.Anim#callback callback}  none      A function to execute when the anim completes
  *     {@link Ext.fx.Anim#scope scope}     this      The scope (this) of the callback function
@@ -68,7 +68,7 @@
  *
  *     // Element animation options object
  *     var opt = {
- *         {@link Ext.fx.Anim#duration duration}: 1,
+ *         {@link Ext.fx.Anim#duration duration}: 1000,
  *         {@link Ext.fx.Anim#easing easing}: 'elasticIn',
  *         {@link Ext.fx.Anim#callback callback}: this.foo,
  *         {@link Ext.fx.Anim#scope scope}: this
@@ -1301,7 +1301,16 @@ var HIDDEN = 'hidden',
          */
         getScopeParent: function() {
             var parent = this.dom.parentNode;
-            return Ext.scopeResetCSS ? parent.parentNode : parent;
+            if (Ext.scopeResetCSS) {
+                // If it's a normal reset, we will be wrapped in a single x-reset element, so grab the parent
+                parent = parent.parentNode;
+                if (!Ext.supports.CSS3LinearGradient || !Ext.supports.CSS3BorderRadius) {
+                    // In the cases where we have nbr or nlg, it will be wrapped in a second element,
+                    // so we need to go and get the parent again.
+                    parent = parent.parentNode;
+                }
+            }
+            return parent;
         },
 
 <span id='Ext-dom-Element-method-needsTabIndex'>        /**

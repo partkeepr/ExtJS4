@@ -36,17 +36,17 @@ Ext.define('Ext.selection.Model', {
     allowDeselect: false,
 
     /**
-     * @property {Ext.util.MixedCollection} selected
+     * @property {Ext.util.MixedCollection} [selected=undefined]
      * A MixedCollection that maintains all of the currently selected records.
      * @readonly
      */
     selected: null,
 
     /**
+     * @cfg {Boolean} pruneRemoved
      * Prune records when they are removed from the store from the selection.
      * This is a private flag. For an example of its usage, take a look at
      * Ext.selection.TreeModel.
-     * @private
      */
     pruneRemoved: true,
 
@@ -519,20 +519,26 @@ Ext.define('Ext.selection.Model', {
 
     refresh: function() {
         var me = this,
+            store = me.store,
             toBeSelected = [],
             oldSelections = me.getSelection(),
             len = oldSelections.length,
             selection,
             change,
             i = 0,
-            lastFocused = this.getLastFocused();
+            lastFocused = me.getLastFocused();
+
+        // Not been bound yet.
+        if (!store) {
+            return;
+        }
 
         // check to make sure that there are no records
         // missing after the refresh was triggered, prune
         // them from what is to be selected if so
         for (; i < len; i++) {
             selection = oldSelections[i];
-            if (!this.pruneRemoved || me.store.indexOf(selection) !== -1) {
+            if (!me.pruneRemoved || store.indexOf(selection) !== -1) {
                 toBeSelected.push(selection);
             }
         }
@@ -545,9 +551,9 @@ Ext.define('Ext.selection.Model', {
 
         me.clearSelections();
 
-        if (me.store.indexOf(lastFocused) !== -1) {
+        if (store.indexOf(lastFocused) !== -1) {
             // restore the last focus but supress restoring focus
-            this.setLastFocused(lastFocused, true);
+            me.setLastFocused(lastFocused, true);
         }
 
         if (toBeSelected.length) {
@@ -571,9 +577,7 @@ Ext.define('Ext.selection.Model', {
     },
 
     // when a record is added to a store
-    onStoreAdd: function() {
-
-    },
+    onStoreAdd: Ext.emptyFn,
 
     // when a store is cleared remove all selections
     // (if there were any)
@@ -615,14 +619,10 @@ Ext.define('Ext.selection.Model', {
     },
 
     // cleanup.
-    destroy: function() {
-
-    },
+    destroy: Ext.emptyFn,
 
     // if records are updated
-    onStoreUpdate: function() {
-
-    },
+    onStoreUpdate: Ext.emptyFn,
 
     // @abstract
     onSelectChange: function(record, isSelected, suppressEvent) {
@@ -635,12 +635,12 @@ Ext.define('Ext.selection.Model', {
     },
 
     // @abstract
-    onEditorKey: function(field, e) {
-
-    },
+    onEditorKey: Ext.emptyFn,
 
     // @abstract
-    bindComponent: function(cmp) {
+    bindComponent: Ext.emptyFn,
 
-    }
+    // @abstract
+    beforeViewRender: Ext.emptyFn
+
 });

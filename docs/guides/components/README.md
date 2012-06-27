@@ -309,7 +309,7 @@ Usage:
         height: 200,
         renderTo: Ext.getBody(),
         items: [ image ]
-    })
+    });
 
     image.on('load', function() {
         console.log('image loaded: ', image.getSrc());

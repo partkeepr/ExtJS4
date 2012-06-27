@@ -52,6 +52,8 @@ Ext.define('Ext.view.View', {
     alternateClassName: 'Ext.DataView',
     alias: 'widget.dataview',
 
+    deferHighlight: (Ext.isIE6 || Ext.isIE7) ? 100 : 0,
+
     inheritableStatics: {
         EventMap: {
             mousedown: 'MouseDown',
@@ -65,6 +67,15 @@ Ext.define('Ext.view.View', {
             mouseleave: 'MouseLeave',
             keydown: 'KeyDown',
             focus: 'Focus'
+        }
+    },
+
+    initComponent: function() {
+        var me = this;
+        me.callParent();
+        if (me.deferHighlight){
+            me.setHighlightedItem =
+                Ext.Function.createBuffered(me.setHighlightedItem, me.deferHighlight, me);
         }
     },
 
@@ -337,20 +348,35 @@ Ext.define('Ext.view.View', {
             'containerkeydown',
 
             /**
-             * @event selectionchange
-             * Fires when the selected nodes change. Relayed event from the underlying selection model.
-             * @param {Ext.view.View} this
-             * @param {HTMLElement[]} selections Array of the selected nodes
+             * @event
+             * @inheritdoc Ext.selection.DataViewModel#selectionchange
              */
             'selectionchange',
             /**
-             * @event beforeselect
-             * Fires before a selection is made. If any handlers return false, the selection is cancelled.
-             * @param {Ext.view.View} this
-             * @param {HTMLElement} node The node to be selected
-             * @param {HTMLElement[]} selections Array of currently selected nodes
+             * @event
+             * @inheritdoc Ext.selection.DataViewModel#beforeselect
              */
             'beforeselect',
+            /**
+             * @event
+             * @inheritdoc Ext.selection.DataViewModel#beforedeselect
+             */
+            'beforedeselect',
+            /**
+             * @event
+             * @inheritdoc Ext.selection.DataViewModel#select
+             */
+            'select',
+            /**
+             * @event
+             * @inheritdoc Ext.selection.DataViewModel#deselect
+             */
+            'deselect',
+            /**
+             * @event
+             * @inheritdoc Ext.selection.DataViewModel#focuschange
+             */
+            'focuschange',
             
             /**
              * @event highlightitem
@@ -581,6 +607,27 @@ Ext.define('Ext.view.View', {
     onBeforeContainerContextMenu: Ext.emptyFn,
     onBeforeContainerKeyDown: Ext.emptyFn,
 
+    //private
+    setHighlightedItem: function(item){
+        var me = this,
+            highlighted = me.highlightedItem;
+
+        if (highlighted != item){
+            if (highlighted) {
+                Ext.fly(highlighted).removeCls(me.overItemCls);
+                me.fireEvent('unhighlightitem', me, highlighted);
+            }
+
+            me.highlightedItem = item;
+
+            if (item) {
+                //console.log(item.viewIndex);
+                Ext.fly(item).addCls(me.overItemCls);
+                me.fireEvent('highlightitem', me, item);
+            }
+        }
+    },
+
     /**
      * Highlights a given item in the View. This is called by the mouseover handler if {@link #overItemCls}
      * and {@link #trackOver} are configured, but can also be called manually by other code, for instance to
@@ -588,25 +635,14 @@ Ext.define('Ext.view.View', {
      * @param {HTMLElement} item The item to highlight
      */
     highlightItem: function(item) {
-        var me = this;
-        me.clearHighlight();
-        me.highlightedItem = item;
-        Ext.fly(item).addCls(me.overItemCls);
-        me.fireEvent('highlightitem', me, item);
+        this.setHighlightedItem(item);
     },
 
     /**
      * Un-highlights the currently highlighted item, if any.
      */
     clearHighlight: function() {
-        var me = this,
-            highlighted = me.highlightedItem;
-
-        if (highlighted) {
-            Ext.fly(highlighted).removeCls(me.overItemCls);
-            me.fireEvent('unhighlightitem', me, highlighted);
-            delete me.highlightedItem;
-        }
+        this.setHighlightedItem(undefined);
     },
     
     onUpdate: function(store, record){

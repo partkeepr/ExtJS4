@@ -168,9 +168,6 @@ Ext.onReady(function() {
             name: 'St Michael\'s Alley',
             cuisine: 'Californian'
         },{
-            name: 'Cafe Renzo',
-            cuisine: 'Italian'
-        },{
             name: 'Osteria',
             cuisine: 'Italian'
         },{
@@ -214,17 +211,54 @@ Ext.onReady(function() {
             cuisine: 'Chinese'
         }],
         listeners: {
-            // Clear grouping button only valid if the store is grouped
-            groupchange: function() {
-                grid.down('[text=Clear Grouping]').setDisabled(!restaurants.isGrouped());
+            groupchange: function(store, groupers) {
+                var grouped = restaurants.isGrouped(),
+                    groupBy = groupers.items[0] ? groupers.items[0].property : '',
+                    toggleMenuItems, len, i = 0;
+
+                // Clear grouping button only valid if the store is grouped
+                grid.down('[text=Clear Grouping]').setDisabled(!grouped);
+                
+                // Sync state of group toggle checkboxes
+                if (grouped && groupBy === 'cuisine') {
+                    toggleMenuItems = grid.down('button[text=Toggle groups...]').menu.items.items;
+                    for (len = toggleMenuItems.length; i < len; i++) {
+                        toggleMenuItems[i].setChecked(groupingFeature.isExpanded(toggleMenuItems[i].text));
+                    }
+                    grid.down('[text=Toggle groups...]').enable();
+                } else {
+                    grid.down('[text=Toggle groups...]').disable();
+                }
             }
         }
     });
-    
-    var groupingFeature = Ext.create('Ext.grid.feature.Grouping',{
-        groupHeaderTpl: 'Cuisine: {name} ({rows.length} Item{[values.rows.length > 1 ? "s" : ""]})',
-        hideGroupedHeader: true
-    });
+
+    var groupingFeature = Ext.create('Ext.grid.feature.Grouping', {
+            groupHeaderTpl: '{columnName}: {name} ({rows.length} Item{[values.rows.length > 1 ? "s" : ""]})',
+            hideGroupedHeader: true,
+            startCollapsed: true,
+            id: 'restaurantGrouping'
+        }),
+        groups = restaurants.getGroups(),
+        len = groups.length, i = 0,
+        toggleMenu = [],
+        toggleGroup = function(item) {
+            var groupName = item.text;
+            if (item.checked) {
+                groupingFeature.expand(groupName, true);
+            } else {
+                groupingFeature.collapse(groupName, true);
+            }
+        };
+
+    // Create checkbox menu items to toggle associated groupd
+    for (; i < len; i++) {
+        toggleMenu[i] = {
+            xtype: 'menucheckitem',
+            text: groups[i].name,
+            handler: toggleGroup
+        }
+    }
 
     var grid = Ext.create('Ext.grid.Panel', {
         renderTo: Ext.getBody(),
@@ -237,6 +271,26 @@ Ext.onReady(function() {
         title: 'Restaurants',
         resizable: true,
         features: [groupingFeature],
+        tbar: ['->', {
+            text: 'Toggle groups...',
+            menu: toggleMenu
+        }],
+    
+        // Keep checkbox menu items in sync with expand/collapse
+        viewConfig: {
+            listeners: {
+                groupcollapse: function(v, n, groupName) {
+                    if (!grid.down('[text=Toggle groups...]').disabled) {
+                        grid.down('menucheckitem[text=' + groupName + ']').setChecked(false, true);
+                    }
+                },
+                groupexpand: function(v, n, groupName) {
+                    if (!grid.down('[text=Toggle groups...]').disabled) {
+                        grid.down('menucheckitem[text=' + groupName + ']').setChecked(true, true);
+                    }
+                }
+            }
+        },
         columns: [{
             text: 'Name',
             flex: 1,
@@ -249,7 +303,7 @@ Ext.onReady(function() {
         fbar  : ['->', {
             text:'Clear Grouping',
             iconCls: 'icon-clear-group',
-            handler : function(){
+            handler : function() {
                 groupingFeature.disable();
             }
         }]

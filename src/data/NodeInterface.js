@@ -362,7 +362,7 @@ Ext.define('Ext.data.NodeInterface', {
                 },
                 /**
                  * Ensures that the passed object is an instance of a Record with the NodeInterface applied
-                 * @return {Boolean}
+                 * @return {Ext.data.NodeInterface}
                  */
                 createNode: function(node) {
                     if (Ext.isObject(node) && !node.isModel) {
@@ -812,10 +812,10 @@ Ext.define('Ext.data.NodeInterface', {
                 },
 
                 /**
-                 * Insert a node into this node
+                 * Inserts a node into this node.
                  * @param {Number} index The zero-based index to insert the node at
-                 * @param {Ext.data.Model} node The node to insert
-                 * @return {Ext.data.Model} The record you just inserted
+                 * @param {Ext.data.NodeInterface} node The node to insert
+                 * @return {Ext.data.NodeInterface} The node you just inserted
                  */
                 insertChild: function(index, node) {
                     var sibling = this.childNodes[index];
@@ -1218,7 +1218,7 @@ Ext.define('Ext.data.NodeInterface', {
 
                     for (; i < ln; ++i) {
                         node = nodes[i];
-                        if (!node.isLeaf() && !node.isExpanded()) {
+                        if (!node.isLeaf()) {
                             expanding++;
                             nodes[i].expand(recursive, function () {
                                 expanding--;
@@ -1288,7 +1288,7 @@ Ext.define('Ext.data.NodeInterface', {
 
                     for (; i < ln; ++i) {
                         node = nodes[i];
-                        if (!node.isLeaf() && node.isExpanded()) {
+                        if (!node.isLeaf()) {
                             collapsing++;
                             nodes[i].collapse(recursive, function () {
                                 collapsing--;

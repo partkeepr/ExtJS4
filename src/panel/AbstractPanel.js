@@ -121,23 +121,13 @@ var panel = new Ext.panel.Panel({
 
     border: true,
 
+    /**
+     * @private
+     */
+    emptyArray: [],
+
     initComponent : function() {
         var me = this;
-
-        me.addEvents(
-            /**
-             * @event bodyresize
-             * Fires after the Panel has been resized.
-             * @param {Ext.panel.Panel} p the Panel which has been resized.
-             * @param {Number} width The Panel body's new width.
-             * @param {Number} height The Panel body's new height.
-             */
-            'bodyresize'
-            // // inherited
-            // 'activate',
-            // // inherited
-            // 'deactivate'
-        );
 
         //!frame
         //!border
@@ -235,7 +225,8 @@ var panel = new Ext.panel.Panel({
     },
 
     getCollapsedDockedItems: function () {
-        return [ this.getReExpander() ];
+        var me = this;
+        return me.collapseMode == 'placeholder' ? me.emptyArray : [ me.getReExpander() ];
     },
 
     /**

@@ -230,12 +230,7 @@ Ext.define('Ext.layout.ContextItem', {
         // We need to know how we will determine content size: containers can look at the
         // results of their items but non-containers or item-less containers with just raw
         // markup need to be measured in the DOM:
-        me.hasRawContent = true;
-        if (target.isContainer) {
-            if (target.items.items.length || !target.getTargetEl().dom.firstChild) {
-                me.hasRawContent = false;
-            }
-        }
+        me.hasRawContent = !(target.isContainer && target.items.items.length > 0);
 
         if (full) {
             // We must null these out or getSizeModel will assume they are the correct,
@@ -1617,6 +1612,9 @@ Ext.define('Ext.layout.ContextItem', {
         done:                   faux,
         x:                      faux,
         y:                      faux,
+
+        // For Ext.grid.ColumnLayout
+        columnWidthsDone:       faux,
 
         left:                   px,
         top:                    px,

@@ -1206,6 +1206,18 @@
                     "name": "BorderSplitterTracker.js"
                 },
                 {
+                    "path": "../../src/selection/",
+                    "name": "CellModel.js"
+                },
+                {
+                    "path": "../../src/selection/",
+                    "name": "CheckboxModel.js"
+                },
+                {
+                    "path": "../../src/view/",
+                    "name": "TableLayout.js"
+                },
+                {
                     "path": "../../src/view/",
                     "name": "TableChunker.js"
                 },

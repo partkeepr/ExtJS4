@@ -34,6 +34,23 @@ Ext.define('Ext.AbstractPlugin', {
     },
 
     /**
+     * @cfg {String} pluginId
+     * A name for the plugin that can be set at creation time to then retrieve the plugin
+     * through {@link Ext.AbstractComponent#getPlugin getPlugin} method.  For example:
+     *
+     *     var grid = Ext.create('Ext.grid.Panel', {
+     *         plugins: [{
+     *             ptype: 'cellediting',
+     *             clicksToEdit: 2,
+     *             pluginId: 'cellplugin'
+     *         }]
+     *     });
+     *
+     *     // later on:
+     *     var plugin = grid.getPlugin('cellplugin');
+     */
+
+    /**
      * @method
      * The init method is invoked after initComponent method has been run for the client Component.
      *

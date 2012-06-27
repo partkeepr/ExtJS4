@@ -98,7 +98,9 @@ Ext.define('Ext.layout.container.HBox', {
         gotWidth: 'gotWidth',
         gotHeight: 'gotHeight',
         setContentWidth: 'setContentWidth',
-        setContentHeight: 'setContentHeight'
+        setContentHeight: 'setContentHeight',
+        setWidthInDom: 'setWidthInDom',
+        setHeightInDom: 'setHeightInDom'
     },
 
     sizePolicy: {

@@ -172,9 +172,12 @@ Ext.define('Ext.ZIndexManager', {
         }
         me.mask.maskTarget = maskTarget;
         maskTarget.addCls(Ext.baseCSSPrefix + 'body-masked');
-        me.mask.setBox(viewSize);
         me.mask.setStyle('zIndex', zIndex);
+
+        // setting mask box before showing it in an IE7 strict iframe within a quirks page
+        // can cause body scrolling [EXTJSIV-6219]
         me.mask.show();
+        me.mask.setBox(viewSize);
     },
 
     _hideModalMask: function() {

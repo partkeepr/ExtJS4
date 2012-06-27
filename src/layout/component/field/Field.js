@@ -16,11 +16,15 @@ Ext.define('Ext.layout.component.field.Field', {
     /* End Definitions */
 
     type: 'field',
+    
+    naturalSizingProp: 'size',
 
     beginLayout: function(ownerContext) {
         var me = this,
             owner = me.owner,
             widthModel = ownerContext.widthModel,
+            row,
+            ownerNaturalSize = owner[me.naturalSizingProp],
             width;
 
         me.callParent(arguments);
@@ -51,8 +55,8 @@ Ext.define('Ext.layout.component.field.Field', {
         } else if (widthModel.natural) {
 
             // When a size specified, natural becomes fixed width
-            if (typeof owner.size == 'number') {
-                me.beginLayoutFixed(ownerContext, (width = owner.size * 6.5 + 20), 'px');
+            if (typeof ownerNaturalSize == 'number') {
+                me.beginLayoutFixed(ownerContext, (width = ownerNaturalSize * 6.5 + 20), 'px');
             }
 
             // Otherwise it is the same as shrinkWrap
@@ -63,6 +67,13 @@ Ext.define('Ext.layout.component.field.Field', {
         } else {
             me.beginLayoutFixed(ownerContext, '100', '%');
         }
+        
+        // See finishedLayout
+        if (me.movedOnLastLayout) {
+            row = ownerContext.bodyCellContext.el.parent();
+            row.insertAfter(row.next());
+            me.movedOnLastLayout = false;
+        }
     },
 
     beginLayoutFixed: function (ownerContext, width, suffix) {
@@ -70,6 +81,7 @@ Ext.define('Ext.layout.component.field.Field', {
 
         owner.el.setStyle('table-layout', 'fixed');
         owner.bodyEl.setStyle('width', width + suffix);
+        ownerContext.isFixed = true;
     },
 
     beginLayoutShrinkWrap: function (ownerContext) {
@@ -83,11 +95,23 @@ Ext.define('Ext.layout.component.field.Field', {
     },
 
     finishedLayout: function(ownerContext){
-        var owner = this.owner;
+        var owner = this.owner,
+            bodyRow;
         
-        this.callParent(arguments);
+        this.callParent(arguments);        
         ownerContext.labelStrategy.finishedLayout(ownerContext, owner);
         ownerContext.errorStrategy.finishedLayout(ownerContext, owner);
+        
+        // If we're using table-layout: fixed, the width of the cells is always determined by
+        // the first row in the table. When using labelAlign: 'top' with an empty label, the first
+        // row ends up being completely empty. On some browsers this is ok, however on most it
+        // causes the sizing to be ignored and the width to be distributed equally. Instead, we
+        // move the body row to be first if we have no visible label to allow sizing to occur.
+        if (ownerContext.isFixed && owner.labelAlign == 'top' && !owner.hasVisibleLabel() && owner.hasActiveError() && owner.msgTarget == 'side') {
+            bodyRow = ownerContext.bodyCellContext.el.parent();
+            bodyRow.insertBefore(bodyRow.prev());
+            this.movedOnLastLayout = true;
+        }
     },
 
     calculateOwnerHeightFromContentHeight: function(ownerContext, contentHeight) {
@@ -164,37 +188,18 @@ Ext.define('Ext.layout.component.field.Field', {
             /**
              * Label displayed above the bodyEl
              */
-            top: Ext.applyIf({
-                prepare: function(ownerContext, owner){
-                    base.prepare(ownerContext, owner);
-                    var labelEl = owner.labelEl;
-                    ownerContext.hasHiddenLabel = labelEl && !owner.hideEmptyLabel && !owner.getFieldLabel(); 
-                    
-                    if (ownerContext.hasHiddenLabel) {
-                        labelEl.dom.innerHTML = '&#160;';
-                    }    
-                },
-                
+            top: Ext.applyIf({        
+                        
                 getHeight: function (ownerContext) {
                     var labelContext = ownerContext.labelContext,
-                        height = labelContext.getProp('height'),
-                        hasEmptyLabel = ownerContext.hasHiddenLabel;
-
-                    if (height === undefined || hasEmptyLabel) {
-                        height = labelContext.el.getHeight() + labelContext.getMarginInfo().height;
-                        if (hasEmptyLabel) {
-                            // only force the height if we'll be clearing it later
-                            labelContext.setHeight(height);
-                        }
+                        props = labelContext.props,
+                        height = props.height;
+                        
+                    if (height === undefined) {
+                        props.height = height = labelContext.el.getHeight();
                     }
 
                     return height;
-                },
-                
-                finishedLayout: function(ownerContext, owner) {
-                     if (ownerContext.hasHiddenLabel) {
-                        owner.labelEl.dom.innerHTML = '';
-                    }    
                 }
             }, base),
 
@@ -254,6 +259,7 @@ Ext.define('Ext.layout.component.field.Field', {
             side: applyIf({
                 prepare: function(ownerContext, owner) {
                     var errorEl = owner.errorEl,
+                        display = owner.hasActiveError(),
                         tempEl;
 
                     // Capture error icon width once
@@ -264,8 +270,12 @@ Ext.define('Ext.layout.component.field.Field', {
 
                     errorEl.addCls(iconCls);
                     errorEl.set({'data-errorqtip': owner.getActiveError() || ''});
-                    errorEl.setDisplayed(owner.hasActiveError());
+                    errorEl.setDisplayed(display);
                     owner.bodyEl.dom.colSpan = owner.getBodyColspan();
+                    
+                    if (owner.topPlaceHolder) {
+                        owner.topPlaceHolder.setDisplayed(display && owner.hasVisibleLabel());
+                    }
 
                     // TODO: defer the tip call until after the layout to avoid immediate DOM reads now
                     Ext.layout.component.field.Field.initTip();
@@ -283,9 +293,9 @@ Ext.define('Ext.layout.component.field.Field', {
 
                     errorEl.addCls(cls);
                     errorEl.setDisplayed(owner.hasActiveError());
-                    if (owner.labelAlign == 'left') {
+                    if (owner.labelAlign == 'left' || owner.labelAlign == 'right') {
                         // hide the under label placeholder td
-                        errorEl.prev().setDisplayed(owner.hasVisibleLabel() ? 'block' : 'none');
+                        owner.bottomPlaceHolder.setDisplayed(owner.hasVisibleLabel() ? 'block' : 'none');
                     }
                 },
                 getHeight: function (ownerContext) {

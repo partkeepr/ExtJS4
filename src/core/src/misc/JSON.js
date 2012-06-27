@@ -1,8 +1,9 @@
 /**
- * @class Ext.JSON
- * Modified version of Douglas Crockford's JSON.js that doesn't
- * mess with the Object prototype
- * http://www.json.org/js.html
+ * Modified version of [Douglas Crockford's JSON.js][dc] that doesn't
+ * mess with the Object prototype.
+ *
+ * [dc]: http://www.json.org/js.html
+ *
  * @singleton
  */
 Ext.JSON = (new(function() {
@@ -143,16 +144,18 @@ Ext.JSON = (new(function() {
     };
     
     /**
-     * Encodes a String. This returns the actual string which is inserted into the JSON string as the literal expression.
-     * **The returned value includes enclosing double quotation marks.**
+     * Encodes a String. This returns the actual string which is inserted into the JSON string as the literal
+     * expression. **The returned value includes enclosing double quotation marks.**
      *
      * To override this:
-     *    Ext.JSON.encodeString = function(s) {
-     *        return 'Foo' + s;
-     *    };
+     *
+     *     Ext.JSON.encodeString = function(s) {
+     *         return 'Foo' + s;
+     *     };
      *
      * @param {String} s The String to encode
      * @return {String} The string literal to use in a JSON string.
+     * @method
      */
     me.encodeString = encodeString;
 
@@ -169,15 +172,16 @@ Ext.JSON = (new(function() {
     me.encodeValue = doEncode;
 
     /**
-     * Encodes a Date. This returns the actual string which is inserted into the JSON string as the literal expression.
-     * **The returned value includes enclosing double quotation marks.**
+     * Encodes a Date. This returns the actual string which is inserted into the JSON string as the literal
+     * expression. **The returned value includes enclosing double quotation marks.**
      *
-     * The default return format is "yyyy-mm-ddThh:mm:ss".
+     * The default return format is `"yyyy-mm-ddThh:mm:ss"`.
      *
      * To override this:
-     *    Ext.JSON.encodeDate = function(d) {
-     *        return Ext.Date.format(d, '"Y-m-d"');
-     *    };
+     *
+     *     Ext.JSON.encodeDate = function(d) {
+     *         return Ext.Date.format(d, '"Y-m-d"');
+     *     };
      *
      * @param {Date} d The Date to encode
      * @return {String} The string literal to use in a JSON string.
@@ -194,9 +198,10 @@ Ext.JSON = (new(function() {
     /**
      * Encodes an Object, Array or other value.
      * 
-     * If the environment's native JSON encoding is not being used ({@link Ext#USE_NATIVE_JSON} is not set, or the environment does not support it), then 
-     * ExtJS's encoding will be used. This allows the developer to add a `toJSON` method to their classes which need serializing to return a valid
-     * JSON representation of the object.
+     * If the environment's native JSON encoding is not being used ({@link Ext#USE_NATIVE_JSON} is not set,
+     * or the environment does not support it), then ExtJS's encoding will be used. This allows the developer
+     * to add a `toJSON` method to their classes which need serializing to return a valid JSON representation
+     * of the object.
      * 
      * @param {Object} o The variable to encode
      * @return {String} The JSON string
@@ -210,9 +215,11 @@ Ext.JSON = (new(function() {
     };
 
     /**
-     * Decodes (parses) a JSON string to an object. If the JSON is invalid, this function throws a SyntaxError unless the safe option is set.
+     * Decodes (parses) a JSON string to an object. If the JSON is invalid, this function throws
+     * a SyntaxError unless the safe option is set.
+     *
      * @param {String} json The JSON string
-     * @param {Boolean} safe (optional) Whether to return null or throw an exception if the JSON is invalid.
+     * @param {Boolean} [safe=false] True to return null, false to throw an exception if the JSON is invalid.
      * @return {Object} The resulting object
      */
     me.decode = function(json, safe) {

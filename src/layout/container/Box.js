@@ -377,6 +377,13 @@ Ext.define('Ext.layout.container.Box', {
         }
 
         me.cacheFlexes(ownerContext);
+
+        // In webkit we set the width of the target el equal to the width of the innerCt
+        // when the layout cycle is finished, so we need to set it back to 20000px here
+        // to prevent the children from being crushed. 
+        if (Ext.isWebKit) {
+            me.targetEl.setWidth(20000);
+        }
     },
 
     /**
@@ -450,35 +457,9 @@ Ext.define('Ext.layout.container.Box', {
             targetSize = me.getContainerSize(ownerContext),
             names = ownerContext.boxNames,
             state = ownerContext.state,
-            plan = state.boxPlan || (state.boxPlan = {}),
-            extraWidth = Ext.getScrollbarSize()[names.width];
+            plan = state.boxPlan || (state.boxPlan = {});
 
         plan.targetSize = targetSize;
-
-        // Set an extra scrollbar-sized increment to add if
-        //     Scrollbars take up space
-        //     and we are scrolling in the perpendicular direction
-        //     and shrinkWrapping in the parallel direction,
-        //     and NOT stretching perpendicular dimensions to fit
-        //     and NOT shrinkWrapping in the perpendicular direction
-        // publishInnerCtSize may need to add this to contentHeight if the perpendicular maxSize overflows
-        if (extraWidth &&
-            me.scrollPerpendicular &&
-            ownerContext.parallelSizeModel.shrinkWrap &&
-            !ownerContext.boxOptions.align.stretch &&
-            !ownerContext.perpendicularSizeModel.shrinkWrap) {
-
-            // Set the flag/possible extra height for shrinkWrap
-            state.additionalScrollbarWidth = extraWidth;
-
-            // In this mode, we MUST have a "height" (perpendicular measurement) to proceed.
-            if (!targetSize[names.gotHeight]) {
-                me.done = false;
-                return;
-            }
-        } else {
-            state.additionalScrollbarWidth = 0;
-        }
 
         // If we are not widthModel.shrinkWrap, we need the width before we can lay out boxes:
         if (!ownerContext.parallelSizeModel.shrinkWrap && !targetSize[names.gotWidth]) {
@@ -533,8 +514,30 @@ Ext.define('Ext.layout.container.Box', {
             left = padding[leftName],
             nonFlexWidth = left + padding[rightName] + me.scrollOffset +
                                     (me.reserveOffset ? me.availableSpaceOffset : 0),
+            scrollbarWidth = Ext.getScrollbarSize()[names.width],
             i, childMargins, remainingWidth, remainingFlex, childContext, flex, flexedWidth,
-            contentWidth, childWidth, percentageSpace;
+            contentWidth, mayNeedScrollbarAdjust, childWidth, percentageSpace;
+
+        // We may need to add scrollbar size to parallel size if
+        //     Scrollbars take up space
+        //     and we are scrolling in the perpendicular direction
+        //     and shrinkWrapping in the parallel direction,
+        //     and NOT stretching perpendicular dimensions to fit
+        //     and NOT shrinkWrapping in the perpendicular direction
+        if (scrollbarWidth &&
+            me.scrollPerpendicular &&
+            ownerContext.parallelSizeModel.shrinkWrap &&
+            !ownerContext.boxOptions.align.stretch &&
+            !ownerContext.perpendicularSizeModel.shrinkWrap) {
+
+            // If its possible that we may need to add scrollbar size to the parallel size
+            // then we need to wait until the perpendicular size has been determined,
+            // so that we know if there is a scrollbar.
+            if (!ownerContext.state.perpendicularDone) {
+                return false;
+            }
+            mayNeedScrollbarAdjust = true;
+        }
 
         // Gather the total size taken up by non-flexed items:
         for (i = 0; i < childItemsLength; ++i) {
@@ -544,7 +547,11 @@ Ext.define('Ext.layout.container.Box', {
             totalMargin += childMargins[widthName];
 
             if (!childContext[names.widthModel].calculated) {
-                nonFlexWidth += childContext.getProp(widthName); // min/maxWidth safe
+                childWidth = childContext.getProp(widthName);
+                if (childContext.hasDoubleScrollbarWidthAdjustment) {
+                    childWidth -= scrollbarWidth;
+                }
+                nonFlexWidth += childWidth; // min/maxWidth safe
                 if (isNaN(nonFlexWidth)) {
                     return false;
                 }
@@ -632,14 +639,35 @@ Ext.define('Ext.layout.container.Box', {
             left += childMargins[rightName] + childContext.props[widthName];
         }
 
-        // Stash the contentWidth on the state so that it can always be accessed later in the calculation
-        ownerContext.state.contentWidth = contentWidth + ownerContext.targetContext.getPaddingInfo()[widthName];
+        contentWidth += ownerContext.targetContext.getPaddingInfo()[widthName];
 
-        // If we may have to increase our contentWidth to accommodate shrinkwrapping a scrollbar, we cannot publish our contentWidth
-        // Until we know whether that scrollbar is neeeded. Which won't be until we've calculated perpendicular
-        if (!ownerContext.state.additionalScrollbarWidth) {
-            ownerContext[names.setContentWidth](ownerContext.state.contentWidth);
+        // Stash the contentWidth on the state so that it can always be accessed later in the calculation
+        ownerContext.state.contentWidth = contentWidth; 
+
+        // if there is perpendicular overflow, the published parallel content size includes
+        // the size of the perpendicular scrollbar.
+        if (mayNeedScrollbarAdjust &&
+            (ownerContext.peek(names.contentHeight) > plan.targetSize[names.height])) {
+            contentWidth += scrollbarWidth;
+
+            // IE9 strict subtracts the scrollbar size from the element size when the element
+            // is absolutely positioned and uses box-sizing: border-box. To workaround this
+            // issue we have to add the double the scrollbar size.
+            // see http://social.msdn.microsoft.com/Forums/da-DK/iewebdevelopment/thread/47c5148f-a142-4a99-9542-5f230c78cb3b
+            if (Ext.isIE9 && Ext.isStrict && me.isTargetAbsolute()) {
+                contentWidth += scrollbarWidth;
+                ownerContext.hasDoubleScrollbarWidthAdjustment = true;
+            }
+            // tell the component layout to set the parallel size in the dom
+            ownerContext.target.componentLayout[names.setWidthInDom] = true;
+
+            // IE8 in what passes for "strict" mode will not create a scrollbar if 
+            // there is just the *exactly correct* spare space created for it. We
+            // have to force that to happen once all the styles have been flushed
+            // to the DOM (see completeLayout):
+            ownerContext['invalidateScroll' + names.y.toUpperCase()] = (Ext.isStrict && Ext.isIE8);
         }
+        ownerContext[names.setContentWidth](contentWidth);
 
         return true;
     },
@@ -664,8 +692,10 @@ Ext.define('Ext.layout.container.Box', {
             isCenter     = align.center,
             maxHeight = 0,
             hasPercentageSizes = 0,
-            childTop, i, childHeight, childMargins, diff, height, childContext,
-            percentagePerpendicular, stretchMaxPartner, scrollbarHeight, stretchMaxChildren;
+            scrollbarHeight = Ext.getScrollbarSize().height,
+            childTop, i, childHeight, childMargins, diff, height, childContext, contentHeight,
+            stretchMaxPartner, stretchMaxChildren, shrinkWrapParallelOverflow, 
+            percentagePerpendicular, needsScrollbarAdjust;
 
         if (isStretch || (isCenter && !heightShrinkWrap)) {
             if (isNaN(availHeight)) {
@@ -673,12 +703,19 @@ Ext.define('Ext.layout.container.Box', {
             }
         }
 
-        // If the intention is to horizontally scroll height-fitted child components, but the container is too narrow,
-        // then we must allow for the parallel scrollbar to intrude into the perpendicular dimension
-        if (isStretch && me.scrollParallel && plan.tooNarrow) {
-            scrollbarHeight = Ext.getScrollbarSize().height;
-            availHeight -= scrollbarHeight;
-            plan.targetSize[heightName] -= scrollbarHeight;
+        // If the intention is to horizontally scroll child components, but the container is too narrow,
+        // then:
+        //     if we are shrinkwrapping height:
+        //         Set a flag because we are going to expand the height taken by the perpendicular dimension to accommodate the scrollbar
+        //     else
+        //         We must allow for the parallel scrollbar to intrude into the height
+        if (me.scrollParallel && plan.tooNarrow) {
+            if (heightShrinkWrap) {
+                shrinkWrapParallelOverflow = true;
+            } else {
+                availHeight -= scrollbarHeight;
+                plan.targetSize[heightName] -= scrollbarHeight;
+            }
         }
 
         if (isStretch) {
@@ -698,10 +735,13 @@ Ext.define('Ext.layout.container.Box', {
                         continue;
                     } else {
                         childHeight = percentagePerpendicular * availHeight - childMargins;
-                        childHeight = childContext.setHeight(childHeight);
+                        childHeight = childContext[names.setHeight](childHeight);
                     }
                 }
 
+                if (childContext.hasDoubleScrollbarHeightAdjustment) {
+                    childHeight -= scrollbarHeight;
+                }
                 // Max perpendicular measurement (used for stretchmax) must take the min perpendicular size of each child into account in case any fall short.
                 if (isNaN(maxHeight = mmax(maxHeight, childHeight + childMargins,
                                            childContext.target[names.minHeight] || 0))) {
@@ -709,7 +749,23 @@ Ext.define('Ext.layout.container.Box', {
                 }
             }
 
+            // If there is going to be a parallel scrollbar maxHeight must include it to the outside world.
+            // ie: a stretchmaxPartner, and the setContentHeight
+            if (shrinkWrapParallelOverflow) {
+                maxHeight += scrollbarHeight;
+                needsScrollbarAdjust = true;
+               // tell the component layout to set the perpendicular size in the dom
+                ownerContext.target.componentLayout[names.setHeightInDom] = true;
+
+                // IE8 in what passes for "strict" mode will not create a scrollbar if 
+                // there is just the *exactly correct* spare space created for it. We
+                // have to force that to happen once all the styles have been flushed
+                // to the DOM (see completeLayout):
+                ownerContext['invalidateScroll' + names.x.toUpperCase()] = (Ext.isStrict && Ext.isIE8);
+            }
+
             // If we are associated with another box layout, grab its maxChildHeight
+            // This must happen before we calculate and publish our contentHeight
             stretchMaxPartner = ownerContext.stretchMaxPartner;
             if (stretchMaxPartner) {
                 // Publish maxChildHeight as soon as it has been calculated for our partner:
@@ -724,9 +780,24 @@ Ext.define('Ext.layout.container.Box', {
                 }
             }
 
+            contentHeight = maxHeight + me.padding[heightName] +
+                ownerContext.targetContext.getPaddingInfo()[heightName]
+
+            // IE9 strict subtracts the scrollbar size from the element size when the element
+            // is absolutely positioned and uses box-sizing: border-box. To workaround this
+            // issue we have to add the double the scrollbar size.
+            // see http://social.msdn.microsoft.com/Forums/da-DK/iewebdevelopment/thread/47c5148f-a142-4a99-9542-5f230c78cb3b
+            if (needsScrollbarAdjust && Ext.isIE9 && Ext.isStrict && me.isTargetAbsolute()) {
+                contentHeight += scrollbarHeight;
+                ownerContext.hasDoubleScrollbarHeightAdjustment = true;
+            }
+
+            ownerContext[names.setContentHeight](contentHeight);
+
+            if (shrinkWrapParallelOverflow) {
+                maxHeight -= scrollbarHeight;
+            }
             plan.maxSize = maxHeight;
-            ownerContext[names.setContentHeight](maxHeight + me.padding[heightName] +
-                ownerContext.targetContext.getPaddingInfo()[heightName]);
 
             if (isStretchMax) {
                 height = maxHeight;
@@ -825,9 +896,23 @@ Ext.define('Ext.layout.container.Box', {
             me.owner.getTargetEl().dom[names.scrollLeft] = me.scrollPos;
         }
 
-        if (ownerContext.invalidateScroll) {
-            el = ownerContext.el;
+        if (ownerContext.invalidateScrollY) {
+            el = me.getTarget();
             prop = names.overflowY;
+            overflow = el.getStyle(prop);
+
+            if (overflow == 'auto') {
+                // force the scrollbars to appear...
+                el.setStyle(prop, 'scroll');
+                // force a reflow of the element...
+                el.dom.scrollWidth;
+                // reset the overflow to the proper value
+                el.setStyle(prop, overflow);
+            }
+        }
+        if (ownerContext.invalidateScrollX) {
+            el = me.getTarget();
+            prop = names.overflowX;
             overflow = el.getStyle(prop);
 
             if (overflow == 'auto') {
@@ -844,6 +929,16 @@ Ext.define('Ext.layout.container.Box', {
     finishedLayout: function(ownerContext) {
         this.overflowHandler.finishedLayout(ownerContext);
         this.callParent(arguments);
+
+        // Fix for an obscure webkit bug (EXTJSIV-5962) caused by the targetEl's 20000px
+        // width.  We set a very large width on the targetEl at the beginning of the 
+        // layout cycle to prevent any "crushing" effect on the child items, however
+        // in some cases the very large width makes it possible to scroll the innerCt
+        // by dragging on certain child elements. To prevent this from happening we ensure
+        // that the targetEl's width is the same as the innerCt.
+        if (Ext.isWebKit) {
+            this.targetEl.setWidth(ownerContext.innerCtContext.props.width);
+        }
     },
 
     onBeforeInvalidateChild: function (childContext, options) {
@@ -863,7 +958,18 @@ Ext.define('Ext.layout.container.Box', {
 
     onAfterInvalidateChild: function (childContext, options) {
         // NOTE: No "this" pointer in here...
-        var names = options.names;
+        var names = options.names,
+            scrollbarSize = Ext.getScrollbarSize(),
+            childHeight = options.childHeight,
+            childWidth = options.childWidth;
+
+        if (childContext.hasDoubleScrollbarHeightAdjustment) {
+            childHeight += scrollbarSize.height;
+        }
+
+        if (childContext.hasDoubleScrollbarWidthAdjustment) {
+            childWidth += scrollbarSize.width;
+        }
 
         childContext.setProp('x', options.childX);
         childContext.setProp('y', options.childY);
@@ -871,11 +977,11 @@ Ext.define('Ext.layout.container.Box', {
         if (childContext[names.heightModel].calculated) {
             // We need to respect a child that is still not calculated (such as a collapsed
             // panel)...
-            childContext[names.setHeight](options.childHeight);
+            childContext[names.setHeight](childHeight);
         }
 
         if (childContext[names.widthModel].calculated) {
-            childContext[names.setWidth](options.childWidth);
+            childContext[names.setWidth](childWidth);
         }
     },
 
@@ -891,12 +997,10 @@ Ext.define('Ext.layout.container.Box', {
             targetSize = plan.targetSize,
             height = targetSize[heightName],
             innerCtContext = ownerContext.innerCtContext,
-            parallelContentDim = names.contentWidth,
             innerCtWidth = (ownerContext.parallelSizeModel.shrinkWrap || (plan.tooNarrow && me.scrollParallel)
                     ? ownerContext.state.contentWidth
                     : targetSize[widthName]) - (reservedSpace || 0),
-            innerCtHeight,
-            IEShrinkwrapParallelSize;
+            innerCtHeight;
 
         if (align.stretch) {
             innerCtHeight = height;
@@ -911,38 +1015,6 @@ Ext.define('Ext.layout.container.Box', {
         innerCtContext[names.setWidth](innerCtWidth);
         innerCtContext[names.setHeight](innerCtHeight);
 
-        // If we are scrolling in the perpendicular dimension
-        // AND we are shrinkWrapping the parallel dimension (Imagine stacking boxes on top of each other and stretching the container height),
-        // AND the perpendicular is *not* shrinkWrapped, and overflows
-        // AND scrollbars take up space
-        //    Then the shrink wrap size must extend to include the scrollbar
-        if (ownerContext.state.additionalScrollbarWidth) {
-            if (innerCtHeight > plan.targetSize[names.height]) {
-                ownerContext.setProp(parallelContentDim, ownerContext.state.contentWidth + ownerContext.state.additionalScrollbarWidth);
-
-                // Scrollbar does not stretch the container in IE, so we must explicitly
-                // extend the container to accommodate the scrollbar, otherwise it "cuts"
-                // into the content.
-                if (Ext.isIE && !(Ext.isIE9 && Ext.isStrict)) {
-                    IEShrinkwrapParallelSize = ownerContext.props[parallelContentDim] + 
-                                               ownerContext.getPaddingInfo()[names.width] +
-                                               ownerContext.getBorderInfo()[names.width];
-
-                    ownerContext[names.setWidth](IEShrinkwrapParallelSize);
-                    
-                    // It gets worse...
-                    // IE8 in what passes for "strict" mode will not create a scrollbar if 
-                    // there is just the *exactly correct* spare space created for it. We
-                    // have to force that to happen once all the styles have been flushed
-                    // to the DOM (see completeLayout):
-                    //
-                    ownerContext.invalidateScroll = (Ext.isStrict && Ext.isIE8);
-                }
-            } else {
-                ownerContext.setProp(parallelContentDim, ownerContext.state.contentWidth);
-            }
-        }
-
         // If unable to publish both dimensions, this layout needs to run again
         if (isNaN(innerCtWidth + innerCtHeight)) {
             me.done = false;
@@ -955,6 +1027,7 @@ Ext.define('Ext.layout.container.Box', {
         // We MUST pass the dirty flag to get that into the DOM, and because we are a Container
         // layout, and not really supposed to perform sizing, we must also use the force flag.
         if (plan.calculatedWidth && (dock == 'left' || dock == 'right')) {
+            // TODO: setting the owner size should be the job of the component layout.
             ownerContext.setWidth(plan.calculatedWidth, true, true);
         }
     },
@@ -1008,6 +1081,11 @@ Ext.define('Ext.layout.container.Box', {
     // Used by Container classes to insert special DOM elements which must exist in addition to the child components
     getElementTarget: function() {
         return this.innerCt;
+    },
+
+    isTargetAbsolute: function() {
+        return this.isAbsolute ||
+            (this.isAbsolute = (this.getTarget().getStyle('position') === 'absolute'));
     },
 
     //<debug>

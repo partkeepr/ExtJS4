@@ -23,6 +23,12 @@ Ext.define('Ext.tree.View', {
     nodeAnimWrapCls: Ext.baseCSSPrefix + 'tree-animator-wrap',
 
     blockRefresh: true,
+    
+    /**
+     * @cfg
+     * @inheritdoc
+     */
+    loadMask: false,
 
     /** 
      * @cfg {Boolean} rootVisible
@@ -49,7 +55,7 @@ Ext.define('Ext.tree.View', {
     stripeRows: false,
 
     // fields that will trigger a change in the ui that aren't likely to be bound to a column
-    uiFields: ['expanded', 'loaded', 'checked', 'expandable', 'leaf', 'icon', 'iconCls', 'loading'],
+    uiFields: ['expanded', 'loaded', 'checked', 'expandable', 'leaf', 'icon', 'iconCls', 'loading', 'qtip', 'qtitle'],
 
     initComponent: function() {
         var me = this,
@@ -112,6 +118,10 @@ Ext.define('Ext.tree.View', {
             click: me.onCheckboxChange
         });
     },
+    
+    getMaskStore: function(){
+        return this.panel.getStore();    
+    },
 
     afterComponentLayout: function(){
         this.callParent(arguments);
@@ -119,6 +129,10 @@ Ext.define('Ext.tree.View', {
         if (stretcher) {
             stretcher.setWidth((this.getWidth() - Ext.getScrollbarSize().width));
         }
+    },
+    
+    getRecordByRowIndex: function(rowIndex) {
+        return this.getRecord(this.getNode(rowIndex));
     },
 
     processUIEvent: function(e) {
@@ -320,7 +334,7 @@ Ext.define('Ext.tree.View', {
         var me = this,
             bulk = me.bulkUpdate;
             
-        if (me.rendered) {
+        if (me.viewReady) {
             me.doRemove(record, index);
             if (!bulk) {
                 me.updateIndexes(index);
@@ -340,9 +354,10 @@ Ext.define('Ext.tree.View', {
         var me = this,
             all = me.all,
             animWrap = me.getAnimWrap(record),
-            node = all.item(index).dom;
+            item = all.item(index),
+            node = item ? item.dom : null;
 
-        if (!animWrap || !animWrap.collapsing) {
+        if (!node || !animWrap || !animWrap.collapsing) {
             return me.callParent(arguments);
         }
 

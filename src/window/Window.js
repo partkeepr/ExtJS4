@@ -562,6 +562,15 @@ Ext.define('Ext.window.Window', {
         }
     },
 
+    beforeLayout: function () {
+        var shadow = this.el.shadow;
+
+        this.callParent();
+        if (shadow) {
+            shadow.hide();
+        }
+    },
+
     // private
     afterShow: function(animateTarget) {
         var me = this,
@@ -625,10 +634,19 @@ Ext.define('Ext.window.Window', {
 
     // private
     onWindowResize: function() {
-        if (this.maximized) {
-            this.fitContainer();
+        var me = this,
+            sizeModel;
+
+        if (me.maximized) {
+            me.fitContainer();
+        } else {
+            sizeModel = me.getSizeModel();
+            if (sizeModel.width.natural || sizeModel.height.natural) {
+                me.updateLayout();
+            }
         }
-        this.doConstrain();
+
+        me.doConstrain();
     },
 
     /**

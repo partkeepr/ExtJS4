@@ -40,10 +40,8 @@ Ext.define('Ext.selection.CheckboxModel', {
     // private
     checkerOnCls: Ext.baseCSSPrefix + 'grid-hd-checker-on',
 
-    bindComponent: function(view) {
+    beforeViewRender: function(view) {
         var me = this;
-
-        me.sortable = false;
         me.callParent(arguments);
 
         // if we have a locked header, only hook up to the first
@@ -51,9 +49,15 @@ Ext.define('Ext.selection.CheckboxModel', {
             if (me.showHeaderCheckbox !== false) {
                 view.headerCt.on('headerclick', me.onHeaderClick, me);
             }
-            me.addCheckbox(true);
+            me.addCheckbox(view, true);
             me.mon(view.ownerCt, 'reconfigure', me.onReconfigure, me);
         }
+    },
+
+    bindComponent: function(view) {
+        var me = this;
+        me.sortable = false;
+        me.callParent(arguments);
     },
 
     hasLockedHeader: function(){
@@ -74,10 +78,9 @@ Ext.define('Ext.selection.CheckboxModel', {
      * @private
      * @param {Boolean} initial True if we're binding for the first time.
      */
-    addCheckbox: function(initial){
+    addCheckbox: function(view, initial){
         var me = this,
             checkbox = me.injectCheckbox,
-            view = me.views[0],
             headerCt = view.headerCt;
 
         // Preserve behaviour of false, but not clear why that would ever be done.
@@ -106,7 +109,7 @@ Ext.define('Ext.selection.CheckboxModel', {
      */
     onReconfigure: function(grid, store, columns) {
         if(columns) {
-            this.addCheckbox();
+            this.addCheckbox(this.views[0]);
         }
     },
 

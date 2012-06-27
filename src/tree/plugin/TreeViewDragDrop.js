@@ -142,7 +142,7 @@ Ext.define('Ext.tree.plugin.TreeViewDragDrop', {
     allowContainerDrops: false,
 
     /**
-     * @cfg {String} appendOnly
+     * @cfg {Boolean} appendOnly
      * True if the tree should only allow append drops (use for trees which are sorted).
      */
     appendOnly: false,

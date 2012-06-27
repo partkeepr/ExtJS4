@@ -363,20 +363,28 @@ Ext.define('Ext.layout.Context', {
 
     callLayout: function (layout, methodName) {
         this.currentLayout = layout;
-        var ownerContext = this.getCmp(layout.owner);
-        layout[methodName](ownerContext);
+        layout[methodName](this.getCmp(layout.owner));
     },
 
-    cancelComponent: function (comp, isChild) {
+    cancelComponent: function (comp, isChild, isDestroying) {
         var me = this,
             components = comp,
             isArray = !comp.isComponent,
             length = isArray ? components.length : 1,
-            i, k, klen, items, layout, newQueue, oldQueue, entry, temp;
+            i, k, klen, items, layout, newQueue, oldQueue, entry, temp,
+            ownerCtContext;
 
         for (i = 0; i &lt; length; ++i) {
             if (isArray) {
                 comp = components[i];
+            }
+
+            // If the component is being destroyed, remove the component's ContextItem from its parent's contextItem.childItems array
+            if (isDestroying &amp;&amp; comp.ownerCt) {
+                ownerCtContext = this.items[comp.ownerCt.el.id];
+                if (ownerCtContext) {
+                    Ext.Array.remove(ownerCtContext.childItems, me.getCmp(comp));
+                }
             }
 
             if (!isChild) {

@@ -1,12 +1,21 @@
 /**
- * @private
+ * @class Ext.draw.engine.SvgExporter
+ *
+ * A utility class for exporting a {@link Ext.draw.Surface Surface} to a string
+ * that may be saved or used for processing on the server.
+ * 
+ * @singleton
  */
 Ext.define('Ext.draw.engine.SvgExporter', {
     singleton: true,
    
     statics: (function(){ 
-        var surface, len, width,
-        height,
+        var commaRe = /,/g,
+            fontRegex = /(-?\d*\.?\d*){1}(em|ex|px|in|cm|mm|pt|pc|%)\s('*.*'*)/,
+            rgbColorRe = /rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/g,
+            rgbaColorRe = /rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,([\d\.]+)\)/g,
+            surface, len, width, height,
+            
         init = function(s){
             surface = s;
             len = surface.length;
@@ -21,15 +30,15 @@ Ext.define('Ext.draw.engine.SvgExporter', {
                     pathString = '',
                     props, p, pLen;
                 
-                if(Ext.isArray(path[0])){
+                if (Ext.isArray(path[0])) {
                     pLen = path.length;
                     for (p = 0; p < pLen; p++) {
                         pathString += path[p].join(' ');
                     }
-                }else if(Ext.isArray(path)){
+                } else if (Ext.isArray(path)) {
                     pathString = path.join(' ');
-                }else{
-                    pathString = path.replace(/,/g,' ');
+                } else {
+                    pathString = path.replace(commaRe,' ');
                 }
 
                 props = toPropertyString({
@@ -51,7 +60,6 @@ Ext.define('Ext.draw.engine.SvgExporter', {
                 // implement multi line support (@see Svg.js tuneText)
                 
                 var attr = sprite.attr,
-                    fontRegex = /(-?\d*\.?\d*){1}(em|ex|px|in|cm|mm|pt|pc|%)\s('*.*'*)/,
                     match = fontRegex.exec(attr.font),
                     size = (match && match[1]) || "12",
                     // default font family is Arial
@@ -68,16 +76,16 @@ Ext.define('Ext.draw.engine.SvgExporter', {
 
 
                 props = toPropertyString({
-                        x: attr.x,
-                        y: attr.y,
-                        'font-size': size,
-                        'font-family': family,
-                        'font-weight': attr['font-weight'],
-                        'text-anchor': attr['text-anchor'],
-                        // if no fill property is set it will be black
-                        fill: attr.fill || '#000',
-                        'fill-opacity': attr.opacity,
-                        transform: sprite.matrix.toSvg()
+                    x: attr.x,
+                    y: attr.y,
+                    'font-size': size,
+                    'font-family': family,
+                    'font-weight': attr['font-weight'],
+                    'text-anchor': attr['text-anchor'],
+                    // if no fill property is set it will be black
+                    fill: attr.fill || '#000',
+                    'fill-opacity': attr.opacity,
+                    transform: sprite.matrix.toSvg()
                 });
 
                     
@@ -204,8 +212,8 @@ Ext.define('Ext.draw.engine.SvgExporter', {
                     gradient = surface.gradientsColl.getByKey(key);
                     defs += '<linearGradient id="' + key + '" x1="0" y1="0" x2="1" y2="1">';
 
-                    var color = gradient.colors.replace(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/g, 'rgb($1|$2|$3)');
-                    color = color.replace(/rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,([\d\.]+)\)/g, 'rgba($1|$2|$3|$4)')
+                    var color = gradient.colors.replace(rgbColorRe, 'rgb($1|$2|$3)');
+                    color = color.replace(rgbaColorRe, 'rgba($1|$2|$3|$4)')
                     colorstops = color.split(',');
                     for(i=0, stopsLen = colorstops.length; i < stopsLen; i++){
                         stop = colorstops[i].split(' ');
@@ -270,7 +278,16 @@ Ext.define('Ext.draw.engine.SvgExporter', {
         };
 
         return {
-            generate: function(config, surface){
+            /**
+             * Exports the passed surface to a SVG string representation
+             * @param {Ext.draw.Surface} surface The surface to export
+             * @param {Object} [config] Any configuration for the export. Currently this is
+             * unused but may provide more options in the future
+             * @return {String} The SVG as a string
+             * @static
+             */
+            generate: function(surface, config){
+                config = config || {};
                 init(surface);
                 return svgHeader() + svgContent();
             }

@@ -103,7 +103,9 @@ Ext.define('Ext.layout.container.VBox', {
         gotWidth: 'gotHeight',
         gotHeight: 'gotWidth',
         setContentWidth: 'setContentHeight',
-        setContentHeight: 'setContentWidth'
+        setContentHeight: 'setContentWidth',
+        setWidthInDom: 'setHeightInDom',
+        setHeightInDom: 'setWidthInDom'
     },
 
     sizePolicy: {

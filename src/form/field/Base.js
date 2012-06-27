@@ -145,11 +145,11 @@ Ext.define('Ext.form.field.Base', {
      * applyTo
      */
 
+    //<locale>
     /**
      * @cfg {String} invalidText
      * The error text to use when marking a field invalid and no message is provided
      */
-    //<locale>
     invalidText : 'The value in this field is invalid',
     //</locale>
 

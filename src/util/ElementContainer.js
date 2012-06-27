@@ -129,7 +129,7 @@ Ext.define('Ext.util.ElementContainer', {
     },
 
     /**
-     * Adds each argument passed to this method to the {@link Ext.AbstractComponent#childEls childEls} array.
+     * Adds each argument passed to this method to the {@link Ext.AbstractComponent#cfg-childEls childEls} array.
      */
     addChildEls: function () {
         var me = this,

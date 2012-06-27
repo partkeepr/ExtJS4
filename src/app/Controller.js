@@ -303,7 +303,7 @@ Ext.define('Ext.app.Controller', {
      * @param {Ext.app.Application} application
      * @template
      */
-    init: function(application) {},
+    init: Ext.emptyFn,
 
     /**
      * A template method like {@link #init}, but called after the viewport is created.
@@ -312,7 +312,7 @@ Ext.define('Ext.app.Controller', {
      * @param {Ext.app.Application} application
      * @template
      */
-    onLaunch: function(application) {},
+    onLaunch: Ext.emptyFn,
 
     createGetters: function(type, refs) {
         type = Ext.String.capitalize(type);

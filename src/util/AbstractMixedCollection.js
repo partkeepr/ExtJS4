@@ -11,7 +11,7 @@ Ext.define('Ext.util.AbstractMixedCollection', {
 
     /**
      * @property {Boolean} isMixedCollection
-     * `true` in this class to identify an objact as an instantiated MixedCollection, or subclass thereof.
+     * `true` in this class to identify an object as an instantiated MixedCollection, or subclass thereof.
      */
     isMixedCollection: true,
 

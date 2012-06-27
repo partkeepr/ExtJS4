@@ -27,6 +27,10 @@
  * An appropriate field type should be chosen to match the data structure that it will be editing. For example,
  * to edit a date, it would be useful to specify {@link Ext.form.field.Date} as the editor.
  *
+ * ## Example
+ *
+ * A grid with editor for the name and the email columns:
+ *
  *     @example
  *     Ext.create('Ext.data.Store', {
  *         storeId:'simpsonsStore',
@@ -69,6 +73,17 @@
  *         width: 400,
  *         renderTo: Ext.getBody()
  *     });
+ *
+ * This requires a little explanation. We're passing in `store` and `columns` as normal, but
+ * we also specify a {@link Ext.grid.column.Column#field field} on two of our columns. For the
+ * Name column we just want a default textfield to edit the value, so we specify 'textfield'.
+ * For the Email column we customized the editor slightly by passing allowBlank: false, which
+ * will provide inline validation.
+ *
+ * To support cell editing, we also specified that the grid should use the 'cellmodel'
+ * {@link Ext.grid.Panel#selType selType}, and created an instance of the CellEditing plugin,
+ * which we configured to activate each editor after a single click.
+ *
  */
 Ext.define('Ext.grid.plugin.CellEditing', {
     alias: 'plugin.cellediting',
@@ -100,7 +115,7 @@ Ext.define('Ext.grid.plugin.CellEditing', {
          *     grid.on('edit', function(editor, e) {
          *         // commit the changes right after editing finished
          *         e.record.commit();
-         *     };
+         *     });
          *
          * @param {Ext.grid.plugin.CellEditing} editor
          * @param {Object} e An edit event with the following properties:
@@ -281,7 +296,7 @@ Ext.define('Ext.grid.plugin.CellEditing', {
         // Whether we are going to edit or not, ensure the edit cell is scrolled into view
         me.grid.view.cancelFocus();
         me.view.focusCell({
-            row: context.row,
+            row: context.rowIdx,
             column: context.colIdx
         });
         if (ed) {
@@ -410,6 +425,7 @@ Ext.define('Ext.grid.plugin.CellEditing', {
         var me = this,
             grid = me.grid,
             activeColumn = me.getActiveColumn(),
+            sm = grid.getSelectionModel(),
             record;
 
         if (activeColumn) {
@@ -422,14 +438,19 @@ Ext.define('Ext.grid.plugin.CellEditing', {
             if (!me.validateEdit()) {
                 return;
             }
+
             // Only update the record if the new value is different than the
             // startValue. When the view refreshes its el will gain focus
             if (!record.isEqual(value, startValue)) {
                 record.set(activeColumn.dataIndex, value);
-            // Restore focus back to the view's element.
-            } else {
-                grid.getView().getEl(activeColumn).focus();
             }
+
+            // Restore focus back to the view's element.
+            if (sm.setCurrentPosition) {
+                sm.setCurrentPosition(sm.getCurrentPosition());
+            }
+            grid.getView().getEl(activeColumn).focus();
+
             me.context.value = value;
             me.fireEvent('edit', me, me.context);
         }

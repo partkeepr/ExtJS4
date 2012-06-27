@@ -241,11 +241,18 @@ Ext.define('Ext.form.field.Field', {
     reset : function(){
         var me = this;
 
+        me.beforeReset();
         me.setValue(me.originalValue);
         me.clearInvalid();
         // delete here so we reset back to the original state
         delete me.wasValid;
     },
+    
+    /**
+     * Template method before a field is reset.
+     * @protected
+     */
+    beforeReset: Ext.emptyFn,
 
     /**
      * Resets the field's {@link #originalValue} property so it matches the current {@link #getValue value}. This is

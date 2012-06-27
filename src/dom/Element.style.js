@@ -341,7 +341,7 @@ Element.override({
      * Set the opacity of the element
      * @param {Number} opacity The new opacity. 0 = transparent, .5 = 50% visibile, 1 = fully visible, etc
      * @param {Boolean/Object} [animate] a standard Element animation config object or `true` for
-     * the default animation (`{duration: .35, easing: 'easeIn'}`)
+     * the default animation (`{duration: 350, easing: 'easeIn'}`)
      * @return {Ext.dom.Element} this
      */
     setOpacity: function(opacity, animate) {

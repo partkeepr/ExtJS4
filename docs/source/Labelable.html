@@ -72,7 +72,10 @@ Ext.define(&quot;Ext.form.Labelable&quot;, {
          */
         'errorEl',
 
-        'inputRow'
+        'inputRow',
+        
+        'topPlaceHolder',
+        'bottomPlaceHolder'
     ],
 
 <span id='Ext-form-Labelable-cfg-labelableRenderTpl'>    /**
@@ -83,7 +86,7 @@ Ext.define(&quot;Ext.form.Labelable&quot;, {
      *
      * The structure of a field is a table as follows:
      * 
-     * If `label:align: 'left|top'`:
+     * If `labelAlign: 'left|top'`:
      *
      *      +----------------------+------------+---------+--------------+
      *      | Label:               | InputField           | sideErrorEl |
@@ -115,7 +118,7 @@ Ext.define(&quot;Ext.form.Labelable&quot;, {
         // Top TR if labelAlign =='top'
         '&lt;tpl if=&quot;labelAlign==\'top\'&quot;&gt;',
             '&lt;tr&gt;',
-                '&lt;td id=&quot;{id}-labelCell&quot; colspan=&quot;3&quot; style=&quot;{labelCellStyle}&quot; {labelCellAttrs}&gt;',
+                '&lt;td id=&quot;{id}-labelCell&quot; colspan=&quot;{labelTopColspan}&quot; style=&quot;{labelCellStyle}&quot; {labelCellAttrs}&gt;',
                     '{beforeLabelTpl}',
                     '&lt;label id=&quot;{id}-labelEl&quot; {labelAttrTpl}&lt;tpl if=&quot;inputId&quot;&gt; for=&quot;{inputId}&quot;&lt;/tpl&gt; class=&quot;{labelCls}&quot;',
                         '&lt;tpl if=&quot;labelStyle&quot;&gt; style=&quot;{labelStyle}&quot;&lt;/tpl&gt;&gt;',
@@ -125,6 +128,12 @@ Ext.define(&quot;Ext.form.Labelable&quot;, {
                     '&lt;/label&gt;',
                     '{afterLabelTpl}',
                 '&lt;/td&gt;',
+                // When we use a fixed table layout, the label cannot stretch the full colspan since
+                // it will cause the cells below it to size 1/3 each, however we need the error icon
+                // to be small. So we insert a small placeholder here &amp; modify the colspan
+                '&lt;tpl if=&quot;msgTarget==\'side\'&quot;&gt;',
+                    '&lt;td id=&quot;{id}-topPlaceHolder&quot; style=&quot;display: none; width: {errorIconWidth}px;&quot;&gt;&lt;/td&gt;',
+                '&lt;/tpl&gt;',
             '&lt;/tr&gt;',
         '&lt;/tpl&gt;',
 
@@ -163,7 +172,7 @@ Ext.define(&quot;Ext.form.Labelable&quot;, {
             '&lt;tr&gt;',
                 // Align under the input element
                 '&lt;tpl if=&quot;labelOnLeft&quot;&gt;',
-                    '&lt;td&gt;&lt;/td&gt;',
+                    '&lt;td id=&quot;{id}-bottomPlaceHolder&quot;&gt;&lt;/td&gt;',
                 '&lt;/tpl&gt;',
                 '&lt;td id=&quot;{id}-errorEl&quot; class=&quot;{errorMsgClass}&quot; colspan=&quot;{[values.labelOnLeft ? 2 : 3]}&quot; style=&quot;display:none&quot;&gt;&lt;/td&gt;',
             '&lt;/tr&gt;',
@@ -272,11 +281,13 @@ Ext.define(&quot;Ext.form.Labelable&quot;, {
      */
     labelPad : 5,
 
+    //&lt;locale&gt;
 <span id='Ext-form-Labelable-cfg-labelSeparator'>    /**
 </span>     * @cfg {String} labelSeparator
      * Character(s) to be inserted at the end of the {@link #fieldLabel label text}.
+     *
+     * Set to empty string to hide the separator completely.
      */
-    //&lt;locale&gt;
     labelSeparator : ':',
     //&lt;/locale&gt;
 
@@ -439,13 +450,28 @@ Ext.define(&quot;Ext.form.Labelable&quot;, {
         );
     },
 
+<span id='Ext-form-Labelable-method-trimLabelSeparator'>    /**
+</span>     * Returns the trimmed label by slicing off the label separator character. Can be overridden.
+     * @return {String} The trimmed field label, or empty string if not defined
+     */
+    trimLabelSeparator: function() {
+        var me = this,
+            separator = me.labelSeparator,
+            label = me.fieldLabel || '',
+            lastChar = label.substr(label.length - 1);
+
+        // if the last char is the same as the label separator then slice it off otherwise just return label value
+        return lastChar === separator ? label.slice(0, -1) : label;
+    },
+
 <span id='Ext-form-Labelable-method-getFieldLabel'>    /**
 </span>     * Returns the label for the field. Defaults to simply returning the {@link #fieldLabel} config. Can be overridden
-     * to provide
+     * to provide a custom generated label.
+     * @template
      * @return {String} The configured field label, or empty string if not defined
      */
     getFieldLabel: function() {
-        return this.fieldLabel || '';
+        return this.trimLabelSeparator();
     },
     
 <span id='Ext-form-Labelable-method-setFieldLabel'>    /**
@@ -467,11 +493,7 @@ Ext.define(&quot;Ext.form.Labelable&quot;, {
                 labelEl.parent().setDisplayed('none');
             } else {
                 if (separator) {
-                    last = label.substr(label.length - 1);
-                    // append separator if necessary
-                    if (last != separator) {
-                        label += separator;
-                    }
+                    label = me.trimLabelSeparator() + separator;
                 }
                 labelEl.update(label);
                 labelEl.parent().setDisplayed('');
@@ -514,7 +536,7 @@ Ext.define(&quot;Ext.form.Labelable&quot;, {
             tempEl;
 
         if (!Ext.form.Labelable.errorIconWidth) {
-            Ext.form.Labelable.errorIconWidth = (tempEl = Ext.getBody().createChild({style: 'position:absolute', cls: Ext.baseCSSPrefix + 'form-invalid-icon'})).getWidth();
+            Ext.form.Labelable.errorIconWidth = (tempEl = Ext.resetElement.createChild({style: 'position:absolute', cls: Ext.baseCSSPrefix + 'form-invalid-icon'})).getWidth();
             tempEl.remove();
         }
 
@@ -523,6 +545,7 @@ Ext.define(&quot;Ext.form.Labelable&quot;, {
             inputId        : me.getInputId(),
             labelOnLeft    : me.labelAlign != 'top',
             fieldLabel     : me.getFieldLabel(),
+            labelTopColspan: me.msgTarget == 'side' ? 2 : 3,
             labelCellStyle : me.getLabelCellStyle(),
             labelCellAttrs : me.getLabelCellAttrs(),
             labelCls       : me.getLabelCls(),

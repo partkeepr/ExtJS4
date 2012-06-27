@@ -201,12 +201,7 @@
  * A Store is just a collection of Model instances - usually loaded from a server somewhere. Store can also maintain a
  * set of added, updated and removed Model instances to be synchronized with the server via the Proxy. See the {@link
  * Ext.data.Store Store docs} for more information on Stores.
- *
- * @constructor
- * Creates new Model instance.
- * @param {Object} data An object containing keys corresponding to this model's fields, and their associated values
  */
-
 Ext.define('Ext.data.Model', {
     alternateClassName: 'Ext.data.Record',
 
@@ -385,6 +380,12 @@ Ext.define('Ext.data.Model', {
 
             // If we have not been supplied with a Proxy *instance*, then add the proxy type to our dependency list
             if (clsProxy && !clsProxy.isProxy) {
+                //<debug>
+                if (typeof clsProxy !== 'string' && !clsProxy.type) {
+                    Ext.log.warn(name + ': proxy type is ' + clsProxy.type);
+                }
+                //</debug>
+
                 dependencies.push('proxy.' + (typeof clsProxy === 'string' ? clsProxy : clsProxy.type));
             }
 
@@ -578,10 +579,35 @@ Ext.define('Ext.data.Model', {
     },
 
     statics: {
+        /**
+         * @property
+         * @static
+         * @private
+         */
         PREFIX : 'ext-record',
+        /**
+         * @property
+         * @static
+         * @private
+         */
         AUTO_ID: 1,
+        /**
+         * @property
+         * @static
+         * The update operation of type 'edit'. Used by {@link Ext.data.Store#update Store.update} event.
+         */
         EDIT   : 'edit',
+        /**
+         * @property
+         * @static
+         * The update operation of type 'reject'. Used by {@link Ext.data.Store#update Store.update} event.
+         */
         REJECT : 'reject',
+        /**
+         * @property
+         * @static
+         * The update operation of type 'commit'. Used by {@link Ext.data.Store#update Store.update} event.
+         */
         COMMIT : 'commit',
 
         /**
@@ -787,8 +813,12 @@ Ext.define('Ext.data.Model', {
      * @param {Number/String} newId The new id
      */
 
-    // id, raw and convertedData not documented intentionally, meant to be used internally.
+    /**
+     * Creates new Model instance.
+     * @param {Object} data An object containing keys corresponding to this model's fields, and their associated values
+     */
     constructor: function(data, id, raw, convertedData) {
+        // id, raw and convertedData not documented intentionally, meant to be used internally.
         data = data || {};
 
         var me = this,
@@ -826,9 +856,7 @@ Ext.define('Ext.data.Model', {
         // Deal with spelling error in previous releases
         if (me.persistanceProperty) {
             //<debug>
-            if (Ext.isDefined(Ext.global.console)) {
-                Ext.global.console.warn('Ext.data.Model: persistanceProperty has been deprecated. Use persistenceProperty instead.');
-            }
+            Ext.log.warn('Ext.data.Model: persistanceProperty has been deprecated. Use persistenceProperty instead.');
             //</debug>
             me.persistenceProperty = me.persistanceProperty;
         }
@@ -1197,9 +1225,8 @@ Ext.define('Ext.data.Model', {
 
     //<debug>
     markDirty : function() {
-        if (Ext.isDefined(Ext.global.console)) {
-            Ext.global.console.warn('Ext.data.Model: markDirty has been deprecated. Use setDirty instead.');
-        }
+        Ext.log.warn('Ext.data.Model: markDirty has been deprecated. Use setDirty instead.');
+
         return this.setDirty.apply(this, arguments);
     },
     //</debug>
@@ -1209,7 +1236,7 @@ Ext.define('Ext.data.Model', {
      * all changes made to the model instance since either creation, or the last commit operation. Modified fields are
      * reverted to their original values.
      *
-     * Developers should subscribe to the {@link Ext.data.Store#update} event to have their code notified of reject
+     * Developers should subscribe to the {@link Ext.data.Store#event-update} event to have their code notified of reject
      * operations.
      *
      * @param {Boolean} silent (optional) True to skip notification of the owning store of the change.
@@ -1241,7 +1268,7 @@ Ext.define('Ext.data.Model', {
      * Usually called by the {@link Ext.data.Store} which owns the model instance. Commits all changes made to the
      * instance since either creation or the last commit operation.
      *
-     * Developers should subscribe to the {@link Ext.data.Store#update} event to have their code notified of commit
+     * Developers should subscribe to the {@link Ext.data.Store#event-update} event to have their code notified of commit
      * operations.
      *
      * @param {Boolean} silent (optional) True to skip notification of the owning store of the change.
@@ -1599,7 +1626,7 @@ Ext.define('Ext.data.Model', {
      * @return {Object} The nested data set for the Model's loaded associations
      */
     prepareAssociatedData: function(seenKeys, depth) {
-        /**
+        /*
          * In this method we use a breadth first strategy instead of depth
          * first. The reason for doing so is that it prevents messy & difficult
          * issues when figuring out which associations we've already processed

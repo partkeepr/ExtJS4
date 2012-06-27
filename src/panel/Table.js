@@ -18,6 +18,8 @@ Ext.define('Ext.panel.Table', {
 
     uses: [
         'Ext.selection.RowModel',
+        'Ext.selection.CellModel',
+        'Ext.selection.CheckboxModel',
         'Ext.grid.PagingScroller',
         'Ext.grid.header.Container',
         'Ext.grid.Lockable'
@@ -38,6 +40,7 @@ Ext.define('Ext.panel.Table', {
      * @cfg {String} viewType
      * An xtype of view to use. This is automatically set to 'gridview' by {@link Ext.grid.Panel Grid}
      * and to 'treeview' by {@link Ext.tree.Panel Tree}.
+     * @protected
      */
     viewType: null,
 
@@ -67,13 +70,15 @@ Ext.define('Ext.panel.Table', {
      */
 
     /**
-     * @cfg {Boolean} multiSelect
-     * True to enable 'MULTI' selection mode on selection model. See {@link Ext.selection.Model#mode}.
+     * @cfg {Boolean} [multiSelect=false]
+     * True to enable 'MULTI' selection mode on selection model.
+     * @deprecated 4.1.1 Use {@link Ext.selection.Model#mode} 'MULTI' instead.
      */
 
     /**
-     * @cfg {Boolean} simpleSelect
-     * True to enable 'SIMPLE' selection mode on selection model. See {@link Ext.selection.Model#mode}.
+     * @cfg {Boolean} [simpleSelect=false]
+     * True to enable 'SIMPLE' selection mode on selection model.
+     * @deprecated 4.1.1 Use {@link Ext.selection.Model#mode} 'SIMPLE' instead.
      */
 
     /**
@@ -119,7 +124,8 @@ Ext.define('Ext.panel.Table', {
      * @cfg {Boolean} forceFit
      * Ttrue to force the columns to fit into the available width. Headers are first sized according to configuration,
      * whether that be a specific width, or flex. Then they are all proportionally changed in width so that the entire
-     * content width is used.
+     * content width is used. For more accurate control, it is more optimal to specify a flex setting on the columns
+     * that are to be stretched & explicit widths on columns that are not.
      */
 
     /**
@@ -175,11 +181,11 @@ Ext.define('Ext.panel.Table', {
     enableColumnMove: true,
     
     /**
-     * @cfg {Boolean} [restrictColumnReorder=false]
+     * @cfg {Boolean} [sealedColumns=false]
      * True to constrain column dragging so that a column cannot be dragged in or out of it's
      * current group. Only relevant while {@link #enableColumnMove} is enabled.
      */
-    restrictColumnReorder: false,
+    sealedColumns: false,
 
     /**
      * @cfg {Boolean} [enableColumnResize=true]
@@ -282,7 +288,7 @@ Ext.define('Ext.panel.Table', {
                 enableColumnResize: me.enableColumnResize,
                 enableColumnHide: me.enableColumnHide,
                 border:  border,
-                restrictReorder: me.restrictColumnReorder
+                sealed: me.sealedColumns
             });
             me.columns = headerCtCfg.items;
 
@@ -699,6 +705,10 @@ Ext.define('Ext.panel.Table', {
                 panel: me,
                 emptyText : me.emptyText ? '<div class="' + Ext.baseCSSPrefix + 'grid-empty">' + me.emptyText + '</div>' : ''
             }));
+
+            // TableView's custom component layout, Ext.view.TableLayout requires a reference to the headerCt because it depends on the headerCt doing its work.
+            me.view.getComponentLayout().headerCt = me.headerCt;
+
             me.mon(me.view, {
                 uievent: me.processEvent,
                 scope: me
@@ -867,17 +877,6 @@ Ext.define('Ext.panel.Table', {
         }
     },
 
-    /**
-     * Sets the scrollTop of the TablePanel.
-     * @param {Number} top
-     */
-    setScrollTop: function(top) {
-        var me               = this,
-            rootCmp          = me.getScrollerOwner();
-
-        rootCmp.virtualScrollTop = top;
-    },
-
     getScrollerOwner: function() {
         var rootCmp = this;
         if (!this.scrollerOwner) {
@@ -893,8 +892,8 @@ Ext.define('Ext.panel.Table', {
     getLhsMarker: function() {
         var me = this;
         return me.lhsMarker || (me.lhsMarker = Ext.DomHelper.append(me.el, {
-                cls: Ext.baseCSSPrefix + 'grid-resize-marker'
-            }, true));
+            cls: Ext.baseCSSPrefix + 'grid-resize-marker'
+        }, true));
     },
 
     /**
@@ -905,8 +904,8 @@ Ext.define('Ext.panel.Table', {
         var me = this;
 
         return me.rhsMarker || (me.rhsMarker = Ext.DomHelper.append(me.el, {
-                cls: Ext.baseCSSPrefix + 'grid-resize-marker'
-            }, true));
+            cls: Ext.baseCSSPrefix + 'grid-resize-marker'
+        }, true));
     },
 
     /**
@@ -966,7 +965,7 @@ Ext.define('Ext.panel.Table', {
         var me = this,
             scrollTarget;
             
-        if (me.rendered) {   
+        if (me.rendered && left !== me.scrollLeftPos) {   
             scrollTarget = me.getScrollTarget();
             scrollTarget.el.dom.scrollLeft = left;
             me.headerCt.el.dom.scrollLeft = left;

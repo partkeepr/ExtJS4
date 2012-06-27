@@ -740,6 +740,14 @@
                     "name": "RowModel.js"
                 },
                 {
+                    "path": "../../src/selection/",
+                    "name": "CellModel.js"
+                },
+                {
+                    "path": "../../src/selection/",
+                    "name": "CheckboxModel.js"
+                },
+                {
                     "path": "../../src/grid/",
                     "name": "PagingScroller.js"
                 },
@@ -754,6 +762,10 @@
                 {
                     "path": "../../../platform/src/draw/engine/",
                     "name": "ImageExporter.js"
+                },
+                {
+                    "path": "../../src/view/",
+                    "name": "TableLayout.js"
                 },
                 {
                     "path": "../../src/view/",

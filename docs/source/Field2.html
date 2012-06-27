@@ -261,8 +261,14 @@ Ext.define('Ext.data.Field', {
 <span id='Ext-data-Field-cfg-useNull'>    /**
 </span>     * @cfg {Boolean} useNull
      *
-     * Use when converting received data into a Number type (either int or float). If the value cannot be
-     * parsed, null will be used if useNull is true, otherwise the value will be 0. Defaults to false.
+     * Use when converting received data into a INT, FLOAT, BOOL or STRING type. If the value cannot be
+     * parsed, `null` will be used if useNull is true, otherwise a default value for that type will be used:
+     *
+     * - for INT and FLOAT - `0`.
+     * - for STRING - `&quot;&quot;`.
+     * - for BOOL - `false`.
+     *
+     * Note that when parsing of DATE type fails, the value will be `null` regardless of this setting.
      */
     useNull: false,
     
@@ -288,7 +294,7 @@ Ext.define('Ext.data.Field', {
      * - {@link Ext.data.reader.Json}
      *
      *   The mapping is a string containing the javascript expression to reference the data from an element of the data
-     *   item's {@link Ext.data.reader.Json#root root} Array. Defaults to the field name.
+     *   item's {@link Ext.data.reader.Json#cfg-root root} Array. Defaults to the field name.
      *
      * - {@link Ext.data.reader.Xml}
      *

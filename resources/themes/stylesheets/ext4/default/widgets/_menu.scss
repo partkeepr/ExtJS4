@@ -1,13 +1,14 @@
 /**
-  * @class Ext.menu.*
-  */
+ * Creates the base structure of a Menu
+ * @member Ext.menu.Menu
+ */
 @mixin extjs-menu {
     .#{$prefix}menu-body {
         @include no-select;
         background: $menu-background-color !important;
         padding: $menu-padding;
     }
-    
+
     .#{$prefix}menu-item .#{$prefix}form-text {
         user-select: text;
         -webkit-user-select: text;
@@ -61,7 +62,7 @@
         line-height: 16px;
         cursor: default;
     }
-    
+
     @if $include-opera {
         .#{$prefix}opera {
             // Opera 10.5 absolute positioning of submenu arrow has issues
@@ -154,18 +155,18 @@
                     background-color: transparent;
                 }
             }
-            
+
             .#{$prefix}strict .#{$prefix}ie7m & {
                 .#{$prefix}menu-icon-separator {
                     width: 1px;
                 }
-                
+
                 .#{$prefix}menu-item-separator {
                     height: 1px;
                 }
             }
         }
-        
+
         .#{$prefix}ie6,
         .#{$prefix}ie7,
         .#{$prefix}quirks .#{$prefix}ie8 {
@@ -183,7 +184,7 @@
             }
         }
     }
-    
+
     .#{$prefix}menu-date-item {
         border-color: #99BBE8;
     }

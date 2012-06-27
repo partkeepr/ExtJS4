@@ -238,7 +238,7 @@ Ext.define('Ext.form.field.Spinner', {
 
     // private
     // Handle trigger mouse up gesture; refocuses the input element upon end of spin.
-    onTriggerWrapMousup: function() {
+    onTriggerWrapMouseup: function() {
         this.inputEl.focus();
     },
 

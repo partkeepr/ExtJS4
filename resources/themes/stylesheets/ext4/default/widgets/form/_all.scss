@@ -1,3 +1,7 @@
+/**
+ * Creates the base structure of Ext.form.Panel.
+ * @member Ext.form.Panel
+ */
 @mixin extjs-form {
     /*misc*/
     .#{$prefix}webkit {
@@ -7,7 +11,7 @@
             }
         }
     }
-    
+
     // form items
     .#{$prefix}form-item {
         vertical-align: top;
@@ -59,12 +63,12 @@
             height: 5px;
         }
     }
-    
+
     // No padding when inside an Editor
     .#{$prefix}editor .#{$prefix}form-item-body {
         padding-bottom: 0;
     }
-    
+
     .#{$prefix}form-item-label {
         display: block;
         padding: 3px 0 0;

@@ -119,8 +119,8 @@ Ext.dom.AbstractElement.override({
         // Pull the ID from the DOM (Ext.id also ensures that there *is* an ID).
         // If this object is a Flyweight, it will not have an ID
         id = Ext.id(me.dom);
-        // Escape . or :
-        id = id.replace(/[\.:]/g, &quot;\\$0&quot;);
+        // Escape &quot;invalid&quot; chars
+        id = Ext.escapeId(id);
         node = Ext.DomQuery.selectNode('#' + id + &quot; &gt; &quot; + selector, me.dom);
         return returnDom ? node : Ext.get(node);
     },

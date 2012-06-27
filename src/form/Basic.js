@@ -256,11 +256,11 @@ Ext.define('Ext.form.Basic', {
      */
     paramsAsHash: false,
 
+    //<locale>
     /**
      * @cfg {String} waitTitle
      * The default title to show for the waiting message box
      */
-    //<locale>
     waitTitle: 'Please Wait...',
     //</locale>
 
@@ -324,7 +324,7 @@ Ext.define('Ext.form.Basic', {
             handleField(child);
         } else if (isContainer) {
             // Walk down
-            if (child.isDestroyed) {
+            if (child.isDestroyed || child.destroying) {
                 // the container is destroyed, this means we may have child fields, so here
                 // we just invalidate all the fields to be sure.
                 delete me._fields;
@@ -868,8 +868,9 @@ Ext.define('Ext.form.Basic', {
      * Retrieves the fields in the form as a set of key/value pairs, using their
      * {@link Ext.form.field.Field#getSubmitData getSubmitData()} method to collect the values.
      * If multiple fields return values under the same name those values will be combined into an Array.
-     * This is similar to {@link #getFieldValues} except that this method collects only String values for
-     * submission, while getFieldValues collects type-specific data values (e.g. Date objects for date fields.)
+     * This is similar to {@link Ext.form.Basic#getFieldValues getFieldValues} except that this method
+     * collects only String values for submission, while getFieldValues collects type-specific data
+     * values (e.g. Date objects for date fields.)
      *
      * @param {Boolean} [asString=false] If true, will return the key/value collection as a single
      * URL-encoded param string.

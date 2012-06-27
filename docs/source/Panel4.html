@@ -62,8 +62,7 @@ Ext.define('Ext.tree.Panel', {
     deferRowRender: false,
 
 <span id='Ext-tree-Panel-cfg-rowLines'>    /**
-</span>     * @private
-     * @cfg {Boolean} rowLines
+</span>     * @cfg {Boolean} rowLines
      * False so that rows are not separated by lines.
      */
     rowLines: false,
@@ -219,18 +218,18 @@ Ext.define('Ext.tree.Panel', {
         me.relayEvents(me.store, [
 <span id='Ext-tree-Panel-event-beforeload'>            /**
 </span>             * @event beforeload
-             * @inheritdoc Ext.data.Store#beforeload
+             * @inheritdoc Ext.data.TreeStore#beforeload
              */
             'beforeload',
 
 <span id='Ext-tree-Panel-event-load'>            /**
 </span>             * @event load
-             * @inheritdoc Ext.data.Store#load
+             * @inheritdoc Ext.data.TreeStore#load
              */
             'load'
         ]);
 
-        me.store.on({
+        me.mon(me.store, {
 <span id='Ext-tree-Panel-event-itemappend'>            /**
 </span>             * @event itemappend
              * @inheritdoc Ext.data.TreeStore#append

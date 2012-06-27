@@ -492,7 +492,7 @@ Ext.define('Ext.layout.Layout', {
 
     /**
      * Removes layout's itemCls and owning Container's itemCls.
-     * Clears the managed dimensinos flags
+     * Clears the managed dimensions flags
      * @protected
      */
     afterRemove : function(item) {

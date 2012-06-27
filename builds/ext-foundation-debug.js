@@ -13,7 +13,7 @@ Ext license terms. Public redistribution is prohibited.
 
 For early licensing, please contact us at licensing@sencha.com
 
-Build date: 2012-05-12 20:31:37 (0c4e02828abd5db4a2b0b2aa79030ddecedbb3f4)
+Build date: 2012-06-11 23:41:44 (c11133f09694d5eb4054e7eec7a949cd0d8656c3)
 */
 
 
@@ -530,7 +530,7 @@ Ext.globalEval = Ext.global.execScript
 (function() {
 
 
-var version = '4.1.1.0RC', Version;
+var version = '4.1.1.1RC', Version;
     Ext.Version = Version = Ext.extend(Object, {
 
         
@@ -700,6 +700,7 @@ var version = '4.1.1.0RC', Version;
         }
     });
 
+    
     Ext.apply(Ext, {
         
         versions: {},
@@ -3686,16 +3687,22 @@ var noArgs = [],
     });
 
     Base.implement({
+        
         isInstance: true,
 
+        
         $className: 'Ext.Base',
 
+        
         configClass: Ext.emptyFn,
 
+        
         initConfigList: [],
 
+        
         configMap: {},
 
+        
         initConfigMap: {},
 
         
@@ -3854,6 +3861,7 @@ var noArgs = [],
             }
         },
 
+        
         destroy: function() {
             this.destroy = Ext.emptyFn;
         }
@@ -4326,6 +4334,16 @@ var noArgs = [],
 
 (function(Class, alias, arraySlice, arrayFrom, global) {
 
+    
+    function makeCtor () {
+        function constructor () {
+            
+            
+            return this.constructor.apply(this, arguments) || null;
+        }
+        return constructor;
+    }
+
     var Manager = Ext.ClassManager = {
 
         
@@ -4668,9 +4686,15 @@ var noArgs = [],
         
         create: function(className, data, createdFn) {
 
+            var ctor = makeCtor();
+            if (typeof data == 'function') {
+                data = data(ctor);
+            }
+
+
             data.$className = className;
 
-            return new Class(data, function() {
+            return new Class(ctor, data, function() {
                 var postprocessorStack = data.postprocessors || Manager.defaultPostprocessors,
                     registeredPostprocessors = Manager.postprocessors,
                     postprocessors = [],
@@ -4716,13 +4740,17 @@ var noArgs = [],
                 createdFn = clsData.createdFn;
 
             if (!postprocessor) {
-                me.set(className, cls);
-
-                if (createdFn) {
-                     createdFn.call(cls, cls);
+                if (className) {
+                    me.set(className, cls);
                 }
 
-                me.triggerCreated(className);
+                if (createdFn) {
+                    createdFn.call(cls, cls);
+                }
+
+                if (className) {
+                    me.triggerCreated(className);
+                }
                 return;
             }
 
@@ -5612,7 +5640,8 @@ Ext.Loader = new function() {
             var config = Loader.getConfig(),
                 noCacheUrl = url + (config.disableCaching ? ('?' + config.disableCachingParam + '=' + Ext.Date.now()) : ''),
                 isCrossOriginRestricted = false,
-                xhr, status, onScriptError;
+                xhr, status, onScriptError,
+                debugSourceURL = "";
 
             scope = scope || Loader;
 
@@ -5649,7 +5678,11 @@ Ext.Loader = new function() {
                 ) {
                     
                     
-                    Ext.globalEval(xhr.responseText + "\n//@ sourceURL=" + url);
+                    if (!Ext.isIE) {
+                        debugSourceURL = "\n//@ sourceURL=" + url;
+                    }
+
+                    Ext.globalEval(xhr.responseText + debugSourceURL);
 
                     onLoad.call(scope);
                 }

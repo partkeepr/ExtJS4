@@ -240,17 +240,18 @@ Ext.define('Ext.grid.Lockable', {
         Ext.applyIf(lockedGrid.viewConfig, me.viewConfig);
         Ext.applyIf(normalGrid.viewConfig, me.viewConfig);
 
-        me.normalGrid = Ext.ComponentManager.create(normalGrid);
         me.lockedGrid = Ext.ComponentManager.create(lockedGrid);
+        lockedView = me.lockedGrid.getView();
+        
+        normalGrid.viewConfig.lockingPartner = lockedView;
+        me.normalGrid = Ext.ComponentManager.create(normalGrid);
+        normalView = me.normalGrid.getView();
 
         me.view = new Ext.grid.LockingView({
             locked: me.lockedGrid,
             normal: me.normalGrid,
             panel: me
         });
-
-        lockedView = me.lockedGrid.getView();
-        normalView = me.normalGrid.getView();
 
         // Set up listeners for the locked view
         // If the OS does not show a space-taking scrollbar, the locked view can be overflow:auto
@@ -514,6 +515,7 @@ Ext.define('Ext.grid.Lockable', {
                 me.lockedHeights[i] = rowEls[i].clientHeight;
             }
             me.syncRowHeights();
+            me.updateSpacer();
         }
     },
 
@@ -596,9 +598,6 @@ Ext.define('Ext.grid.Lockable', {
             }
 
             // Synchronize the scrollTop positions of the two views
-            // We don't use setScrollTop here because if the scrollTop is
-            // set to the exact same value some browsers won't fire the scroll
-            // event. Instead, we directly set the scrollTop.
             scrollTop = normalView.el.dom.scrollTop;
             normalView.el.dom.scrollTop = scrollTop;
             lockedView.el.dom.scrollTop = scrollTop;

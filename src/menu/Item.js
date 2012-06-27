@@ -415,7 +415,8 @@ Ext.define('Ext.menu.Item', {
      */
     setMenu: function(menu, destroyMenu) {
         var me = this,
-            oldMenu = me.menu;
+            oldMenu = me.menu,
+            arrowEl = me.arrowEl;
             
         if (oldMenu) {
             delete oldMenu.parentItem;
@@ -434,8 +435,8 @@ Ext.define('Ext.menu.Item', {
             me.menu = null;
         }
         
-        if (me.rendered && !me.destroying) {
-            me.arrowEl[me.menu ? 'addCls' : 'removeCls'](me.arrowCls);
+        if (me.rendered && !me.destroying && arrowEl) {
+            arrowEl[me.menu ? 'addCls' : 'removeCls'](me.arrowCls);
         }
     },
 

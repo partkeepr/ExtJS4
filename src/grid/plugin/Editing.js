@@ -359,7 +359,12 @@ Ext.define('Ext.grid.plugin.Editing', {
             // Listen for whichever click event we are configured to use
             me.mon(view, me.triggerEvent || ('cell' + (me.clicksToEdit === 1 ? 'click' : 'dblclick')), me.onCellClick, me);
         }
-        view.on('render', me.addHeaderEvents, me, {single: true});
+        
+        // add/remove header event listeners need to be added immediately because
+        // columns can be added/removed before render
+        me.initAddRemoveHeaderEvents()
+        // wait until render to initialize keynav events since they are attached to an element
+        view.on('render', me.initKeyNavHeaderEvents, me, {single: true});
     },
 
     // Override of View's method so that we can pre-empt the View's processing if the view is being triggered by a mousedown
@@ -388,14 +393,18 @@ Ext.define('Ext.grid.plugin.Editing', {
         }
     },
 
-    addHeaderEvents: function(){
+    initAddRemoveHeaderEvents: function(){
         var me = this;
         me.mon(me.grid.headerCt, {
             scope: me,
             add: me.onColumnAdd,
             remove: me.onColumnRemove
         });
-        
+    },
+
+    initKeyNavHeaderEvents: function() {
+        var me = this;
+
         me.keyNav = Ext.create('Ext.util.KeyNav', me.view.el, {
             enter: me.onEnterKey,
             esc: me.onEscKey,
@@ -469,7 +478,7 @@ Ext.define('Ext.grid.plugin.Editing', {
         var me = this,
             context = me.getEditingContext(record, columnHeader);
 
-        if (me.beforeEdit(context) === false || me.fireEvent('beforeedit', me, context) === false || context.cancel || !me.grid.view.isVisible(true)) {
+        if (context == null || me.beforeEdit(context) === false || me.fireEvent('beforeedit', me, context) === false || context.cancel || !me.grid.view.isVisible(true)) {
             return false;
         }
 
@@ -483,7 +492,7 @@ Ext.define('Ext.grid.plugin.Editing', {
      * Collects all information necessary for any subclasses to perform their editing functions.
      * @param record
      * @param columnHeader
-     * @returns {Object} The editing context based upon the passed record and column
+     * @returns {Object/undefined} The editing context based upon the passed record and column
      */
     getEditingContext: function(record, columnHeader) {
         var me = this,

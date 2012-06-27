@@ -330,8 +330,9 @@ Ext.define('Ext.grid.header.Container', {
     
     setSortState: function(){
         var store   = this.up('[store]').store,
-            sorters = store.sorters,
-            first   = sorters.first(),
+            // grab the first sorter, since there may also be groupers
+            // in this collection
+            first = store.getFirstSorter(),
             hd;
 
         if (first) {
@@ -339,6 +340,8 @@ Ext.define('Ext.grid.header.Container', {
             if (hd) {
                 hd.setSortState(first.direction, false, true);
             }
+        } else {
+            this.clearOtherSortStates(null);
         }
     },
     
@@ -465,15 +468,11 @@ Ext.define('Ext.grid.header.Container', {
         // Only update the grid UI when we are notified about base level Header shows;
         // Group header shows just cause a layout of the HeaderContainer
         if (!header.isGroupHeader) {
-            if (me.view) {
-                me.view.onHeaderShow(me, header, true);
-            }
             if (gridSection) {
                 gridSection.onHeaderShow(me, header);
             }
         }
         me.fireEvent('columnshow', me, header);
-        me.updateLayout();
     },
 
     onHeaderHide: function(header) {
@@ -485,15 +484,9 @@ Ext.define('Ext.grid.header.Container', {
 
         // Only update the UI when we are notified about base level Header hides;
         if (!header.isGroupHeader) {
-            if (me.view) {
-                me.view.ignoreTemplate = true;
-                me.view.onHeaderHide(me, header, true);
-                me.view.ignoreTemplate = false;
-            }
             if (gridSection) {
                 gridSection.onHeaderHide(me, header);
             }
-            me.updateLayout();
         }
         me.fireEvent('columnhide', me, header);
     },
@@ -515,13 +508,11 @@ Ext.define('Ext.grid.header.Container', {
     onHeaderResize: function(header, w, suppressFocus) {
         var me = this,
             view = me.view,
-            gridSection = me.ownerCt,
-            viewEl;
+            gridSection = me.ownerCt;
 
         // Do not react to header sizing during initial Panel layout when there is no view content to size.
-        if (view && (viewEl = view.el) && viewEl.dom.firstChild) {
+        if (view && view.table.dom) {
             me.tempLock();
-            view.onHeaderResize(header, w, suppressFocus);
             if (gridSection) {
                 gridSection.onHeaderResize(me, header, w);
             }

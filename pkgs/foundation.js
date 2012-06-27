@@ -742,36 +742,43 @@ Ext.globalEval = Ext.global.execScript
  *
  * A utility class that wrap around a string version number and provide convenient
  * method to perform comparison. See also: {@link Ext.Version#compare compare}. Example:
-
-    var version = new Ext.Version('1.0.2beta');
-    console.log("Version is " + version); // Version is 1.0.2beta
-
-    console.log(version.getMajor()); // 1
-    console.log(version.getMinor()); // 0
-    console.log(version.getPatch()); // 2
-    console.log(version.getBuild()); // 0
-    console.log(version.getRelease()); // beta
-
-    console.log(version.isGreaterThan('1.0.1')); // True
-    console.log(version.isGreaterThan('1.0.2alpha')); // True
-    console.log(version.isGreaterThan('1.0.2RC')); // False
-    console.log(version.isGreaterThan('1.0.2')); // False
-    console.log(version.isLessThan('1.0.2')); // True
-
-    console.log(version.match(1.0)); // True
-    console.log(version.match('1.0.2')); // True
-
- * @markdown
+ *
+ *     var version = new Ext.Version('1.0.2beta');
+ *     console.log("Version is " + version); // Version is 1.0.2beta
+ *
+ *     console.log(version.getMajor()); // 1
+ *     console.log(version.getMinor()); // 0
+ *     console.log(version.getPatch()); // 2
+ *     console.log(version.getBuild()); // 0
+ *     console.log(version.getRelease()); // beta
+ *
+ *     console.log(version.isGreaterThan('1.0.1')); // True
+ *     console.log(version.isGreaterThan('1.0.2alpha')); // True
+ *     console.log(version.isGreaterThan('1.0.2RC')); // False
+ *     console.log(version.isGreaterThan('1.0.2')); // False
+ *     console.log(version.isLessThan('1.0.2')); // True
+ *
+ *     console.log(version.match(1.0)); // True
+ *     console.log(version.match('1.0.2')); // True
+ *
  */
 (function() {
 
 // Current core version
-var version = '4.1.1.0RC', Version;
+var version = '4.1.1.1RC', Version;
     Ext.Version = Version = Ext.extend(Object, {
 
         /**
-         * @param {String/Number} version The version number in the follow standard format: major[.minor[.patch[.build[release]]]]
-         * Examples: 1.0 or 1.2.3beta or 1.2.3.4RC
+         * @param {String/Number} version The version number in the following standard format:
+         *
+         *     major[.minor[.patch[.build[release]]]]
+         *
+         * Examples:
+         *
+         *     1.0
+         *     1.2.3beta
+         *     1.2.3.4RC
+         *
          * @return {Ext.Version} this
          */
         constructor: function(version) {
@@ -907,13 +914,13 @@ var version = '4.1.1.0RC', Version;
 
         /**
          * Returns whether this version matches the supplied argument. Example:
-         * <pre><code>
-         * var version = new Ext.Version('1.0.2beta');
-         * console.log(version.match(1)); // True
-         * console.log(version.match(1.0)); // True
-         * console.log(version.match('1.0.2')); // True
-         * console.log(version.match('1.0.2RC')); // False
-         * </code></pre>
+         *
+         *     var version = new Ext.Version('1.0.2beta');
+         *     console.log(version.match(1)); // True
+         *     console.log(version.match(1.0)); // True
+         *     console.log(version.match('1.0.2')); // True
+         *     console.log(version.match('1.0.2RC')); // False
+         *
          * @param {String/Number} target The version to compare with
          * @return {Boolean} True if this version matches the target, false otherwise
          */
@@ -1031,6 +1038,9 @@ var version = '4.1.1.0RC', Version;
         }
     });
 
+    /**
+     * @class Ext
+     */
     Ext.apply(Ext, {
         /**
          * @private
@@ -1074,20 +1084,19 @@ var version = '4.1.1.0RC', Version;
         /**
          * Create a closure for deprecated code.
          *
-    // This means Ext.oldMethod is only supported in 4.0.0beta and older.
-    // If Ext.getVersion('extjs') returns a version that is later than '4.0.0beta', for example '4.0.0RC',
-    // the closure will not be invoked
-    Ext.deprecate('extjs', '4.0.0beta', function() {
-        Ext.oldMethod = Ext.newMethod;
-
-        ...
-    });
-
+         *     // This means Ext.oldMethod is only supported in 4.0.0beta and older.
+         *     // If Ext.getVersion('extjs') returns a version that is later than '4.0.0beta', for example '4.0.0RC',
+         *     // the closure will not be invoked
+         *     Ext.deprecate('extjs', '4.0.0beta', function() {
+         *         Ext.oldMethod = Ext.newMethod;
+         *
+         *         ...
+         *     });
+         *
          * @param {String} packageName The package name
          * @param {String} since The last version before it's deprecated
          * @param {Function} closure The callback function to be executed with the specified version is less than the current version
-         * @param {Object} scope The execution scope (<tt>this</tt>) if the closure
-         * @markdown
+         * @param {Object} scope The execution scope (`this`) if the closure
          */
         deprecate: function(packageName, since, closure, scope) {
             if (Version.compare(Ext.getVersion(packageName), since) < 1) {
@@ -4039,8 +4048,8 @@ function xf(format) {
 
 Ext.Date = {
     /**
-     * Returns the current timestamp
-     * @return {Number} The current timestamp
+     * Returns the current timestamp.
+     * @return {Number} Milliseconds since UNIX epoch.
      * @method
      */
     now: Date.now || function() {
@@ -5416,6 +5425,8 @@ var noArgs = [],
 
         /**
          * @private
+         * @static
+         * @inheritable
          * @param config
          */
         extend: function(parent) {
@@ -5466,11 +5477,15 @@ var noArgs = [],
 
         /**
          * @private
+         * @static
+         * @inheritable
          */
         $onExtended: [],
 
         /**
          * @private
+         * @static
+         * @inheritable
          */
         triggerExtended: function() {
             var callbacks = this.$onExtended,
@@ -5487,6 +5502,8 @@ var noArgs = [],
 
         /**
          * @private
+         * @static
+         * @inheritable
          */
         onExtended: function(fn, scope) {
             this.$onExtended.push({
@@ -5499,6 +5516,8 @@ var noArgs = [],
 
         /**
          * @private
+         * @static
+         * @inheritable
          * @param config
          */
         addConfig: function(config, fullMerge) {
@@ -5575,6 +5594,8 @@ var noArgs = [],
 
         /**
          * @private
+         * @static
+         * @inheritable
          * @param {Object} members
          */
         addInheritableStatics: function(members) {
@@ -5620,7 +5641,7 @@ var noArgs = [],
          *         }
          *     });
          *
-         *      My.awesome.Cat.implement({
+         *      My.awesome.Cat.addMembers({
          *          meow: function() {
          *             alert('Meowww...');
          *          }
@@ -5670,6 +5691,8 @@ var noArgs = [],
 
         /**
          * @private
+         * @static
+         * @inheritable
          * @param name
          * @param member
          */
@@ -5688,7 +5711,10 @@ var noArgs = [],
         },
 
         /**
-         * @private
+         * Adds members to class.
+         * @static
+         * @inheritable
+         * @deprecated 4.1 Use {@link #addMembers} instead.
          */
         implement: function() {
             this.addMembers.apply(this, arguments);
@@ -5893,6 +5919,7 @@ var noArgs = [],
         /**
          * Used internally by the mixins pre-processor
          * @private
+         * @static
          * @inheritable
          */
         mixin: function(name, mixinClass) {
@@ -5987,6 +6014,8 @@ var noArgs = [],
 
         /**
          * @private
+         * @static
+         * @inheritable
          */
         addXtype: function(xtype) {
             var prototype = this.prototype,
@@ -6013,16 +6042,22 @@ var noArgs = [],
     });
 
     Base.implement({
+        /** @private */
         isInstance: true,
 
+        /** @private */
         $className: 'Ext.Base',
 
+        /** @private */
         configClass: Ext.emptyFn,
 
+        /** @private */
         initConfigList: [],
 
+        /** @private */
         configMap: {},
 
+        /** @private */
         initConfigMap: {},
 
         /**
@@ -6367,8 +6402,11 @@ var noArgs = [],
         },
 
         /**
-         *
-         * @param name
+         * Returns the initial configuration passed to constructor when instantiating
+         * this class.
+         * @param {String} [name] Name of the config option to return.
+         * @return {Object/Mixed} The full config object or a single config value
+         * when `name` parameter specified.
          */
         getInitialConfig: function(name) {
             var config = this.config;
@@ -6418,6 +6456,9 @@ var noArgs = [],
         },
         //</feature>
 
+        /**
+         * @private
+         */
         destroy: function() {
             this.destroy = Ext.emptyFn;
         }
@@ -7330,6 +7371,16 @@ var noArgs = [],
  */
 (function(Class, alias, arraySlice, arrayFrom, global) {
 
+    // Creates a constructor that has nothing extra in its scope chain.
+    function makeCtor () {
+        function constructor () {
+            // Opera has some problems returning from a constructor when Dragonfly isn't running. The || null seems to
+            // be sufficient to stop it misbehaving. Known to be required against 10.53, 11.51 and 11.61.
+            return this.constructor.apply(this, arguments) || null;
+        }
+        return constructor;
+    }
+
     var Manager = Ext.ClassManager = {
 
         /**
@@ -7784,14 +7835,25 @@ var noArgs = [],
          */
         create: function(className, data, createdFn) {
             //<debug error>
-            if (typeof className != 'string') {
+            if (className != null && typeof className != 'string') {
                 throw new Error("[Ext.define] Invalid class name '" + className + "' specified, must be a non-empty string");
+            }
+            //</debug>
+
+            var ctor = makeCtor();
+            if (typeof data == 'function') {
+                data = data(ctor);
+            }
+
+            //<debug>
+            if (className) {
+                ctor.displayName = className;
             }
             //</debug>
 
             data.$className = className;
 
-            return new Class(data, function() {
+            return new Class(ctor, data, function() {
                 var postprocessorStack = data.postprocessors || Manager.defaultPostprocessors,
                     registeredPostprocessors = Manager.postprocessors,
                     postprocessors = [],
@@ -7837,13 +7899,17 @@ var noArgs = [],
                 createdFn = clsData.createdFn;
 
             if (!postprocessor) {
-                me.set(className, cls);
-
-                if (createdFn) {
-                     createdFn.call(cls, cls);
+                if (className) {
+                    me.set(className, cls);
                 }
 
-                me.triggerCreated(className);
+                if (createdFn) {
+                    createdFn.call(cls, cls);
+                }
+
+                if (className) {
+                    me.triggerCreated(className);
+                }
                 return;
             }
 
@@ -8456,7 +8522,48 @@ var noArgs = [],
          *
          *      obj.someMethod('Say '); // alerts 'Say something'
          *
-         * To defines an override, include the `override` property. The content of an
+         * To create an anonymous class, pass `null` for the `className`:
+         * 
+         *      Ext.define(null, {
+         *          constructor: function () {
+         *              // ...
+         *          }
+         *      });
+         *
+         * In some cases, it is helpful to create a nested scope to contain some private
+         * properties. The best way to do this is to pass a function instead of an object
+         * as the second parameter. This function will be called to produce the class
+         * body:
+         * 
+         *      Ext.define('MyApp.foo.Bar', function () {
+         *          var id = 0;
+         *          
+         *          return {
+         *              nextId: function () {
+         *                  return ++id;
+         *              }
+         *          };
+         *      });
+         * 
+         * When using this form of `Ext.define`, the function is passed a reference to its
+         * class. This can be used as an efficient way to access any static properties you
+         * may have:
+         * 
+         *      Ext.define('MyApp.foo.Bar', function (Bar) {
+         *          return {
+         *              statics: {
+         *                  staticMethod: function () {
+         *                      // ...
+         *                  }
+         *              },
+         *              
+         *              method: function () {
+         *                  return Bar.staticMethod();
+         *              }
+         *          };
+         *      });
+         *
+         * To define an override, include the `override` property. The content of an
          * override is aggregated with the specified class in order to extend or modify
          * that class. This can be as simple as setting default property values or it can
          * extend and/or replace methods. This can also extend the statics of the class.
@@ -8535,6 +8642,7 @@ var noArgs = [],
          * It is highly recommended to follow this simple convention:
          *  - The root and the class name are 'CamelCased'
          *  - Everything else is lower-cased
+         * Pass `null` to create an anonymous class.
          * @param {Object} data The key - value pairs of properties to apply to this class. Property names can be of any valid
          * strings, except those in the reserved listed below:
          *  - `mixins`
@@ -8809,7 +8917,7 @@ var noArgs = [],
  * Ext.Loader will automatically fetch all dependencies on demand as they're needed during run-time. For example:
  *
  *     Ext.onReady(function(){
- *         var window = Ext.createWidget('window', {
+ *         var window = Ext.widget('window', {
  *             width: 500,
  *             height: 300,
  *             layout: {
@@ -9492,7 +9600,8 @@ Ext.Loader = new function() {
             var config = Loader.getConfig(),
                 noCacheUrl = url + (config.disableCaching ? ('?' + config.disableCachingParam + '=' + Ext.Date.now()) : ''),
                 isCrossOriginRestricted = false,
-                xhr, status, onScriptError;
+                xhr, status, onScriptError,
+                debugSourceURL = "";
 
             scope = scope || Loader;
 
@@ -9544,7 +9653,11 @@ Ext.Loader = new function() {
                 ) {
                     // Debugger friendly, file names are still shown even though they're eval'ed code
                     // Breakpoints work on both Firebug and Chrome's Web Inspector
-                    Ext.globalEval(xhr.responseText + "\n//@ sourceURL=" + url);
+                    if (!Ext.isIE) {
+                        debugSourceURL = "\n//@ sourceURL=" + url;
+                    }
+
+                    Ext.globalEval(xhr.responseText + debugSourceURL);
 
                     onLoad.call(scope);
                 }

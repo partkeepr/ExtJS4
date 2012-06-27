@@ -341,8 +341,8 @@ Ext.define('Ext.layout.container.boxOverflow.Menu', {
      * splitbuttons and buttongroups, where the Toolbar item cannot be represented by a single menu item
      */
     clearMenu : function() {
-        var menu = this.moreMenu,
-        items, i, iLen, item;
+        var menu = this.menu,
+            items, i, iLen, item;
         
         if (menu && menu.items) {
             items = menu.items.items;
@@ -350,9 +350,8 @@ Ext.define('Ext.layout.container.boxOverflow.Menu', {
             
             for (i = 0; i < iLen; i++) {
                 item = items[i];
-
-                if (item.menu) {
-                    delete item.menu;
+                if (item.setMenu) {
+                    item.setMenu(null);
                 }
             }
         }
@@ -362,6 +361,13 @@ Ext.define('Ext.layout.container.boxOverflow.Menu', {
      * @private
      */
     destroy: function() {
-        Ext.destroy(this.menu, this.menuTrigger);
+        var trigger = this.menuTrigger;
+            
+        if (!this.layout.owner.items.contains(trigger)) {
+            // Ensure we delete the ownerCt if it's not in the items
+            // so we don't get spurious container remove warnings.
+            delete trigger.ownerCt;
+        }
+        Ext.destroy(this.menu, trigger);
     }
 });

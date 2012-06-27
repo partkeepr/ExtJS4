@@ -48,6 +48,7 @@
  *         width: 400,
  *         renderTo: Ext.getBody()
  *     });
+ *
  */
 Ext.define('Ext.grid.plugin.RowEditing', {
     extend: 'Ext.grid.plugin.Editing',
@@ -114,6 +115,10 @@ Ext.define('Ext.grid.plugin.RowEditing', {
     startEdit: function(record, columnHeader) {
         var me = this,
             editor = me.getEditor();
+
+        if (me.editing && editor.isDirty()) {
+            return false;
+        }
 
         if ((me.callParent(arguments) !== false) && (editor.beforeEdit() !== false)) {
             editor.startEdit(me.context.record, me.context.column);
@@ -195,7 +200,7 @@ Ext.define('Ext.grid.plugin.RowEditing', {
                 errorSummary: me.errorSummary,
                 fields: headerCt.getGridColumns(),
                 hidden: true,
-            
+                view: view,
                 // keep a reference..
                 editingPlugin: me,
                 renderTo: view.el
@@ -216,25 +221,26 @@ Ext.define('Ext.grid.plugin.RowEditing', {
     // private
     initEditTriggers: function() {
         var me = this,
+            view = me.view,
             moveEditorEvent = me.clicksToMoveEditor === 1 ? 'click' : 'dblclick';
 
         me.callParent(arguments);
 
         if (me.clicksToMoveEditor !== me.clicksToEdit) {
-            me.mon(me.view, 'cell' + moveEditorEvent, me.moveEditorByClick, me);
+            me.mon(view, 'cell' + moveEditorEvent, me.moveEditorByClick, me);
         }
-    },
-    
-    addHeaderEvents: function(){
-        var me = this;
-        me.callParent();
-        
-        me.mon(me.grid.headerCt, {
-            scope: me,
-            columnresize: me.onColumnResize,
-            columnhide: me.onColumnHide,
-            columnshow: me.onColumnShow,
-            columnmove: me.onColumnMove
+
+        view.on({
+            render: function() {
+                me.mon(me.grid.headerCt, {
+                    scope: me,
+                    columnresize: me.onColumnResize,
+                    columnhide: me.onColumnHide,
+                    columnshow: me.onColumnShow,
+                    columnmove: me.onColumnMove
+                });
+            },
+            single: true
         });
     },
 
@@ -323,7 +329,9 @@ Ext.define('Ext.grid.plugin.RowEditing', {
             editor = me.getEditor();
 
         if (editor && editor.onColumnMove) {
-            editor.onColumnMove(column, fromIdx, toIdx);
+            // Must adjust the toIdx to account for removal if moving rightwards
+            // because RowEditor.onColumnMove just calls Container.move which does not do this.
+            editor.onColumnMove(column, fromIdx, toIdx - (toIdx > fromIdx ? 1 : 0));
         }
     },
 

@@ -57,7 +57,9 @@ Ext.onReady(function(){
                 title: 'Event Tab',
                 listeners: {
                     activate: function(tab){
-                        alert(tab.title + ' was activated.');
+                        setTimeout(function() {
+                            alert(tab.title + ' was activated.');
+                        }, 1);
                     }
                 },
                 html: "I am tab 4's content. I also have an event listener attached."

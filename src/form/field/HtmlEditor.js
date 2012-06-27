@@ -169,11 +169,11 @@ Ext.define('Ext.form.field.HtmlEditor', {
      * Enable font selection. Not available in Safari.
      */
     enableFont : true,
+    //<locale>
     /**
      * @cfg {String} createLinkText
      * The default text for the create link prompt
      */
-    //<locale>
     createLinkText : 'Please enter the URL for the link:',
     //</locale>
     /**
@@ -1282,6 +1282,7 @@ Ext.define('Ext.form.field.HtmlEditor', {
         return this.toolbar;
     },
 
+    //<locale>
     /**
      * @property {Object} buttonTips
      * Object collection of toolbar tooltips for the buttons in the editor. The key is the command id associated with
@@ -1300,7 +1301,6 @@ Ext.define('Ext.form.field.HtmlEditor', {
      *         },
      *         ...
      */
-    //<locale>
     buttonTips : {
         bold : {
             title: 'Bold (Ctrl+B)',

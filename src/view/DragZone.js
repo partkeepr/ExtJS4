@@ -51,6 +51,11 @@ Ext.define('Ext.view.DragZone', {
             scope: this
         });
     },
+    
+    onInvalidDrop: function(){
+        this.callParent(arguments);    
+        this.view.focus();
+    },
 
     onItemMouseDown: function(view, record, item, index, e) {
         if (!this.isPreventDrag(e, record, item, index)) {
@@ -96,8 +101,8 @@ Ext.define('Ext.view.DragZone', {
 
         // Update the selection to match what would have been selected if the user had
         // done a full click on the target node rather than starting a drag from it
-        if (!selectionModel.isSelected(record) || e.hasModifier()) {
-            selectionModel.selectWithEvent(record, e, true);
+        if (!selectionModel.isSelected(record)) {
+            selectionModel.select(record, true);
         }
         data.records = selectionModel.getSelection();
 

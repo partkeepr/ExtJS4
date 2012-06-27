@@ -365,7 +365,9 @@ Ext.define('Ext.data.TreeStore', {
      * @return {Ext.data.NodeInterface} The new root
      */
     setRootNode: function(root, /* private */ preventLoad) {
-        var me = this;
+        var me = this,
+            model = me.model,
+            idProperty = model.prototype.idProperty
 
         root = root || {};
         if (!root.isModel) {
@@ -375,10 +377,13 @@ Ext.define('Ext.data.TreeStore', {
                 text: 'Root',
                 allowDrag: false
             });
-            Ext.data.NodeInterface.decorate(me.model);
-            root = Ext.ModelManager.create(root, me.model);
+            if (root[idProperty] === undefined) {
+                root[idProperty] = me.defaultRootId;
+            }
+            Ext.data.NodeInterface.decorate(model);
+            root = Ext.ModelManager.create(root, model);
         } else if (root.isModel && !root.isNode) {
-            Ext.data.NodeInterface.decorate(me.model);
+            Ext.data.NodeInterface.decorate(model);
         }
 
 
@@ -413,6 +418,11 @@ Ext.define('Ext.data.TreeStore', {
      */
     getNodeById: function(id) {
         return this.tree.getNodeById(id);
+    },
+    
+    // inherit docs
+    getById: function(id) {
+        return this.getNodeById(id);    
     },
 
     /**
@@ -613,6 +623,21 @@ Ext.define('Ext.data.TreeStore', {
         me.fireEvent('load', me, operation.node, records, successful);
         //this is a callback that would have been passed to the 'read' function and is optional
         Ext.callback(operation.callback, operation.scope || me, [records, operation, successful]);
+    },
+    
+    onCreateRecords: function(records) {
+        this.callParent(arguments);
+        
+        var i = 0,
+            len = records.length,
+            tree = this.tree,
+            node;
+
+        for (; i < len; ++i) {
+            node = records[i];
+            tree.onNodeIdChanged(node, null, node.getId());
+        }
+        
     },
     
     cleanRecords: function(node, records){
