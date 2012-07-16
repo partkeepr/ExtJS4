@@ -308,7 +308,7 @@ Ext.define('Ext.view.Table', {
             len;
 
         me.featuresMC = new Ext.util.MixedCollection();
-        features = me.features = me.prepareFeatures();
+        features = me.features = me.constructFeatures();
         len = features ? features.length : 0;
         for (i = 0; i &lt; len; i++) {
             feature = features[i];
@@ -321,7 +321,7 @@ Ext.define('Ext.view.Table', {
         }
     },
 
-<span id='Ext-view-Table-method-prepareFeatures'>    /**
+<span id='Ext-view-Table-method-constructFeatures'>    /**
 </span>     * @private
      * Converts the features array as configured, into an array of instantiated Feature objects.
      * 
@@ -331,7 +331,7 @@ Ext.define('Ext.view.Table', {
      * 
      * MUST NOT update the this.features property, and MUST NOT update the instantiated Features.
      */
-    prepareFeatures: function() {
+    constructFeatures: function() {
         var me = this,
             features = me.features,
             feature,
@@ -568,16 +568,16 @@ Ext.define('Ext.view.Table', {
     },
 
     onCellSelect: function(position) {
-        var cell = this.getCellByPosition(position);
+        var cell = this.getCellByPosition(position, true);
         if (cell) {
-            cell.addCls(this.selectedCellCls);
+            Ext.fly(cell).addCls(this.selectedCellCls);
         }
     },
 
     onCellDeselect: function(position) {
-        var cell = this.getCellByPosition(position);
+        var cell = this.getCellByPosition(position, true);
         if (cell) {
-            cell.removeCls(this.selectedCellCls);
+            Ext.fly(cell).removeCls(this.selectedCellCls);
         }
 
     },
@@ -586,13 +586,13 @@ Ext.define('Ext.view.Table', {
         this.focusCell(position);
     },
 
-    getCellByPosition: function(position) {
+    getCellByPosition: function(position, returnDom) {
         if (position) {
             var node   = this.getNode(position.row),
                 header = this.headerCt.getHeaderAtIndex(position.column);
 
             if (header &amp;&amp; node) {
-                return Ext.fly(node).down(header.getCellSelector());
+                return Ext.fly(node).down(header.getCellSelector(), returnDom);
             }
         }
         return false;
@@ -715,13 +715,15 @@ Ext.define('Ext.view.Table', {
     onUpdate : function(store, record, operation, changedFieldNames) {
         var me = this,
             index,
-            newRow, oldRow,
+            newRow, newAttrs, attLen, i, attName, oldRow, oldRowDom,
             oldCells, newCells, len, i,
             columns, overItemCls,
-            isHovered, row;
-            
+            isHovered, row,
+            // See if an editing plugin is active.
+            isEditing = me.editingPlugin &amp;&amp; me.editingPlugin.editing;
+
         if (me.viewReady) {
-            
+
             index = me.store.indexOf(record);
             columns = me.headerCt.getGridColumns();
             overItemCls = me.overItemCls;
@@ -732,35 +734,52 @@ Ext.define('Ext.view.Table', {
                 newRow = me.bufferRender([record], index)[0];
                 oldRow = me.all.item(index);
                 if (oldRow) {
+                    oldRowDom = oldRow.dom;
                     isHovered = oldRow.hasCls(overItemCls);
-                    oldRow.dom.className = newRow.className;
-                    if(isHovered) {
+
+                    // Copy new row attributes across. Use IE-specific method if possible.
+                    if (oldRowDom.mergeAttributes) {
+                        oldRowDom.mergeAttributes(newRow, true);
+                    } else {
+                        newAttrs = newRow.attributes;
+                        attLen = newAttrs.length;
+                        for (i = 0; i &lt; attLen; i++) {
+                            attName = newAttrs[i].name;
+                            if (attName !== 'id') {
+                                oldRowDom.setAttribute(attName, newAttrs[i].value);
+                            }
+                        }
+                    }
+
+                    if (isHovered) {
                         oldRow.addCls(overItemCls);
                     }
 
                     // Replace changed cells in the existing row structure with the new version from the rendered row.
-                    oldCells = oldRow.query(this.cellSelector);
-                    newCells = Ext.fly(newRow).query(this.cellSelector);
+                    oldCells = oldRow.query(me.cellSelector);
+                    newCells = Ext.fly(newRow).query(me.cellSelector);
                     len = newCells.length;
-                    // row is the element that contains the cells.  This will be a different element from oldRow when using a rowwrap feature
+                    // row is the element that contains the cells.  This will be a different element from oldRow when using a rowwrap feature     
                     row = oldCells[0].parentNode;
                     for (i = 0; i &lt; len; i++) {
-                        // If the field at this column index was changed, replace the cell.
+                        // If the field at this column index was changed, or column has a custom renderer
+                        // (which means value could rely on any other changed field) the update the cell's content.
                         if (me.shouldUpdateCell(columns[i], changedFieldNames)) {
-                            row.insertBefore(newCells[i], oldCells[i]);
-                            row.removeChild(oldCells[i]);
+                            // If an editor plugin is active, we carefully replace just the *contents* of the cell.
+                            if (isEditing) {
+                                Ext.fly(oldCells[i]).syncContent(newCells[i]);
+                            }
+                            // Otherwise, we simply replace whole TDs with a new version
+                            else {
+                                row.insertBefore(newCells[i], oldCells[i]);
+                                row.removeChild(oldCells[i]);
+                            }
                         }
                     }
                 }
-
-                // Maintain selection after update
-                // TODO: Move to approriate event handler.
-                me.selModel.refresh();
-                me.doStripeRows(index, index);
                 me.fireEvent('itemupdate', record, index, newRow);
             }
         }
-
     },
     
     shouldUpdateCell: function(column, changedFieldNames){
@@ -924,10 +943,6 @@ Ext.define('Ext.view.Table', {
             }
         }
         return maxWidth;
-    },
-    
-    getRecordByRowIndex: function(rowIndex) {
-        return this.store.getAt(rowIndex);
     },
 
     getPositionByEvent: function(e) {

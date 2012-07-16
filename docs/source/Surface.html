@@ -117,7 +117,7 @@ Ext.define('Ext.draw.Surface', {
                 prefix = exportTypes[config.type] || 'Svg',
                 exporter = Ext.draw.engine[prefix + 'Exporter'];           
 
-            return exporter.self.generate(surface, config);
+            return exporter.generate(surface, config);
             
         }
     },

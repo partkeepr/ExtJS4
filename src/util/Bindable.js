@@ -15,14 +15,16 @@ Ext.define('Ext.util.Bindable', {
     bindStore: function(store, initial){
         var me = this,
             oldStore = me.store;
-            
+        
         if (!initial && me.store) {
+            // Perform implementation-specific unbinding operations *before* possible Store destruction.
+            me.onUnbindStore(oldStore, initial);
+
             if (store !== oldStore && oldStore.autoDestroy) {
                 oldStore.destroyStore();
             } else {
                 me.unbindStoreListeners(oldStore);
             }
-            me.onUnbindStore(oldStore, initial);
         }
         if (store) {
             store = Ext.data.StoreManager.lookup(store);

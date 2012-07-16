@@ -96,36 +96,43 @@ Ext.define('Ext.data.Field', {
     isField: true,
     
     constructor : function(config) {
+        var me = this,
+            types = Ext.data.Types,
+            st;
+        
         if (Ext.isString(config)) {
             config = {name: config};
         }
-        Ext.apply(this, config);
-        
-        var types = Ext.data.Types,
-            st = this.sortType;
+        Ext.apply(me, config);
 
-        if (this.type) {
-            if (Ext.isString(this.type)) {
-                this.type = types[this.type.toUpperCase()] || types.AUTO;
+        st = me.sortType;
+
+        if (me.type) {
+            if (Ext.isString(me.type)) {
+                me.type = types[me.type.toUpperCase()] || types.AUTO;
             }
         } else {
-            this.type = types.AUTO;
+            me.type = types.AUTO;
         }
 
         // named sortTypes are supported, here we look them up
         if (Ext.isString(st)) {
-            this.sortType = Ext.data.SortTypes[st];
+            me.sortType = Ext.data.SortTypes[st];
         } else if(Ext.isEmpty(st)) {
-            this.sortType = this.type.sortType;
+            me.sortType = me.type.sortType;
         }
 
         // Reference this type's default converter if we did not recieve one in configuration.
         if (!config.hasOwnProperty('convert')) {
-            this.convert = this.type.convert; // this may be undefined (e.g., AUTO)
-        } else if (!this.convert && this.type.convert && !config.hasOwnProperty('defaultValue')) {
+            me.convert = me.type.convert; // this may be undefined (e.g., AUTO)
+        } else if (!me.convert && me.type.convert && !config.hasOwnProperty('defaultValue')) {
             // If the converter has been nulled out, and we have not been configured
             // with a field-specific defaultValue, then coerce the inherited defaultValue into our data type.
-            this.defaultValue = this.type.convert(this.defaultValue);
+            me.defaultValue = me.type.convert(me.defaultValue);
+        }
+
+        if (config.convert) {
+            me.hasCustomConvert = true;
         }
     },
     
@@ -158,7 +165,7 @@ Ext.define('Ext.data.Field', {
      * Developers may create their own application-specific data types by defining new members of the {@link
      * Ext.data.Types} class.
      */
-    
+
     /**
      * @cfg {Function} [convert]
      *
@@ -231,9 +238,30 @@ Ext.define('Ext.data.Field', {
      */
 
     /**
+     * @cfg {Function} [serialize]
+     * A function which converts the Model's value for this Field into a form which can be used by whatever {@link Ext.data.writer.Writer Writer}
+     * is being used to sync data with the server.
+     * 
+     * The function should return a string which represents the Field's value.
+     *
+     * It is passed the following parameters:
+     *
+     * - **v** : Mixed
+     *
+     *   The Field's value - the value to be serialized.
+     *
+     * - **rec** : Ext.data.Model
+     *
+     *   The record being serialized.
+     *
+     */
+
+    /**
      * @cfg {String} dateFormat
      *
      * Used when converting received data into a Date when the {@link #type} is specified as `"date"`.
+     * 
+     * The format dtring is also used when serializing Date fields for use by {@link Ext.data.writer.Writer Writers}.
      *
      * A format string for the {@link Ext.Date#parse Ext.Date.parse} function, or "timestamp" if the value provided by
      * the Reader is a UNIX timestamp, or "time" if the value provided by the Reader is a javascript millisecond

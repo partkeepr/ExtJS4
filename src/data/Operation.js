@@ -56,6 +56,11 @@ Ext.define('Ext.data.Operation', {
      * The batch that this Operation is a part of.
      */
     batch: undefined,
+    
+    /**
+     * @cfg {Object} params
+     * Parameters to pass along with the request when performing the operation.
+     */
 
     /**
      * @cfg {Function} callback

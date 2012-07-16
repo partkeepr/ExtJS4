@@ -10,10 +10,10 @@
 
     .#{$prefix}form-invalid {
         .#{$prefix}form-checkboxgroup-body {
-            border: 1px solid #c30;
+            border: 1px solid #c30!important;
             background: transparent repeat-x bottom;
             background-image: theme-background-image($theme-name, 'grid/invalid_line.gif');
-            padding: 0 3px 0 3px;
+            padding: 1px 3px 0 3px;
         }
     }
 

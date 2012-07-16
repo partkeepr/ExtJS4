@@ -108,6 +108,12 @@ Ext.define('Ext.grid.PagingScroller', {
                     scope: me,
                     single: true
                 },
+
+                // If there are variable row heights, then in beforeRefresh, we have to find a common
+                // row so that we can synchronize the table's top position after the refresh.
+                // Also flag whether the grid view has focus so that it can be refocused after refresh.
+                beforerefresh: me.beforeViewRefresh,
+
                 refresh: me.onViewRefresh,
                 scope: me
             },
@@ -119,12 +125,6 @@ Ext.define('Ext.grid.PagingScroller', {
                 reconfigure: me.onGridReconfigure,
                 scope: me
             }, partner;
-
-        // If there are variable row heights, then in beforeRefresh, we have to find a common
-        // row so that we can synchronize the table's top position after the refresh
-        if (me.variableRowHeight) {
-            viewListeners.beforerefresh = me.beforeViewRefresh;
-        }
 
         // If we need unbinding...
         if (me.view) {
@@ -193,16 +193,16 @@ Ext.define('Ext.grid.PagingScroller', {
     onCacheClear: function() {
         var me = this;
 
-        // Do not do anything if the reason for cache clearing is store destruction
-        if (!me.store.isDestroyed) {
+        // Do not do anything if view is not rendered, or if the reason for cache clearing is store destruction
+        if (me.view.rendered && !me.store.isDestroyed) {
+            // Temporarily disable scroll monitoring until the scroll event caused by any following *change* of scrollTop has fired.
+            // Otherwise it will attempt to process a scroll on a stale view
+            me.ignoreNextScrollEvent = me.view.el.dom.scrollTop !== 0;
+
             me.view.el.dom.scrollTop = 0;
             delete me.lastScrollDirection;
             delete me.scrollOffset;
             delete me.scrollProportion;
-
-            // Temporarily disable scroll monitoring until the scroll event caused by the above setting of scrollTop has fired.
-            // Otherwise it will attempt to process a scroll on a stale view
-            me.ignoreNextScrollEvent = true;
         }
     },
 
@@ -258,46 +258,51 @@ Ext.define('Ext.grid.PagingScroller', {
         var me = this,
             view = me.view,
             rows,
+            direction;
+
+        // Refreshing can cause loss of focus.
+        me.focusOnRefresh = Ext.Element.getActiveElement === view.el.dom;
+
+        // Only need all this is variableRowHeight
+        if (me.variableRowHeight) {
             direction = me.lastScrollDirection;
+            me.commonRecordIndex = undefined;
+            // If we are refreshing in response to a scroll,
+            // And we know where the previous start was,
+            // and we're not teleporting out of visible range
+            // and the view is not empty
+            if (direction && (me.previousStart !== undefined) && (me.scrollProportion === undefined) && (rows = view.getNodes()).length) {
 
-        me.commonRecordIndex = undefined;
+                // We have scrolled downwards
+                if (direction === 1) {
 
-        // If we are refreshing in response to a scroll,
-        // And we know where the previous start was,
-        // and we're not teleporting out of visible range
-        if (direction && (me.previousStart !== undefined) && (me.scrollProportion === undefined)) {
-            rows = view.getNodes();
+                    // If the ranges overlap, we are going to be able to position the table exactly
+                    if (me.tableStart <= me.previousEnd) {
+                        me.commonRecordIndex = rows.length - 1;
 
-            // We have scrolled downwards
-            if (direction === 1) {
-
-                // If the ranges overlap, we are going to be able to position the table exactly
-                if (me.tableStart <= me.previousEnd) {
-                    me.commonRecordIndex = rows.length - 1;
-
+                    }
                 }
-            }
-            // We have scrolled upwards
-            else if (direction === -1) {
+                // We have scrolled upwards
+                else if (direction === -1) {
 
-                // If the ranges overlap, we are going to be able to position the table exactly
-                if (me.tableEnd >= me.previousStart) {
-                    me.commonRecordIndex = 0;
+                    // If the ranges overlap, we are going to be able to position the table exactly
+                    if (me.tableEnd >= me.previousStart) {
+                        me.commonRecordIndex = 0;
+                    }
                 }
-            }
-            // Cache the old offset of the common row from the scrollTop
-            me.scrollOffset = -view.el.getOffsetsTo(rows[me.commonRecordIndex])[1];
+                // Cache the old offset of the common row from the scrollTop
+                me.scrollOffset = -view.el.getOffsetsTo(rows[me.commonRecordIndex])[1];
 
-            // In the new table the common row is at a different index
-            me.commonRecordIndex -= (me.tableStart - me.previousStart);
-        } else {
-            me.scrollOffset = undefined;
+                // In the new table the common row is at a different index
+                me.commonRecordIndex -= (me.tableStart - me.previousStart);
+            } else {
+                me.scrollOffset = undefined;
+            }
         }
     },
-    
-    onLockRefresh: function(view){
-        var style = view.el.child('table', true).style;
-        style.position = 'absolute';
+
+    onLockRefresh: function(view) {
+        view.table.dom.style.position = 'absolute';
     },
 
     // Used for variable row heights. Try to find the offset from scrollTop of a common row
@@ -309,13 +314,18 @@ Ext.define('Ext.grid.PagingScroller', {
             view = me.view,
             viewEl = view.el,
             viewDom = viewEl.dom,
-            table = viewEl.child('table', true),
             rows,
             newScrollOffset,
             scrollDelta,
             table = view.table.dom,
             tableTop,
             scrollTop;
+
+        // Refresh causes loss of focus
+        if (me.focusOnRefresh) {
+            viewEl.focus();
+            me.focusOnRefresh = false;
+        }
 
         // Scroll events caused by processing in here must be ignored, so disable for the duration
         me.disabled = true;
@@ -473,18 +483,22 @@ Ext.define('Ext.grid.PagingScroller', {
 
             // We're scrolling up
             if (direction == -1) {
-                if (visibleStart !== undefined) {
-                    if (visibleStart < (me.tableStart + me.numFromEdge)) {
-                        requestStart = Math.max(0, visibleEnd + me.trailingBufferZone - viewSize);
-                    }
-                }
 
-                // The only way we can end up without a visible start is if, in variableRowHeight mode, the user drags
-                // the thumb up out of the visible range. In this case, we have to estimate the start row index
-                else {
-                    // If we have no visible rows to orientate with, then use the scroll proportion
-                    me.scrollProportion = el.scrollTop / (el.scrollHeight - el.clientHeight);
-                    requestStart = Math.max(0, totalCount * me.scrollProportion - (viewSize / 2) - me.numFromEdge - ((me.leadingBufferZone + me.trailingBufferZone) / 2));
+                // If table starts at record zero, we have nothing to do
+                if (me.tableStart) {
+                    if (visibleStart !== undefined) {
+                        if (visibleStart < (me.tableStart + me.numFromEdge)) {
+                            requestStart = Math.max(0, visibleEnd + me.trailingBufferZone - viewSize);
+                        }
+                    }
+
+                    // The only way we can end up without a visible start is if, in variableRowHeight mode, the user drags
+                    // the thumb up out of the visible range. In this case, we have to estimate the start row index
+                    else {
+                        // If we have no visible rows to orientate with, then use the scroll proportion
+                        me.scrollProportion = el.scrollTop / (el.scrollHeight - el.clientHeight);
+                        requestStart = Math.max(0, totalCount * me.scrollProportion - (viewSize / 2) - me.numFromEdge - ((me.leadingBufferZone + me.trailingBufferZone) / 2));
+                    }
                 }
             }
             // We're scrolling down
@@ -534,7 +548,6 @@ Ext.define('Ext.grid.PagingScroller', {
 
     getFirstVisibleRowIndex: function() {
         var me = this,
-            store = me.store,
             view = me.view,
             scrollTop = view.el.dom.scrollTop,
             rows,
@@ -544,20 +557,23 @@ Ext.define('Ext.grid.PagingScroller', {
 
         if (me.variableRowHeight) {
             rows = view.getNodes();
-            if (!rows.length) {
+            count = rows.length;
+            if (!count) {
                 return;
             }
-            count = store.getCount();
+            rowBottom = Ext.fly(rows[0]).getOffsetsTo(view.el)[1];
             for (i = 0; i < count; i++) {
-                rowBottom = Ext.fly(rows[i]).getOffsetsTo(view.el)[1] + rows[i].offsetHeight;
+                rowBottom += rows[i].offsetHeight;
 
                 // Searching for the first visible row, and off the bottom of the clientArea, then there's no visible first row!
                 if (rowBottom > view.el.dom.clientHeight) {
                     return;
                 }
 
+                // Return the index *within the total dataset* of the first visible row
+                // We cannot use the loop index to offset from the table's start index because of possible intervening group headers.
                 if (rowBottom > 0) {
-                    return i + me.tableStart;
+                    return view.getRecord(rows[i]).index;
                 }
             }
         } else {
@@ -580,16 +596,20 @@ Ext.define('Ext.grid.PagingScroller', {
             if (!rows.length) {
                 return;
             }
-            count = store.getCount();
-            for (i = count - 1; i >= 0; i--) {
-                rowTop = Ext.fly(rows[i]).getOffsetsTo(view.el)[1];
+            count = store.getCount() - 1;
+            rowTop = Ext.fly(rows[count]).getOffsetsTo(view.el)[1] + rows[count].offsetHeight;
+            for (i = count; i >= 0; i--) {
+                rowTop -= rows[i].offsetHeight;
 
                 // Searching for the last visible row, and off the top of the clientArea, then there's no visible last row!
                 if (rowTop < 0) {
                     return;
                 }
+
+                // Return the index *within the total dataset* of the last visible row.
+                // We cannot use the loop index to offset from the table's start index because of possible intervening group headers.
                 if (rowTop < clientHeight) {
-                    return i + me.tableStart;
+                    return view.getRecord(rows[i]).index;
                 }
             }
         } else {

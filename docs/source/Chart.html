@@ -164,7 +164,8 @@ Ext.define('Ext.chart.Chart', {
         themeManager: 'Ext.chart.theme.Theme',
         mask: 'Ext.chart.Mask',
         navigation: 'Ext.chart.Navigation',
-        bindable: 'Ext.util.Bindable'
+        bindable: 'Ext.util.Bindable',
+        observable: 'Ext.util.Observable'
     },
 
     uses: [
@@ -366,11 +367,11 @@ Ext.define('Ext.chart.Chart', {
             }
         }
 
+        me.mixins.observable.constructor.call(me, config);
         if (config.enableMask) {
-            me.mixins.mask.constructor.call(me, config);
+            me.mixins.mask.constructor.call(me);
         }
-
-        me.mixins.navigation.constructor.call(me, config);
+        me.mixins.navigation.constructor.call(me);
         me.callParent([config]);
     },
     
@@ -450,6 +451,9 @@ Ext.define('Ext.chart.Chart', {
                 me.curWidth = width;
                 me.curHeight = height;
                 me.redraw(true);
+            } else if (me.needsRedraw) {
+                delete me.needsRedraw;
+                me.redraw();
             }
         }
         this.callParent(arguments);
@@ -536,6 +540,26 @@ Ext.define('Ext.chart.Chart', {
         }
         me.bindStore(me.store, true);
         me.refresh();
+
+        if (me.surface.engine === 'Vml') {
+            me.on('added', me.onAddedVml, me);
+            me.mon(Ext.container.Container.hierarchyEventSource, 'added', me.onContainerAddedVml, me);
+        }
+    },
+
+    // When using a vml surface we need to redraw when this chart or one of its ancestors
+    // is moved to a new container after render, because moving the vml chart causes the
+    // vml elements to go haywire, some displaing incorrectly or not displaying at all.
+    // This appears to be caused by the component being moved to the detached body element
+    // before being added to the new container.
+    onAddedVml: function() {
+        this.needsRedraw = true; // redraw after component layout
+    },
+
+    onContainerAddedVml: function(container) {
+        if (this.isDescendantOf(container)) {
+            this.needsRedraw = true; // redraw after component layout
+        }
     },
 
     // @private get x and y position of the mouse cursor.
@@ -709,12 +733,49 @@ Ext.define('Ext.chart.Chart', {
     // @private
     refresh: function() {
         var me = this;
+            
         if (me.rendered &amp;&amp; me.curWidth !== undefined &amp;&amp; me.curHeight !== undefined) {
+            if (!me.isVisible(true) &amp;&amp; !me.refreshPending) {
+                me.setShowListeners('mon');
+                me.refreshPending = true;
+                return;
+            }
             if (me.fireEvent('beforerefresh', me) !== false) {
                 me.redraw();
                 me.fireEvent('refresh', me);
             }
         }
+    },
+    
+    onShow: function(){
+        var me = this;
+        me.callParent(arguments);
+        if (me.refreshPending) {
+            me.delayRefresh();
+            me.setShowListeners('mun');
+        }
+        delete me.refreshPending;
+    },
+    
+    setShowListeners: function(method){
+        var me = this;
+        me[method](Ext.container.Container.hierarchyEventSource, {
+            scope: me,
+            single: true,
+            show: me.forceRefresh,
+            expand: me.forceRefresh
+        });
+    },
+    
+    forceRefresh: function(container) {
+        var me = this;
+        if (me.isDescendantOf(container) &amp;&amp; me.refreshPending) {
+            // Add unbind here, because either expand/show could be fired,
+            // so be sure to unbind the listener that didn't
+            me.setShowListeners('mun');
+            me.delayRefresh();
+        }    
+        delete me.refreshPending;
     },
 
     bindStore: function(store, initial) {

@@ -698,8 +698,7 @@ Ext.define('Ext.util.Observable', {
             queued = me.eventQueue,
             qLen, q;
 
-        me.eventsSuspended -= 1;
-        if (!me.eventsSuspended) {
+        if (me.eventsSuspended && ! --me.eventsSuspended) {
             delete me.eventQueue;
 
             if (queued) {

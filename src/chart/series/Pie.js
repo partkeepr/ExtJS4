@@ -867,7 +867,7 @@ Ext.define('Ext.chart.series.Pie', {
         //changed to trigger one itemmouseout between two itemmouseovers.
         this.unHighlightItem();
 
-        if (!item || item.sprite && item.sprite._animating) {
+        if (!item || me.animating || (item.sprite && item.sprite._animating)) {
             return;
         }
         me.callParent([item]);

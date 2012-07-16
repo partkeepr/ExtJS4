@@ -134,6 +134,7 @@ Ext.define('Ext.grid.RowEditor', {
         me.mon(plugin.view, {
             beforerefresh: me.onBeforeViewRefresh,
             refresh: me.onViewRefresh,
+            itemremove: me.onViewItemRemove,
             scope: me
         });
     },
@@ -164,6 +165,14 @@ Ext.define('Ext.grid.RowEditor', {
             }
         } else {
             me.editingPlugin.cancelEdit();
+        }
+    },
+
+    onViewItemRemove: function(record, index) {
+        var context = this.context;
+        if (context && record === context.record) {
+            // if the record being edited was removed, cancel editing
+            this.editingPlugin.cancelEdit();
         }
     },
 

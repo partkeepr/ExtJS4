@@ -71,7 +71,7 @@ Ext.define('Ext.view.AbstractView', {
     /**
      * @cfg {String} overItemCls
      * A CSS class to apply to each item in the view on mouseover.
-     * Ensure {@link #trackOver} is set to `true` to make use of this.
+     * Setting this will automatically set {@link #trackOver} to `true`.
      */
 
     //<locale>
@@ -135,7 +135,11 @@ Ext.define('Ext.view.AbstractView', {
 
     /**
      * @cfg {Boolean} trackOver
-     * True to enable mouseenter and mouseleave events
+     * When `true` the {@link #overItemCls} will be applied to rows when hovered over.
+     * This in return will also cause {@link Ext.view.View#highlightitem highlightitem} and
+     * {@link Ext.view.View#unhighlightitem unhighlightitem} events to be fired.
+     *
+     * Enabled automatically when the {@link #overItemCls} config is set.
      */
     trackOver: false,
 
@@ -314,12 +318,6 @@ Ext.define('Ext.view.AbstractView', {
 
         me.callParent(arguments);
 
-        // Kick off refresh early unless we have a collapsed or hidden ancestor
-        // The deferInitialRefresh will still insert the data on a delay if set
-        if (!me.up('[collapsed],[hidden]')) {
-            me.doFirstRefresh(me.store);
-        }
-
         if (mask) {
             // either a config object 
             if (Ext.isObject(mask)) {
@@ -335,6 +333,16 @@ Ext.define('Ext.view.AbstractView', {
                 beforeshow: me.onMaskBeforeShow,
                 hide: me.onMaskHide
             });
+        }
+    },
+    
+    finishRender: function(){
+        var me = this;
+        me.callParent(arguments);
+        // Kick off the refresh before layouts are resumed after the render 
+        // completes, but after afterrender is fired on the view
+        if (!me.up('[collapsed],[hidden]')) {
+            me.doFirstRefresh(me.store);
         }
     },
 
@@ -686,7 +694,7 @@ Ext.define('Ext.view.AbstractView', {
             me.updateIndexes(index);
 
             // Ensure layout system knows about new content size
-            this.refreshSize();
+            me.refreshSize();
 
             if (me.hasListeners.itemadd) {
                 me.fireEvent('itemadd', records, index, nodes);
@@ -719,7 +727,7 @@ Ext.define('Ext.view.AbstractView', {
     onRemove : function(ds, record, index) {
         var me = this;
 
-        if (me.rendered) {
+        if (me.all.getCount()) {
             if (me.store.getCount() === 0) {
                 // Refresh so emptyText can be applied if necessary
                 me.refresh();
@@ -727,6 +735,9 @@ Ext.define('Ext.view.AbstractView', {
                 // Just remove the element which corresponds to the removed record
                 // The tpl's full HTML will still be in place.
                 me.doRemove(record, index);
+                if (me.selModel.refreshOnRemove) {
+                    me.selModel.refresh();
+                }
                 me.updateIndexes(index);
             }
 
@@ -817,14 +828,35 @@ Ext.define('Ext.view.AbstractView', {
         // We call refresh on a defer if this is the initial call, and we are configured to defer the initial refresh.
         if (store && !store.loading) {
             if (me.deferInitialRefresh) {
-                Ext.Function.defer(function () {
-                    if (!me.isDestroyed) {
-                        me.refresh();
-                    }
-                }, 1);
+                me.applyFirstRefresh();
             } else {
                 me.refresh();
             }
+        }
+    },
+    
+    applyFirstRefresh: function(){
+        var me = this;
+        if (me.isDestroyed) {
+            return;
+        }
+        
+        // In the case of an animated collapse/expand, the layout will
+        // be marked as though it's complete, yet the element itself may
+        // still be animating, which means we could trigger a layout while
+        // everything is not in the correct place. As such, wait until the
+        // animation has finished before kicking off the refresh. The problem
+        // occurs because both the refresh and the animation are running on
+        // a timer which makes it impossible to control the order of when
+        // the refresh is fired.
+        if (me.up('[isCollapsingOrExpanding]')) {
+            Ext.Function.defer(me.applyFirstRefresh, 100, me);
+        } else {
+            Ext.Function.defer(function () {
+                if (!me.isDestroyed) {
+                    me.refresh();
+                }
+            }, 1);
         }
     },
 
@@ -1019,22 +1051,14 @@ Ext.define('Ext.view.AbstractView', {
      * @return {HTMLElement[]} An array of nodes
      */
     getNodes: function(start, end) {
-        var ns = this.all.elements,
-            nodes = [],
-            i;
+        var ns = this.all.elements;
 
-        start = start || 0;
-        end = !Ext.isDefined(end) ? Math.max(ns.length - 1, 0) : end;
-        if (start <= end) {
-            for (i = start; i <= end && ns[i]; i++) {
-                nodes.push(ns[i]);
-            }
+        if (end === undefined) {
+            end = ns.length;
         } else {
-            for (i = start; i >= end && ns[i]; i--) {
-                nodes.push(ns[i]);
-            }
+            end++;
         }
-        return nodes;
+        return this.all.elements.slice(start||0, end);
     },
 
     /**

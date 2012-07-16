@@ -336,45 +336,35 @@ Ext.define('Ext.chart.axis.Axis', {
             range = me.getRange(),
             min = range.min,
             max = range.max,
-            outfrom, outto, out;
+            steps, prettyNumbers, out, changedRange;
 
-        out = Ext.draw.Draw.snapEnds(min, max, me.majorTickSteps !== false ? (me.majorTickSteps + 1) : me.steps, (me.majorTickSteps === false));
-        outfrom = out.from;
-        outto = out.to;
+        steps = (Ext.isNumber(me.majorTickSteps) ? me.majorTickSteps + 1 : me.steps);
+        prettyNumbers = !(Ext.isNumber(me.maximum) &amp;&amp; Ext.isNumber(me.minimum) &amp;&amp; Ext.isNumber(me.majorTickSteps) &amp;&amp; me.majorTickSteps &gt; 0);
 
-        if (me.forceMinMax) {
-            if (!isNaN(max)) {
-                out.to = max;
-            }
-            if (!isNaN(min)) {
-                out.from = min;
-            }
-        }
-        if (!isNaN(me.maximum)) {
-            //TODO(nico) users are responsible for their own minimum/maximum values set.
-            //Clipping should be added to remove lines in the chart which are below the axis.
+        out = Ext.draw.Draw.snapEnds(min, max, steps, prettyNumbers);
+
+        if (Ext.isNumber(me.maximum)) {
             out.to = me.maximum;
+            changedRange = true;
         }
-        if (!isNaN(me.minimum)) {
-            //TODO(nico) users are responsible for their own minimum/maximum values set.
-            //Clipping should be added to remove lines in the chart which are below the axis.
+        if (Ext.isNumber(me.minimum)) {
             out.from = me.minimum;
+            changedRange = true;
         }
-
-        //Adjust after adjusting minimum and maximum
-        out.step = (out.to - out.from) / (outto - outfrom) * out.step;
-
         if (me.adjustMaximumByMajorUnit) {
             out.to = Math.ceil(out.to / out.step) * out.step;
-            out.steps = (out.to - out.from) / out.step;
+            changedRange = true;
         }
-
         if (me.adjustMinimumByMajorUnit) {
             out.from = Math.floor(out.from / out.step) * out.step;
-            out.steps = (out.to - out.from) / out.step;
+            changedRange = true;
         }
 
-        me.prevMin = min == max ? 0 : min;
+        if (changedRange) {
+            out.steps = Math.ceil((out.to - out.from) / out.step);            
+        }
+
+        me.prevMin = (min == max ? 0 : min);
         me.prevMax = max;
         return out;
     },

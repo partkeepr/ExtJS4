@@ -177,6 +177,23 @@ Ext.define('Ext.form.field.Time', {
     },
 
     /**
+     * @private
+     */
+    transformOriginalValue: function(value) {
+        if (Ext.isString(value)) {
+            return this.rawToValue(value);
+        }
+        return value;
+    },
+
+    /**
+     * @private
+     */
+    isEqual: function(v1, v2) {
+        return Ext.Date.isEqual(v1, v2);
+    },
+
+    /**
      * Replaces any existing {@link #minValue} with the new time and refreshes the picker's range.
      * @param {Date/String} value The minimum time that can be selected
      */
@@ -443,16 +460,15 @@ Ext.define('Ext.form.field.Time', {
         me.setRawValue(me.formatDate(me.getValue()));
     },
 
-    setValue: function(v) {
+    setValue: function() {
 
         // Store MUST be created for parent setValue to function
         this.getPicker();
 
-        this.callParent([this.parseDate(v)]);
+        this.callParent(arguments);
     },
 
     getValue: function() {
-        var val = this.callParent(arguments);
-        return this.parseDate(val);
+        return this.parseDate(this.callParent(arguments));
     }
 });

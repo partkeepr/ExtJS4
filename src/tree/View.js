@@ -130,10 +130,6 @@ Ext.define('Ext.tree.View', {
             stretcher.setWidth((this.getWidth() - Ext.getScrollbarSize().width));
         }
     },
-    
-    getRecordByRowIndex: function(rowIndex) {
-        return this.getRecord(this.getNode(rowIndex));
-    },
 
     processUIEvent: function(e) {
         // If the clicked node is part of an animation, ignore the click.
@@ -600,10 +596,12 @@ Ext.define('Ext.tree.View', {
     },
 
     onItemDblClick: function(record, item, index) {
-        var editingPlugin = this.editingPlugin;
-        this.callParent(arguments);
-        if (this.toggleOnDblClick && !(editingPlugin && editingPlugin.clicksToEdit === 2)) {
-            this.toggle(record);
+        var me = this,
+            editingPlugin = me.editingPlugin;
+            
+        me.callParent(arguments);
+        if (me.toggleOnDblClick && record.isExpandable() && !(editingPlugin && editingPlugin.clicksToEdit === 2)) {
+            me.toggle(record);
         }
     },
 
@@ -615,7 +613,7 @@ Ext.define('Ext.tree.View', {
     },
 
     onItemClick: function(record, item, index, e) {
-        if (e.getTarget(this.expanderSelector, item)) {
+        if (e.getTarget(this.expanderSelector, item) && record.isExpandable()) {
             this.toggle(record, e.ctrlKey);
             return false;
         }
@@ -649,7 +647,17 @@ Ext.define('Ext.tree.View', {
     },
 
     shouldUpdateCell: function(column, changedFieldNames){
-        return Ext.Array.contains(this.uiFields, column.dataIndex) || this.callParent(arguments);
+        if (changedFieldNames) {
+            var i = 0,
+                len = changedFieldNames.length;
+                
+            for (; i < len; ++i) {
+                if (Ext.Array.contains(this.uiFields, changedFieldNames[i])) {
+                    return true;
+                }
+            }
+        }
+        return this.callParent(arguments);
     },
 
     /**

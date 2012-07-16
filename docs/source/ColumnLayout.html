@@ -209,13 +209,19 @@ Ext.define('Ext.grid.ColumnLayout', {
     // typically because of the scrollOffset on the GridView, must reserve this
     publishInnerCtSize: function(ownerContext) {
         var me = this,
-            plan = ownerContext.state.boxPlan,
-            size = plan.targetSize,
-            cw = ownerContext.peek('contentWidth');
+            size = ownerContext.state.boxPlan.targetSize,
+            cw = ownerContext.peek('contentWidth'),
+            view;
 
         // InnerCt MUST stretch to accommodate all columns so that left/right scrolling is enabled in the header container.
         if ((cw != null) &amp;&amp; !me.owner.isHeader) {
-            size.width = cw + Ext.getScrollbarSize().width;
+            size.width = cw;
+
+            // innerCt must also encompass any vertical scrollbar width if there may be one
+            view = me.owner.ownerCt.view;
+            if (view.autoScroll || view.overflowY) {
+                size.width += Ext.getScrollbarSize().width;
+            }
         }
 
         return me.callParent(arguments);

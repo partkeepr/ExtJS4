@@ -209,9 +209,11 @@ Ext.define('Ext.data.proxy.Server', {
     },
 
 <span id='Ext-data-proxy-Server-method-buildRequest'>    /**
-</span>     * Creates and returns an Ext.data.Request object based on the options passed by the {@link Ext.data.Store Store}
-     * that this Proxy is attached to.
-     * @param {Ext.data.Operation} operation The {@link Ext.data.Operation Operation} object to execute
+</span>     * Creates an {@link Ext.data.Request Request} object from {@link Ext.data.Operation Operation}.
+     *
+     * This gets called from doRequest methods in subclasses of Server proxy.
+     * 
+     * @param {Ext.data.Operation} operation The operation to execute
      * @return {Ext.data.Request} The request object
      */
     buildRequest: function(operation) {

@@ -565,9 +565,6 @@ Ext.define('Ext.layout.container.Box', {
 
             if (!childContext[names.widthModel].calculated) {
                 childWidth = childContext.getProp(widthName);
-                if (childContext.hasDoubleScrollbarWidthAdjustment) {
-                    childWidth -= scrollbarWidth;
-                }
                 nonFlexWidth += childWidth; // min/maxWidth safe
                 if (isNaN(nonFlexWidth)) {
                     return false;
@@ -666,15 +663,8 @@ Ext.define('Ext.layout.container.Box', {
         if (mayNeedScrollbarAdjust &amp;&amp;
             (ownerContext.peek(names.contentHeight) &gt; plan.targetSize[names.height])) {
             contentWidth += scrollbarWidth;
+            ownerContext[names.hasOverflowY] = true;
 
-            // IE9 strict subtracts the scrollbar size from the element size when the element
-            // is absolutely positioned and uses box-sizing: border-box. To workaround this
-            // issue we have to add the double the scrollbar size.
-            // see http://social.msdn.microsoft.com/Forums/da-DK/iewebdevelopment/thread/47c5148f-a142-4a99-9542-5f230c78cb3b
-            if (Ext.isIE9 &amp;&amp; Ext.isStrict &amp;&amp; me.isTargetAbsolute()) {
-                contentWidth += scrollbarWidth;
-                ownerContext.hasDoubleScrollbarWidthAdjustment = true;
-            }
             // tell the component layout to set the parallel size in the dom
             ownerContext.target.componentLayout[names.setWidthInDom] = true;
 
@@ -682,7 +672,7 @@ Ext.define('Ext.layout.container.Box', {
             // there is just the *exactly correct* spare space created for it. We
             // have to force that to happen once all the styles have been flushed
             // to the DOM (see completeLayout):
-            ownerContext['invalidateScroll' + names.y.toUpperCase()] = (Ext.isStrict &amp;&amp; Ext.isIE8);
+            ownerContext[names.invalidateScrollY] = (Ext.isStrict &amp;&amp; Ext.isIE8);
         }
         ownerContext[names.setContentWidth](contentWidth);
 
@@ -710,9 +700,9 @@ Ext.define('Ext.layout.container.Box', {
             maxHeight = 0,
             hasPercentageSizes = 0,
             scrollbarHeight = Ext.getScrollbarSize().height,
-            childTop, i, childHeight, childMargins, diff, height, childContext, contentHeight,
+            childTop, i, childHeight, childMargins, diff, height, childContext,
             stretchMaxPartner, stretchMaxChildren, shrinkWrapParallelOverflow, 
-            percentagePerpendicular, needsScrollbarAdjust;
+            percentagePerpendicular;
 
         if (isStretch || (isCenter &amp;&amp; !heightShrinkWrap)) {
             if (isNaN(availHeight)) {
@@ -756,9 +746,6 @@ Ext.define('Ext.layout.container.Box', {
                     }
                 }
 
-                if (childContext.hasDoubleScrollbarHeightAdjustment) {
-                    childHeight -= scrollbarHeight;
-                }
                 // Max perpendicular measurement (used for stretchmax) must take the min perpendicular size of each child into account in case any fall short.
                 if (isNaN(maxHeight = mmax(maxHeight, childHeight + childMargins,
                                            childContext.target[names.minHeight] || 0))) {
@@ -770,15 +757,16 @@ Ext.define('Ext.layout.container.Box', {
             // ie: a stretchmaxPartner, and the setContentHeight
             if (shrinkWrapParallelOverflow) {
                 maxHeight += scrollbarHeight;
-                needsScrollbarAdjust = true;
-               // tell the component layout to set the perpendicular size in the dom
+                ownerContext[names.hasOverflowX] = true;
+
+                // tell the component layout to set the perpendicular size in the dom
                 ownerContext.target.componentLayout[names.setHeightInDom] = true;
 
                 // IE8 in what passes for &quot;strict&quot; mode will not create a scrollbar if 
                 // there is just the *exactly correct* spare space created for it. We
                 // have to force that to happen once all the styles have been flushed
                 // to the DOM (see completeLayout):
-                ownerContext['invalidateScroll' + names.x.toUpperCase()] = (Ext.isStrict &amp;&amp; Ext.isIE8);
+                ownerContext[names.invalidateScrollX] = (Ext.isStrict &amp;&amp; Ext.isIE8);
             }
 
             // If we are associated with another box layout, grab its maxChildHeight
@@ -797,20 +785,12 @@ Ext.define('Ext.layout.container.Box', {
                 }
             }
 
-            contentHeight = maxHeight + me.padding[heightName] +
-                ownerContext.targetContext.getPaddingInfo()[heightName]
+            ownerContext[names.setContentHeight](maxHeight + me.padding[heightName] +
+                    ownerContext.targetContext.getPaddingInfo()[heightName]);
 
-            // IE9 strict subtracts the scrollbar size from the element size when the element
-            // is absolutely positioned and uses box-sizing: border-box. To workaround this
-            // issue we have to add the double the scrollbar size.
-            // see http://social.msdn.microsoft.com/Forums/da-DK/iewebdevelopment/thread/47c5148f-a142-4a99-9542-5f230c78cb3b
-            if (needsScrollbarAdjust &amp;&amp; Ext.isIE9 &amp;&amp; Ext.isStrict &amp;&amp; me.isTargetAbsolute()) {
-                contentHeight += scrollbarHeight;
-                ownerContext.hasDoubleScrollbarHeightAdjustment = true;
-            }
-
-            ownerContext[names.setContentHeight](contentHeight);
-
+            // We have to publish the contentHeight with the additional scrollbarHeight
+            // to encourage our container to accomodate it, but we must remove the height
+            // of the scrollbar as we go to sizing or centering the children.
             if (shrinkWrapParallelOverflow) {
                 maxHeight -= scrollbarHeight;
             }
@@ -904,42 +884,57 @@ Ext.define('Ext.layout.container.Box', {
     completeLayout: function(ownerContext) {
         var me = this,
             names = ownerContext.boxNames,
-            el, overflow, prop;
+            invalidateScrollX = ownerContext.invalidateScrollX,
+            invalidateScrollY = ownerContext.invalidateScrollY,
+            dom, el, overflowX, overflowY, styles;
 
         me.overflowHandler.completeLayout(ownerContext);
+
+        if (invalidateScrollX || invalidateScrollY) {
+            el = me.getTarget();
+            dom = el.dom;
+            styles = dom.style;
+
+            if (invalidateScrollX) {
+                // get computed style to see if we are 'auto'
+                overflowX = el.getStyle('overflowX');
+                if (overflowX == 'auto') {
+                    // capture the inline style (if any) so we can restore it later:
+                    overflowX = styles.overflowX;
+                    styles.overflowX = 'scroll'; // force the scrollbar to appear
+                } else {
+                    invalidateScrollX = false; // no work really since not 'auto'
+                }
+            }
+
+            if (invalidateScrollY) {
+                // get computed style to see if we are 'auto'
+                overflowY = el.getStyle('overflowY');
+                if (overflowY == 'auto') {
+                    // capture the inline style (if any) so we can restore it later:
+                    overflowY = styles.overflowY;
+                    styles.overflowY = 'scroll'; // force the scrollbar to appear
+                } else {
+                    invalidateScrollY = false; // no work really since not 'auto'
+                }
+            }
+
+            if (invalidateScrollX || invalidateScrollY) { // if (some form of 'auto' in play)
+                // force a reflow...
+                dom.scrollWidth;
+
+                if (invalidateScrollX) {
+                    styles.overflowX = overflowX; // restore inline style
+                }
+                if (invalidateScrollY) {
+                    styles.overflowY = overflowY; // restore inline style
+                }
+            }
+        }
 
         // If we are scrolling parallel, restore the saved scroll position
         if (me.scrollParallel) {
             me.owner.getTargetEl().dom[names.scrollLeft] = me.scrollPos;
-        }
-
-        if (ownerContext.invalidateScrollY) {
-            el = me.getTarget();
-            prop = names.overflowY;
-            overflow = el.getStyle(prop);
-
-            if (overflow == 'auto') {
-                // force the scrollbars to appear...
-                el.setStyle(prop, 'scroll');
-                // force a reflow of the element...
-                el.dom.scrollWidth;
-                // reset the overflow to the proper value
-                el.setStyle(prop, overflow);
-            }
-        }
-        if (ownerContext.invalidateScrollX) {
-            el = me.getTarget();
-            prop = names.overflowX;
-            overflow = el.getStyle(prop);
-
-            if (overflow == 'auto') {
-                // force the scrollbars to appear...
-                el.setStyle(prop, 'scroll');
-                // force a reflow of the element...
-                el.dom.scrollWidth;
-                // reset the overflow to the proper value
-                el.setStyle(prop, overflow);
-            }
         }
     },
 
@@ -979,14 +974,6 @@ Ext.define('Ext.layout.container.Box', {
             scrollbarSize = Ext.getScrollbarSize(),
             childHeight = options.childHeight,
             childWidth = options.childWidth;
-
-        if (childContext.hasDoubleScrollbarHeightAdjustment) {
-            childHeight += scrollbarSize.height;
-        }
-
-        if (childContext.hasDoubleScrollbarWidthAdjustment) {
-            childWidth += scrollbarSize.width;
-        }
 
         childContext.setProp('x', options.childX);
         childContext.setProp('y', options.childY);
@@ -1098,11 +1085,6 @@ Ext.define('Ext.layout.container.Box', {
     // Used by Container classes to insert special DOM elements which must exist in addition to the child components
     getElementTarget: function() {
         return this.innerCt;
-    },
-
-    isTargetAbsolute: function() {
-        return this.isAbsolute ||
-            (this.isAbsolute = (this.getTarget().getStyle('position') === 'absolute'));
     },
 
     //&lt;debug&gt;

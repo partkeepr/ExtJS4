@@ -23,7 +23,6 @@ Ext.define('Ext.layout.component.field.Field', {
         var me = this,
             owner = me.owner,
             widthModel = ownerContext.widthModel,
-            row,
             ownerNaturalSize = owner[me.naturalSizingProp],
             width;
 
@@ -36,7 +35,6 @@ Ext.define('Ext.layout.component.field.Field', {
         ownerContext.bodyCellContext = ownerContext.getEl('bodyEl');
         ownerContext.inputContext = ownerContext.getEl('inputEl');
         ownerContext.errorContext = ownerContext.getEl('errorEl');
-        ownerContext.inputRow = ownerContext.getEl('inputRow');
 
         // width:100% on an element inside a table in IE6/7 "strict" sizes the content box.
         // store the input element's border and padding info so that subclasses can take it into consideration if needed
@@ -54,8 +52,8 @@ Ext.define('Ext.layout.component.field.Field', {
             me.beginLayoutShrinkWrap(ownerContext);
         } else if (widthModel.natural) {
 
-            // When a size specified, natural becomes fixed width
-            if (typeof ownerNaturalSize == 'number') {
+            // When a size specified, natural becomes fixed width unless the inpiutWidth is specified - we shrinkwrap that
+            if (typeof ownerNaturalSize == 'number' && !owner.inputWidth) {
                 me.beginLayoutFixed(ownerContext, (width = ownerNaturalSize * 6.5 + 20), 'px');
             }
 
@@ -67,51 +65,42 @@ Ext.define('Ext.layout.component.field.Field', {
         } else {
             me.beginLayoutFixed(ownerContext, '100', '%');
         }
-        
-        // See finishedLayout
-        if (me.movedOnLastLayout) {
-            row = ownerContext.bodyCellContext.el.parent();
-            row.insertAfter(row.next());
-            me.movedOnLastLayout = false;
-        }
     },
 
     beginLayoutFixed: function (ownerContext, width, suffix) {
-        var owner = ownerContext.target;
+        var owner = ownerContext.target,
+            inputEl = owner.inputEl,
+            inputWidth = owner.inputWidth;
 
         owner.el.setStyle('table-layout', 'fixed');
         owner.bodyEl.setStyle('width', width + suffix);
+        if (inputEl && inputWidth) {
+            inputEl.setStyle('width', inputWidth + 'px');
+        }
         ownerContext.isFixed = true;
     },
 
     beginLayoutShrinkWrap: function (ownerContext) {
-        var owner = ownerContext.target;
+        var owner = ownerContext.target,
+            inputEl = owner.inputEl,
+            inputWidth = owner.inputWidth;
 
-        if (owner.inputEl && owner.inputEl.dom) {
-            owner.inputEl.dom.removeAttribute('size');
+        if (inputEl && inputEl.dom) {
+            inputEl.dom.removeAttribute('size');
+            if (inputWidth) {
+                inputEl.setStyle('width', inputWidth + 'px');
+            }
         }
         owner.el.setStyle('table-layout', 'auto');
         owner.bodyEl.setStyle('width', '');
     },
 
     finishedLayout: function(ownerContext){
-        var owner = this.owner,
-            bodyRow;
-        
+        var owner = this.owner;
+
         this.callParent(arguments);        
         ownerContext.labelStrategy.finishedLayout(ownerContext, owner);
         ownerContext.errorStrategy.finishedLayout(ownerContext, owner);
-        
-        // If we're using table-layout: fixed, the width of the cells is always determined by
-        // the first row in the table. When using labelAlign: 'top' with an empty label, the first
-        // row ends up being completely empty. On some browsers this is ok, however on most it
-        // causes the sizing to be ignored and the width to be distributed equally. Instead, we
-        // move the body row to be first if we have no visible label to allow sizing to occur.
-        if (ownerContext.isFixed && owner.labelAlign == 'top' && !owner.hasVisibleLabel() && owner.hasActiveError() && owner.msgTarget == 'side') {
-            bodyRow = ownerContext.bodyCellContext.el.parent();
-            bodyRow.insertBefore(bodyRow.prev());
-            this.movedOnLastLayout = true;
-        }
     },
 
     calculateOwnerHeightFromContentHeight: function(ownerContext, contentHeight) {
@@ -259,7 +248,8 @@ Ext.define('Ext.layout.component.field.Field', {
             side: applyIf({
                 prepare: function(ownerContext, owner) {
                     var errorEl = owner.errorEl,
-                        display = owner.hasActiveError(),
+                        sideErrorCell = owner.sideErrorCell,
+                        displayError = owner.hasActiveError(),
                         tempEl;
 
                     // Capture error icon width once
@@ -270,12 +260,19 @@ Ext.define('Ext.layout.component.field.Field', {
 
                     errorEl.addCls(iconCls);
                     errorEl.set({'data-errorqtip': owner.getActiveError() || ''});
-                    errorEl.setDisplayed(display);
-                    owner.bodyEl.dom.colSpan = owner.getBodyColspan();
-                    
-                    if (owner.topPlaceHolder) {
-                        owner.topPlaceHolder.setDisplayed(display && owner.hasVisibleLabel());
+                    if (owner.autoFitErrors) {
+                        errorEl.setDisplayed(displayError);
                     }
+                    // Not autofitting, the space must still be allocated.
+                    else {
+                        errorEl.setVisible(displayError);
+                    }
+
+                    // If we are auto fitting, then hide and show the entire cell
+                    if (sideErrorCell && owner.autoFitErrors) {
+                        sideErrorCell.setDisplayed(displayError);
+                    }
+                    owner.bodyEl.dom.colSpan = owner.getBodyColspan();
 
                     // TODO: defer the tip call until after the layout to avoid immediate DOM reads now
                     Ext.layout.component.field.Field.initTip();
@@ -293,10 +290,6 @@ Ext.define('Ext.layout.component.field.Field', {
 
                     errorEl.addCls(cls);
                     errorEl.setDisplayed(owner.hasActiveError());
-                    if (owner.labelAlign == 'left' || owner.labelAlign == 'right') {
-                        // hide the under label placeholder td
-                        owner.bottomPlaceHolder.setDisplayed(owner.hasVisibleLabel() ? 'block' : 'none');
-                    }
                 },
                 getHeight: function (ownerContext) {
                     var height = 0,

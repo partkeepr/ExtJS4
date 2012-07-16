@@ -203,7 +203,8 @@ Ext.define('Ext.util.History', {
             if (!me.iframe) {
                 me.iframe = DomHelper.append(me.hiddenField.parentNode, {
                     tag: 'iframe',
-                    id: me.iframeId
+                    id: me.iframeId,
+                    src: Ext.SSL_SECURE_URL
                 });
             }
         }

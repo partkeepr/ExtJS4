@@ -704,7 +704,7 @@ Ext.EventManager = new function() {
                     if (options.delegate) {
                         // double up '\' characters so escape sequences survive the
                         // string-literal translation
-                        f.push('var t = e.getTarget(&quot;' + (options.delegate + '').replace(escapeRx, '\\\\') + '&quot;, this);');
+                        f.push('var result, t = e.getTarget(&quot;' + (options.delegate + '').replace(escapeRx, '\\\\') + '&quot;, this);');
                         f.push('if(!t) {return;}');
                     } else {
                         f.push('var t = e.target, result;');

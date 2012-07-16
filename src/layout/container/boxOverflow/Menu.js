@@ -285,12 +285,34 @@ Ext.define('Ext.layout.container.boxOverflow.Menu', {
             destroyMenu: false
         });
 
-        if (group || component.enableToggle) {
+        // Clone must have same value, and must sync original's value on change
+        if (component.isFormField) {
+            config.value = component.getValue();
+
+            // We're going to add a listener
+            if (!config.listeners) {
+                config.listeners = {};
+            }
+
+            // Sync the original component's value when the clone changes value.
+            // This intentionally overwrites any developer-configured change listener on the clone.
+            // That's because we monitor the clone's change event, and sync the
+            // original field by calling setValue, so the original field's change
+            // event will still fire.
+            config.listeners.change = function(c, newVal, oldVal) {                            
+                component.setValue(newVal);
+            }
+        }
+
+        // ToggleButtons become CheckItems
+        else if (group || component.enableToggle) {
             Ext.apply(config, {
+                iconAlign: 'right',
+                hideOnClick: false,
                 group  : group,
                 checked: component.pressed,
                 listeners: {
-                    checkchange: function(item, checked){
+                    checkchange: function(item, checked) {
                         component.toggle(checked);
                     }
                 }
@@ -308,11 +330,14 @@ Ext.define('Ext.layout.container.boxOverflow.Menu', {
      * Adds the given Toolbar item to the given menu. Buttons inside a buttongroup are added individually.
      * @param {Ext.menu.Menu} menu The menu to add to
      * @param {Ext.Component} component The component to add
+     * TODO: Implement overrides in Ext.layout.container.boxOverflow which create overrides
+     * for SplitButton, Button, ButtonGroup, and TextField. And a generic one for Component
+     * which create clones suitable for use in an overflow menu.
      */
     addComponentToMenu : function(menu, component) {
         var me = this,
         i, items, iLen;
-        
+
         if (component instanceof Ext.toolbar.Separator) {
             menu.add('-');
         } else if (component.isComponent) {
@@ -363,7 +388,7 @@ Ext.define('Ext.layout.container.boxOverflow.Menu', {
     destroy: function() {
         var trigger = this.menuTrigger;
             
-        if (!this.layout.owner.items.contains(trigger)) {
+        if (trigger && !this.layout.owner.items.contains(trigger)) {
             // Ensure we delete the ownerCt if it's not in the items
             // so we don't get spurious container remove warnings.
             delete trigger.ownerCt;

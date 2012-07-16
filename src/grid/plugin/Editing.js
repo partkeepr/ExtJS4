@@ -8,6 +8,7 @@
  */
 Ext.define('Ext.grid.plugin.Editing', {
     alias: 'editing.editing',
+    extend: 'Ext.AbstractPlugin',
 
     requires: [
         'Ext.grid.column.Column',
@@ -21,6 +22,7 @@ Ext.define('Ext.grid.plugin.Editing', {
     /**
      * @cfg {Number} clicksToEdit
      * The number of clicks on a grid required to display the editor.
+     * The only accepted values are **1** and **2**.
      */
     clicksToEdit: 2,
 
@@ -43,7 +45,6 @@ Ext.define('Ext.grid.plugin.Editing', {
 
     constructor: function(config) {
         var me = this;
-        Ext.apply(me, config);
 
         me.addEvents(
             /**
@@ -151,6 +152,7 @@ Ext.define('Ext.grid.plugin.Editing', {
             'canceledit'
 
         );
+        me.callParent(arguments);
         me.mixins.observable.constructor.call(me);
         // TODO: Deprecated, remove in 5.0
         me.on("edit", function(editor, e) {
@@ -162,12 +164,7 @@ Ext.define('Ext.grid.plugin.Editing', {
     init: function(grid) {
         var me = this;
 
-        // If the plugin owner is a lockable grid, attach to its normal (right side) grid.
-        if (grid.lockable) {
-            grid = grid.view.normalGrid;
-        }
         me.grid = grid;
-
         me.view = grid.view;
         me.initEvents();
         me.mon(grid, 'reconfigure', me.onReconfigure, me);
@@ -213,7 +210,7 @@ Ext.define('Ext.grid.plugin.Editing', {
      * Fires after the grid is reconfigured
      * @private
      */
-    onReconfigure: function(){
+    onReconfigure: function() {
         this.initFieldAccessors(this.view.getGridColumns());
     },
 
@@ -370,7 +367,7 @@ Ext.define('Ext.grid.plugin.Editing', {
     // Override of View's method so that we can pre-empt the View's processing if the view is being triggered by a mousedown
     beforeViewCellFocus: function(position) {
         // Pass call on to view if the navigation is from the keyboard, or we are not going to edit this cell.
-        if (this.view.selModel.keyNavigation || !this.isCellEditable || !this.isCellEditable(position.row, position.columnHeader)) {
+        if (this.view.selModel.keyNavigation || !this.editing || !this.isCellEditable || !this.isCellEditable(position.row, position.columnHeader)) {
             this.view.focusCell.apply(this.view, arguments);
         }
     },
@@ -483,6 +480,11 @@ Ext.define('Ext.grid.plugin.Editing', {
         }
 
         me.context = context;
+
+        /**
+         * @property {Boolean} editing
+         * Set to `true` while the editing plugin is active and an Editor is visible.
+         */
         me.editing = true;
     },
 

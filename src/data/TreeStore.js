@@ -437,8 +437,7 @@ Ext.define('Ext.data.TreeStore', {
         options.params = options.params || {};
 
         var me = this,
-            node = options.node || me.tree.getRootNode(),
-            root;
+            node = options.node || me.tree.getRootNode();
 
         // If there is not a node it means the user hasnt defined a rootnode yet. In this case lets just
         // create one for them.
@@ -447,6 +446,9 @@ Ext.define('Ext.data.TreeStore', {
                 expanded: true
             }, true);
         }
+
+        // Assign the ID of the Operation so that a REST proxy can create the correct URL
+        options.id = node.getId();
 
         if (me.clearOnLoad) {
             if(me.clearRemovedOnLoad) {
@@ -594,11 +596,7 @@ Ext.define('Ext.data.TreeStore', {
         var me = this,
             successful = operation.wasSuccessful(),
             records = operation.getRecords(),
-            node = operation.node,
-            filtered,
-            childNodes,
-            len,
-            i;
+            node = operation.node;
 
         me.loading = false;
         node.set('loading', false);

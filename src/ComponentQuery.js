@@ -54,6 +54,7 @@
  * Default pseudos include:
  *
  * - not
+ * - first
  * - last
  *
  * Queries return an array of components.
@@ -346,8 +347,22 @@ Ext.define('Ext.ComponentQuery', {
                 }
                 return results;
             },
+            first: function(components) {
+                var ret = [];
+                    
+                if (components.length > 0) {
+                    ret.push(components[0]);
+                }
+                return ret;       
+            },
             last: function(components) {
-                return components[components.length - 1];
+                var len = components.length,
+                    ret = [];
+                    
+                if (len > 0) {
+                    ret.push(components[len - 1]);
+                }
+                return ret;
             }
         },
 
@@ -422,6 +437,7 @@ Ext.define('Ext.ComponentQuery', {
                     return true;
                 }
             }
+            return false;
         },
 
         parse: function(selector) {

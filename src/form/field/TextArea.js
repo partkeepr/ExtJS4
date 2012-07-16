@@ -150,7 +150,7 @@ Ext.define('Ext.form.field.TextArea', {
 
         me.callParent(arguments);
 
-        me.needsMaxCheck = me.enforceMaxLength && !Ext.supports.TextAreaMaxLength;
+        me.needsMaxCheck = me.enforceMaxLength && me.maxLength !== Number.MAX_VALUE && !Ext.supports.TextAreaMaxLength;
         if (me.needsMaxCheck) {
             me.inputEl.on('paste', me.onPaste, me);
         }

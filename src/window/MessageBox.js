@@ -864,8 +864,9 @@ Ext.define('Ext.window.MessageBox', {
     },
 
     /**
-     * Displays a message box with a progress bar.  This message box has no buttons and is not closeable by
-     * the user.  You are responsible for updating the progress bar as needed via {@link Ext.window.MessageBox#updateProgress}
+     * Displays a message box with a progress bar.
+     *
+     * You are responsible for updating the progress bar as needed via {@link Ext.window.MessageBox#updateProgress}
      * and closing the message box when the process is complete.
      *
      * @param {String} title The title bar text

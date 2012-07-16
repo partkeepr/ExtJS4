@@ -258,7 +258,7 @@ Ext.onReady(function(){
         store: store,
         displayField: 'state',
         typeAhead: true,
-        mode: 'local',
+        queryMode: 'local',
         triggerAction: 'all',
         emptyText:'Select a state...',
         selectOnFocus:true,

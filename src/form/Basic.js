@@ -624,7 +624,17 @@ Ext.define('Ext.form.Basic', {
      * @return {Ext.form.Basic} this
      */
     submit: function(options) {
-        return this.doAction(this.standardSubmit ? 'standardsubmit' : this.api ? 'directsubmit' : 'submit', options);
+        options = options || {};
+        var me = this,
+            action;
+            
+        if (options.standardSubmit || me.standardSubmit) {
+            action = 'standardsubmit';
+        } else {
+            action = me.api ? 'directsubmit' : 'submit';
+        }
+            
+        return me.doAction(action, options);
     },
 
     /**
@@ -734,15 +744,18 @@ Ext.define('Ext.form.Basic', {
      */
     afterAction: function(action, success) {
         if (action.waitMsg) {
-            var MessageBox = Ext.MessageBox,
+            var messageBox = Ext.MessageBox,
                 waitMsgTarget = this.waitMsgTarget;
             if (waitMsgTarget === true) {
                 this.owner.el.unmask();
             } else if (waitMsgTarget) {
                 waitMsgTarget.unmask();
             } else {
-                MessageBox.updateProgress(1);
-                MessageBox.hide();
+                // Do not fire the hide event because that triggers complex processing
+                // which is not necessary just for the wait window, and which may interfere with the app.
+                messageBox.suspendEvents();
+                messageBox.hide();
+                messageBox.resumeEvents();
             }
         }
         if (success) {

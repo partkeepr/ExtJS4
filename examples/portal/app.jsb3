@@ -800,10 +800,6 @@
                     "name": "ColumnLayout.js"
                 },
                 {
-                    "path": "../../src/grid/plugin/",
-                    "name": "HeaderResizer.js"
-                },
-                {
                     "path": "../../src/grid/",
                     "name": "LockingView.js"
                 },
@@ -818,6 +814,10 @@
                 {
                     "path": "../../src/",
                     "name": "FocusManager.js"
+                },
+                {
+                    "path": "../../../platform/src/",
+                    "name": "AbstractPlugin.js"
                 },
                 {
                     "path": "../../../platform/src/draw/",
@@ -870,6 +870,10 @@
                 {
                     "path": "../../src/menu/",
                     "name": "Menu.js"
+                },
+                {
+                    "path": "../../src/grid/plugin/",
+                    "name": "HeaderResizer.js"
                 },
                 {
                     "path": "../../../platform/src/draw/",

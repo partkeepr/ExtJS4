@@ -410,10 +410,11 @@ Ext.define('Ext.window.Window', {
         if (me.closable) {
             keyMap = me.getKeyMap();
             keyMap.on(27, me.onEsc, me);
-
-            //if (hidden) { ? would be consistent w/before/afterShow...
-                keyMap.disable();
-            //}
+        } else {
+            keyMap = me.keyMap;
+        }
+        if (keyMap &amp;&amp; me.hidden) {
+            keyMap.disable();
         }
     },
 
@@ -588,34 +589,19 @@ Ext.define('Ext.window.Window', {
         }
     },
 
-    // private
-    afterShow: function(animateTarget) {
-        var me = this,
-            animating = animateTarget || me.animateTarget;
+    onShow: function() {
+        var me = this;
 
-        if (this.expandOnShow) {
-            this.expand(false);
-        }
-        // No constraining code needs to go here.
-        // Component.onShow constrains the Component. *If the constrain config is true*
-
-        // Perform superclass's afterShow tasks
-        // Which might include animating a proxy from an animateTarget
         me.callParent(arguments);
-
-        if (me.maximized) {
-            me.fitContainer();
+        if (me.expandOnShow) {
+            me.expand(false);
         }
-
         me.syncMonitorWindowResize();
-        if (!animating) {
-            me.doConstrain();
-        }
 
         if (me.keyMap) {
             me.keyMap.enable();
         }
-    },
+   },
 
     // private
     doClose: function() {
@@ -738,7 +724,6 @@ Ext.define('Ext.window.Window', {
             me.container.addCls(Ext.baseCSSPrefix + 'window-maximized-ct');
 
             me.syncMonitorWindowResize();
-            me.setPosition(0, 0);
             me.fitContainer();
             me.fireEvent('maximize', me);
         }
@@ -769,6 +754,8 @@ Ext.define('Ext.window.Window', {
                 me.collapseTool.show();
             }
 
+            me.maximized = false;
+
             // Restore the position/sizing
             me.setPosition(me.restorePos);
             me.setSize(me.restoreSize);
@@ -776,8 +763,6 @@ Ext.define('Ext.window.Window', {
             // Unset old position/sizing
             delete me.restorePos;
             delete me.restoreSize;
-
-            me.maximized = false;
 
             me.el.enableShadow(true);
 

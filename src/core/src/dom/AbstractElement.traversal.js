@@ -62,6 +62,7 @@ Ext.dom.AbstractElement.override({
     /**
      * Creates a {@link Ext.CompositeElement} for child nodes based on the passed CSS selector (the selector should not contain an id).
      * @param {String} selector The CSS selector
+     * @param {Boolean} [unique] True to create a unique Ext.Element for each element. Defaults to a shared flyweight object.
      * @return {Ext.CompositeElement} The composite element
      */
     select: function(selector, composite) {

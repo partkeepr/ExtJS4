@@ -270,6 +270,13 @@ Ext.define('Ext.Component', {
      */
 
     /**
+     * @cfg {Number/String} [columnWidth=undefined]
+     * Defines the column width inside {@link Ext.layout.container.Column column layout}.
+     *
+     * Can be specified as a number or as a percentage.
+     */
+
+    /**
      * @cfg {String} [region=undefined]
      * Defines the region inside {@link Ext.layout.container.Border border layout}.
      *
@@ -865,8 +872,15 @@ Ext.define('Ext.Component', {
 
         me.el.show();
         me.callParent(arguments);
-        if (me.floating && me.constrain) {
-            me.doConstrain();
+
+        // Constraining/containing element may have changed size while this Component was hidden
+        if (me.floating) {
+            if (me.maximized) {
+                me.fitContainer();
+            }
+            else if (me.constrain) {
+                me.doConstrain();
+            }
         }
     },
 
@@ -1091,7 +1105,17 @@ Ext.define('Ext.Component', {
     focus: function(selectText, delay) {
         var me = this,
             focusEl,
-            focusElDom;
+            focusElDom,
+            containerScrollTop;
+
+        // If delay is wanted, queue a call to this function.
+        if (delay) {
+            if (!me.focusTask) {
+                me.focusTask = new Ext.util.DelayedTask(me.focus);
+            }
+            me.focusTask.delay(Ext.isNumber(delay) ? delay : 10, null, me, [selectText, false]);
+            return me;
+        }
 
         if (me.rendered && !me.isDestroyed && me.isVisible(true) && (focusEl = me.getFocusEl())) {
 
@@ -1101,21 +1125,16 @@ Ext.define('Ext.Component', {
                 return focusEl.focus(selectText, delay);
             }
 
-            // If delay is wanted, queue a call to this function.
-            if (delay) {
-                if (!me.focusTask) {
-                    me.focusTask = new Ext.util.DelayedTask(me.focus);
-                }
-                me.focusTask.delay(Ext.isNumber(delay) ? delay : 10, null, me, [selectText, false]);
-                return me;
-            }
-
             // If it was an Element with a dom property
             if ((focusElDom = focusEl.dom)) {
 
                 // Not a natural focus holding element, add a tab index to make it programatically focusable.
                 if (focusEl.needsTabIndex()) {
                     focusElDom.tabIndex = -1;
+                }
+
+                if (me.floating) {
+                    containerScrollTop = me.container.dom.scrollTop;
                 }
 
                 // Focus the element.
@@ -1131,16 +1150,19 @@ Ext.define('Ext.Component', {
             // this is performed by its zIndexManager. Pass preventFocus true to avoid recursion.
             if (me.floating) {
                 me.toFront(true);
+                if (containerScrollTop !== undefined) {
+                    me.container.dom.scrollTop = containerScrollTop;
+                }
             }
         }
         return me;
     },
-    
+
     /**
      * Cancel any deferred focus on this component
      * @protected
      */
-    cancelFocus: function(){
+    cancelFocus: function() {
         var task = this.focusTask;
         if (task) {
             task.cancel();

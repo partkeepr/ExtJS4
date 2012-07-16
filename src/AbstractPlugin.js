@@ -21,12 +21,12 @@ Ext.define('Ext.AbstractPlugin', {
     disabled: false,
 
     constructor: function(config) {
-        //<debug>
-        if (!config.cmp && Ext.global.console) {
-            Ext.global.console.warn("Attempted to attach a plugin ");
-        }
-        //</debug>
+        this.initialConfig = config;
         Ext.apply(this, config);
+    },
+
+    clone: function() {
+        return new this.self(this.initialConfig);
     },
 
     getCmp: function() {

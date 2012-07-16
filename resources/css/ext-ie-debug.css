@@ -5,15 +5,18 @@ Copyright (c) 2011-2012 Sencha Inc
 
 Contact:  http://www.sencha.com/contact
 
-Pre-release code in the Ext repository is intended for development purposes only and will
-not always be stable. 
+GNU General Public License Usage
+This file may be used under the terms of the GNU General Public License version 3.0 as
+published by the Free Software Foundation and appearing in the file LICENSE included in the
+packaging of this file.
 
-Use of pre-release code is permitted with your application at your own risk under standard
-Ext license terms. Public redistribution is prohibited.
+Please review the following information to ensure the GNU General Public License version 3.0
+requirements will be met: http://www.gnu.org/copyleft/gpl.html.
 
-For early licensing, please contact us at licensing@sencha.com
+If you are unsure which license is appropriate for your use, please contact the sales department
+at http://www.sencha.com/contact.
 
-Build date: 2012-06-11 23:41:44 (c11133f09694d5eb4054e7eec7a949cd0d8656c3)
+Build date: 2012-07-04 21:11:01 (65ff594cd80b9bad45df640c22cc0adb52c95a7b)
 */
 /**
  * @class Global_CSS
@@ -3419,26 +3422,35 @@ table.x-datepicker-inner {
   left: 4px;
   background: no-repeat center center; }
 
-/* line 85, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
+/* line 87, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
+.x-menu-item-icon-right {
+  width: 16px;
+  height: 16px;
+  position: absolute;
+  top: 6px;
+  right: 4px;
+  background: no-repeat center center; }
+
+/* line 96, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
 .x-menu-item-text {
   font-size: 11px;
   color: #222222; }
 
-/* line 91, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
+/* line 102, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
 .x-menu-item-checked .x-menu-item-icon {
   background-image: url('../../resources/themes/images/default/menu/checked.gif'); }
-/* line 94, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
+/* line 105, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
 .x-menu-item-checked .x-menu-group-icon {
   background-image: url('../../resources/themes/images/default/menu/group-checked.gif'); }
 
-/* line 100, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
+/* line 111, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
 .x-menu-item-unchecked .x-menu-item-icon {
   background-image: url('../../resources/themes/images/default/menu/unchecked.gif'); }
-/* line 103, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
+/* line 114, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
 .x-menu-item-unchecked .x-menu-group-icon {
   background-image: none; }
 
-/* line 108, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
+/* line 119, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
 .x-menu-item-separator {
   height: 2px;
   border-top: solid 1px #e0e0e0;
@@ -3446,7 +3458,7 @@ table.x-datepicker-inner {
   margin: 2px 0px;
   overflow: hidden; }
 
-/* line 116, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
+/* line 127, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
 .x-menu-item-arrow {
   position: absolute;
   width: 12px;
@@ -3456,15 +3468,15 @@ table.x-datepicker-inner {
   background: no-repeat center center;
   background-image: url('../../resources/themes/images/default/menu/menu-parent.gif'); }
 
-/* line 126, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
+/* line 137, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
 .x-menu-item-indent {
   margin-left: 31px;
   /* The 2px is the width of the seperator */ }
 
-/* line 130, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
+/* line 141, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
 .x-menu-item-active {
   cursor: pointer; }
-  /* line 133, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
+  /* line 144, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
   .x-menu-item-active .x-menu-item-link {
     background-image: none;
     background-color: #d9e8fb;
@@ -3484,37 +3496,37 @@ table.x-datepicker-inner {
     -khtml-border-radius: 3px;
     border-radius: 3px; }
 
-/* line 142, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
+/* line 153, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
 .x-menu-item-disabled {
   filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=50);
   opacity: 0.5; }
 
-/* line 149, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
+/* line 160, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
 .x-ie .x-menu-item-disabled .x-menu-item-icon {
   filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=50);
   opacity: 0.5; }
-/* line 153, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
+/* line 164, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
 .x-ie .x-menu-item-disabled .x-menu-item-text {
   background-color: transparent; }
-/* line 160, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
+/* line 171, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
 .x-strict .x-ie7m .x-ie .x-menu-icon-separator {
   width: 1px; }
-/* line 164, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
+/* line 175, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
 .x-strict .x-ie7m .x-ie .x-menu-item-separator {
   height: 1px; }
 
-/* line 173, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
+/* line 184, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
 .x-ie6 .x-menu-item-link,
 .x-ie7 .x-menu-item-link,
 .x-quirks .x-ie8 .x-menu-item-link {
   padding-bottom: 2px; }
 
-/* line 181, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
+/* line 192, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
 .x-nlg .x-menu-item-active .x-menu-item-link {
   background: #d9e8fb repeat-x left top;
   background-image: url('../../resources/themes/images/default/menu/menu-item-active-bg.gif'); }
 
-/* line 188, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
+/* line 199, ../themes/stylesheets/ext4/default/widgets/_menu.scss */
 .x-menu-date-item {
   border-color: #99BBE8; }
 
@@ -4348,13 +4360,15 @@ browsers will do whacky things with it.
 
 /* line 79, ../themes/stylesheets/ext4/default/widgets/form/_all.scss */
 .x-form-item-label-top {
-  padding: 0; }
+  display: block;
+  zoom: 1;
+  padding: 0 0 5px 0; }
 
-/* line 83, ../themes/stylesheets/ext4/default/widgets/form/_all.scss */
+/* line 85, ../themes/stylesheets/ext4/default/widgets/form/_all.scss */
 .x-form-item-label-right {
   text-align: right; }
 
-/* line 87, ../themes/stylesheets/ext4/default/widgets/form/_all.scss */
+/* line 89, ../themes/stylesheets/ext4/default/widgets/form/_all.scss */
 .x-form-invalid-under {
   padding: 2px 2px 2px 18px;
   color: #c0272b;
@@ -4363,30 +4377,25 @@ browsers will do whacky things with it.
   background: no-repeat 0 2px;
   background-image: url('../../resources/themes/images/default/form/exclamation.gif'); }
 
-/* line 98, ../themes/stylesheets/ext4/default/widgets/form/_all.scss */
-.x-external-error-icon {
-  position: absolute;
-  right: 10px;
-  height: 22px; }
-
-/* line 105, ../themes/stylesheets/ext4/default/widgets/form/_all.scss */
-.x-quirks .x-ie .x-external-error-icon {
-  right: 0; }
-
-/* line 110, ../themes/stylesheets/ext4/default/widgets/form/_all.scss */
+/* line 100, ../themes/stylesheets/ext4/default/widgets/form/_all.scss */
 .x-form-invalid-icon {
   width: 18px;
-  background: no-repeat 2px 3px;
+  height: 14px;
+  background: no-repeat center center;
   background-image: url('../../resources/themes/images/default/form/exclamation.gif');
   overflow: hidden; }
-  /* line 115, ../themes/stylesheets/ext4/default/widgets/form/_all.scss */
+  /* line 106, ../themes/stylesheets/ext4/default/widgets/form/_all.scss */
   .x-form-invalid-icon ul {
     display: block;
     width: 18px; }
-    /* line 118, ../themes/stylesheets/ext4/default/widgets/form/_all.scss */
+    /* line 109, ../themes/stylesheets/ext4/default/widgets/form/_all.scss */
     .x-form-invalid-icon ul li {
       /* prevent inner elements from interfering with QuickTip hovering */
       display: none; }
+
+/* line 117, ../themes/stylesheets/ext4/default/widgets/form/_all.scss */
+.x-lbl-top-err-icon {
+  margin-bottom: 4px; }
 
 /* line 7, ../themes/stylesheets/ext4/default/widgets/form/_field.scss */
 .x-form-field,
@@ -4704,10 +4713,10 @@ textarea.x-form-invalid-field {
 
 /* line 12, ../themes/stylesheets/ext4/default/widgets/form/_checkboxgroup.scss */
 .x-form-invalid .x-form-checkboxgroup-body {
-  border: 1px solid #c30;
+  border: 1px solid #c30!important;
   background: transparent repeat-x bottom;
   background-image: url('../../resources/themes/images/default/grid/invalid_line.gif');
-  padding: 0 3px 0 3px; }
+  padding: 1px 3px 0 3px; }
 
 /* line 20, ../themes/stylesheets/ext4/default/widgets/form/_checkboxgroup.scss */
 .x-check-group-alt {
@@ -8451,17 +8460,17 @@ svg, vml {
   cursor: row-resize;
   font-size: 1px; }
 
-/* line 80, ../themes/stylesheets/ext4/default/util/_splitter.scss */
+/* line 81, ../themes/stylesheets/ext4/default/util/_splitter.scss */
 .x-splitter-vertical {
   cursor: e-resize;
   cursor: col-resize;
   font-size: 1px; }
 
-/* line 85, ../themes/stylesheets/ext4/default/util/_splitter.scss */
-.x-splitter-collapsed {
+/* line 86, ../themes/stylesheets/ext4/default/util/_splitter.scss */
+.x-splitter-collapsed, .x-splitter-horizontal-noresize, .x-splitter-vertical-noresize {
   cursor: default; }
 
-/* line 89, ../themes/stylesheets/ext4/default/util/_splitter.scss */
+/* line 90, ../themes/stylesheets/ext4/default/util/_splitter.scss */
 .x-splitter-active {
   z-index: 4;
   font-size: 1px;
@@ -8469,12 +8478,12 @@ svg, vml {
   filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=80);
   opacity: 0.8; }
 
-/* line 96, ../themes/stylesheets/ext4/default/util/_splitter.scss */
+/* line 97, ../themes/stylesheets/ext4/default/util/_splitter.scss */
 .x-splitter-active .x-collapse-el {
   filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=30);
   opacity: 0.3; }
 
-/* line 101, ../themes/stylesheets/ext4/default/util/_splitter.scss */
+/* line 102, ../themes/stylesheets/ext4/default/util/_splitter.scss */
 .x-proxy-el {
   position: absolute;
   background: #b4b4b4;

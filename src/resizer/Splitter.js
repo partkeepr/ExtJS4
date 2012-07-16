@@ -29,6 +29,9 @@ Ext.define('Ext.resizer.Splitter', {
 
     baseCls: Ext.baseCSSPrefix + 'splitter',
     collapsedClsInternal: Ext.baseCSSPrefix + 'splitter-collapsed',
+    
+    // Default to tree, allow internal classes to disable resizing
+    canResize: true,
 
     /**
      * @cfg {Boolean} collapsible
@@ -109,7 +112,8 @@ Ext.define('Ext.resizer.Splitter', {
             collapseDir = me.getCollapseDirection(),
             vertical = me.vertical,
             fixedSizeProp = vertical ? 'width' : 'height',
-            stretchSizeProp = vertical ? 'height' : 'width';
+            stretchSizeProp = vertical ? 'height' : 'width',
+            cls;
 
         me.callParent();
 
@@ -124,7 +128,12 @@ Ext.define('Ext.resizer.Splitter', {
             me.addCls(me.collapsedClsInternal);
         }
         
-        me.addCls(me.baseCls + '-' + me.orientation);
+        cls = me.baseCls + '-' + me.orientation;
+        me.addCls(cls);
+        if (!me.canResize) {
+            me.addCls(cls + '-noresize');
+        }
+        
         Ext.applyIf(me.renderData, {
             collapseDir: collapseDir,
             collapsible: me.collapsible || target.collapsible
@@ -154,10 +163,11 @@ Ext.define('Ext.resizer.Splitter', {
         });
 
         me.el.unselectable();
-        me.tracker = Ext.create(me.getTrackerConfig());
-
-        // Relay the most important events to our owner (could open wider later):
-        me.relayEvents(me.tracker, [ 'beforedragstart', 'dragstart', 'dragend' ]);
+        if (me.canResize) {
+            me.tracker = Ext.create(me.getTrackerConfig());
+            // Relay the most important events to our owner (could open wider later):
+            me.relayEvents(me.tracker, [ 'beforedragstart', 'dragstart', 'dragend' ]);
+        }
     },
 
     getCollapseDirection: function() {
@@ -245,5 +255,10 @@ Ext.define('Ext.resizer.Splitter', {
         if (Ext.isIE && me.el) {
             me.el.repaint();
         }
+    },
+    
+    beforeDestroy: function(){
+        Ext.destroy(this.tracker);
+        this.callParent();
     }
 });

@@ -168,6 +168,13 @@ Ext.define('Ext.container.Container', {
         this.fireHierarchyEvent('show');
     },
 
+    onAdded: function() {
+        this.callParent(arguments);
+        if (this.hierarchyEventSource.hasListeners.added) {
+            this.fireHierarchyEvent('added');
+        }
+    },
+
     /**
      * Return the immediate child Component in which the passed element is located.
      * @param {Ext.Element/HTMLElement/String} el The element to test (or ID of element).
@@ -207,6 +214,7 @@ Ext.define('Ext.container.Container', {
         hide: true,
         show: true,
         collapse: true,
-        expand: true
+        expand: true,
+        added: true
     }});
 });

@@ -82,6 +82,17 @@
         background: no-repeat center center;
     }
 
+    // For when an icon needs to be used in the right position where a submenu arrow usually goes.
+    // eg: When a CheckItem needs an icon. The left icon position is a checkbox, so the icon is moved to the right.
+    .#{$prefix}menu-item-icon-right {
+        width: 16px;
+        height: 16px;
+        position: absolute;
+        top: 6px;
+        right: 4px;
+        background: no-repeat center center;
+    }
+
     .#{$prefix}menu-item-text {
         font-size: ceil($font-size * .9);
         color: $menu-text-color;

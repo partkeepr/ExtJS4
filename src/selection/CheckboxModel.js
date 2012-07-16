@@ -40,6 +40,9 @@ Ext.define('Ext.selection.CheckboxModel', {
     // private
     checkerOnCls: Ext.baseCSSPrefix + 'grid-hd-checker-on',
 
+    // private
+    refreshOnRemove: true,
+
     beforeViewRender: function(view) {
         var me = this;
         me.callParent(arguments);
@@ -228,8 +231,24 @@ Ext.define('Ext.selection.CheckboxModel', {
      * @private
      */
     onSelectChange: function() {
-        this.callParent(arguments);
+        var me = this;
+        me.callParent(arguments);
+        me.updateHeaderState();
+    },
 
+    /**
+     * @private
+     */
+    onStoreLoad: function() {
+        var me = this;
+        me.callParent(arguments);
+        me.updateHeaderState();
+    },
+
+    /**
+     * @private
+     */
+    updateHeaderState: function() {
         // check to see if all records are selected
         var hdSelectStatus = this.selected.getCount() === this.store.getCount();
         this.toggleUiHeader(hdSelectStatus);

@@ -890,7 +890,8 @@ Ext.define('Ext.panel.Table', {
     onRestoreHorzScroll: function() {
         var left = this.scrollLeftPos;
         if (left) {
-            this.syncHorizontalScroll(left);
+            // We need to restore the body scroll position here
+            this.syncHorizontalScroll(left, true);
         }
     },
 
@@ -978,13 +979,20 @@ Ext.define('Ext.panel.Table', {
         this.syncHorizontalScroll(target.scrollLeft);
     },
     
-    syncHorizontalScroll: function(left) {
+    syncHorizontalScroll: function(left, setBody) {
         var me = this,
             scrollTarget;
             
-        if (me.rendered &amp;&amp; left !== me.scrollLeftPos) {   
-            scrollTarget = me.getScrollTarget();
-            scrollTarget.el.dom.scrollLeft = left;
+        setBody = setBody === true;
+        // Only set the horizontal scroll if we've changed position,
+        // so that we don't set this on vertical scrolls
+        if (me.rendered &amp;&amp; (setBody || left !== me.scrollLeftPos)) {
+            // Only set the body position if we're reacting to a refresh, otherwise
+            // we just need to set the header.
+            if (setBody) {   
+                scrollTarget = me.getScrollTarget();
+                scrollTarget.el.dom.scrollLeft = left;
+            }
             me.headerCt.el.dom.scrollLeft = left;
             me.scrollLeftPos = left;
         }
@@ -1016,10 +1024,10 @@ Ext.define('Ext.panel.Table', {
         if (me.lockable) {
             me.reconfigureLockable(store, columns);
         } else {
+            Ext.suspendLayouts();
             if (columns) {
                 // new columns, delete scroll pos
                 delete me.scrollLeftPos;
-                headerCt.suspendLayouts();
                 headerCt.removeAll();
                 headerCt.add(columns);
             }
@@ -1029,10 +1037,8 @@ Ext.define('Ext.panel.Table', {
             } else {
                 me.getView().refresh();
             }
-            if (columns) {
-                headerCt.resumeLayouts(true);
-            }
             headerCt.setSortState();
+            Ext.resumeLayouts(true);
         }
         me.fireEvent('reconfigure', me, store, columns);
     }

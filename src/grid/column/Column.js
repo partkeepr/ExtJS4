@@ -194,7 +194,7 @@ Ext.define('Ext.grid.column.Column', {
 
     /**
      * @cfg {Function/String} renderer
-     * A renderer is an 'interceptor' method which can be used transform data (value, appearance, etc.)
+     * A renderer is an 'interceptor' method which can be used to transform data (value, appearance, etc.)
      * before it is rendered. Example:
      *
      *     {
@@ -614,7 +614,7 @@ Ext.define('Ext.grid.column.Column', {
     onDestroy: function() {
         var me = this;
         // force destroy on the textEl, IE reports a leak
-        Ext.destroy(me.textEl, me.keyNav);
+        Ext.destroy(me.textEl, me.keyNav, me.field);
         delete me.keyNav;
         me.callParent(arguments);
     },

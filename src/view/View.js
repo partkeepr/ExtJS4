@@ -54,6 +54,8 @@ Ext.define('Ext.view.View', {
 
     deferHighlight: (Ext.isIE6 || Ext.isIE7) ? 100 : 0,
 
+    inputTagRe: /^textarea$|^input$/i,
+
     inheritableStatics: {
         EventMap: {
             mousedown: 'MouseDown',
@@ -425,17 +427,20 @@ Ext.define('Ext.view.View', {
     },
 
     handleEvent: function(e) {
-        var key = e.type == 'keydown' && e.getKey();
+        var me = this,
+            key = e.type == 'keydown' && e.getKey();
 
-        if (this.processUIEvent(e) !== false) {
-            this.processSpecialEvent(e);
+        if (me.processUIEvent(e) !== false) {
+            me.processSpecialEvent(e);
         }
 
-        // After all listeners have processed the event, prevent browser's default action
-        // on SPACE which is to focus the event's target element.
+        // After all listeners have processed the event, then unless the user is typing into an input field,
+        // prevent browser's default action on SPACE which is to focus the event's target element.
         // Focusing causes the browser to attempt to scroll the element into view.
         if (key === e.SPACE) {
-            e.stopEvent();
+            if (!me.inputTagRe.test(e.getTarget().tagName)) {
+                e.stopEvent();
+            }
         }
     },
 

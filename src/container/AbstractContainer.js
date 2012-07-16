@@ -346,7 +346,7 @@ Ext.define('Ext.container.AbstractContainer', {
             layout.initLayout();
         }
     },
-
+    
     setupRenderTpl: function (renderTpl) {
         var layout = this.getLayout();
 
@@ -420,7 +420,8 @@ Ext.define('Ext.container.AbstractContainer', {
         }
 
         // Make sure defaults are applied and item is initialized
-        var i = 0,
+        var me = this,
+            i = 0,
             len = items.length,
             item;
 
@@ -434,7 +435,11 @@ Ext.define('Ext.container.AbstractContainer', {
                 if (applyDefaults) {
                     item = this.applyDefaults(item);
                 }
-                items[i] = this.lookupComponent(item);
+
+                // Tell the item we're in a container during construction
+                item.isContained = me;
+                items[i] = me.lookupComponent(item);
+                delete item.isContained;
             }
         }
 
@@ -550,10 +555,10 @@ Ext.define('Ext.container.AbstractContainer', {
 
             pos = (index < 0) ? me.items.length : (index + i);
 
-            // Floating Components are not added into the items collection
-            // But they do get an upward ownerCt link so that they can traverse
-            // up to their z-index parent.
+            // Floating Components are not added into the items collection, but to a separate floatingItems collection
             if (item.floating) {
+                me.floatingItems = me.floatingItems || new Ext.util.MixedCollection();
+                me.floatingItems.add(item);
                 item.onAdded(me, pos);
             } else if ((!me.hasListeners.beforeadd || me.fireEvent('beforeadd', me, item, pos) !== false) && me.onBeforeAdd(item) !== false) {
                 me.items.insert(pos, item);
@@ -665,7 +670,8 @@ Ext.define('Ext.container.AbstractContainer', {
         var me = this,
             border = item.border;
 
-        if (item.ownerCt) {
+        // Remove from current container if it's not us.
+        if (item.ownerCt && item.ownerCt !== me) {
             item.ownerCt.remove(item, false);
         }
 
@@ -806,9 +812,8 @@ Ext.define('Ext.container.AbstractContainer', {
         }
 
         // Append floating items to the list.
-        // These will only be present after they are rendered.
-        if (me.floatingItems && me.floatingItems.accessList) {
-            result.push.apply(result, me.floatingItems.accessList);
+        if (me.floatingItems) {
+            result.push.apply(result, me.floatingItems.items);
         }
 
         return result;

@@ -72,6 +72,8 @@ Ext.define('Ext.grid.column.Action', {
      * @cfg {Number} handler.colIndex The column index clicked on.
      * @cfg {Object} handler.item The clicked item (or this Column if multiple {@link #cfg-items} were not configured).
      * @cfg {Event} handler.e The click event.
+     * @cfg {Ext.data.Model} handler.record The Record underlying the clicked row.
+     * @cfg {HtmlElement} row The table row clicked upon.
      */
     /**
      * @cfg {Object} scope

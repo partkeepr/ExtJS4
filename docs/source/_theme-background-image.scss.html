@@ -37,11 +37,14 @@
             @if $include-missing-images {
                 @return theme-image($theme-name, $path, $without-url, $relative);
             }
+
+            @return none;
         }
     }
     @else {
         @warn &quot;@theme-background-image: No arguments passed&quot;;
     }
-}</pre>
+}
+</pre>
 </body>
 </html>

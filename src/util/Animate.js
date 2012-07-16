@@ -251,7 +251,7 @@ Ext.define('Ext.util.Animate', {
      *         myWindow.animate({
      *             to: {
      *                 width: (myWindow.getWidth() == 500) ? 700 : 500,
-     *                 height: (myWindow.getHeight() == 300) ? 400 : 300,
+     *                 height: (myWindow.getHeight() == 300) ? 400 : 300
      *             }
      *         });
      *     });

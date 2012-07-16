@@ -265,7 +265,7 @@ Ext.define('Ext.selection.Model', {
     /**
      * Deselects a record instance by record instance or index.
      * @param {Ext.data.Model[]/Number} records An array of records or an index
-     * @param {Boolean} [suppressEvent=false] Trye to not fire a deselect event
+     * @param {Boolean} [suppressEvent=false] True to not fire a deselect event
      */
     deselect: function(records, suppressEvent) {
         this.doDeselect(records, suppressEvent);
@@ -624,10 +624,14 @@ Ext.define('Ext.selection.Model', {
     // if records are updated
     onStoreUpdate: Ext.emptyFn,
 
-    // @abstract
-    onSelectChange: function(record, isSelected, suppressEvent) {
+    /**
+     * @abstract
+     * @private
+     */
+    onStoreLoad: Ext.emptyFn,
 
-    },
+    // @abstract
+    onSelectChange: Ext.emptyFn,
 
     // @abstract
     onLastFocusChanged: function(oldFocused, newFocused) {

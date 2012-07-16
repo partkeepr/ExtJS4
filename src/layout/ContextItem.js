@@ -1511,7 +1511,8 @@ Ext.define('Ext.layout.ContextItem', {
             target = me.target,
             max = Math.max,
             paddingWidth = 0,
-            paddingHeight = 0;
+            paddingHeight = 0,
+            hasWidth, hasHeight, isAbsolute, scrollbarSize, style, targetEl;
 
         // Process non-style properties:
         if ('displayed' in dirtyProps) {
@@ -1558,7 +1559,7 @@ Ext.define('Ext.layout.ContextItem', {
             }
         }
 
-        // Support for the content-box box model
+        // Support for the content-box box model...
         if (!isBorderBox && (width > 0 || height > 0)) { // no need to subtract from 0
             // The width and height values assume the border-box box model,
             // so we must remove the padding & border to calculate the content-box.
@@ -1581,6 +1582,49 @@ Ext.define('Ext.layout.ContextItem', {
                 height = max(parseInt(height, 10) - (me.borderInfo.height + paddingHeight), 0);
                 styles.height = height + 'px';
                 ++styleCount;
+            }
+        }
+
+        // IE9 strict subtracts the scrollbar size from the element size when the element
+        // is absolutely positioned and uses box-sizing: border-box. To workaround this
+        // issue we have to add the the scrollbar size.
+        // 
+        // See http://social.msdn.microsoft.com/Forums/da-DK/iewebdevelopment/thread/47c5148f-a142-4a99-9542-5f230c78cb3b
+        //
+        if (me.wrapsComponent && Ext.isIE9 && Ext.isStrict) {
+            // when we set a width and we have a vertical scrollbar (overflowY), we need
+            // to add the scrollbar width... conversely for the height and overflowX
+            if ((hasWidth = width !== undefined && me.hasOverflowY) ||
+                (hasHeight = height !== undefined && me.hasOverflowX)) {
+                // check that the component is absolute positioned and border-box:
+                isAbsolute = me.isAbsolute;
+                if (isAbsolute === undefined) {
+                    isAbsolute = false;
+                    targetEl = me.target.getTargetEl();
+                    style = targetEl.getStyle('position');
+
+                    if (style == 'absolute') {
+                        style = targetEl.getStyle('box-sizing');
+                        isAbsolute = (style == 'border-box');
+                    }
+
+                    me.isAbsolute = isAbsolute; // cache it
+                }
+
+                if (isAbsolute) {
+                    scrollbarSize = Ext.getScrollbarSize();
+
+                    if (hasWidth) {
+                        width = parseInt(width, 10) + scrollbarSize.width;
+                        styles.width = width + 'px';
+                        ++styleCount;
+                    }
+                    if (hasHeight) {
+                        height = parseInt(height, 10) + scrollbarSize.height;
+                        styles.height = height + 'px';
+                        ++styleCount;
+                    }
+                }
             }
         }
 

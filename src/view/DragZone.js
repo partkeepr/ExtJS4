@@ -51,14 +51,19 @@ Ext.define('Ext.view.DragZone', {
             scope: this
         });
     },
-    
-    onInvalidDrop: function(){
-        this.callParent(arguments);    
-        this.view.focus();
-    },
 
+    onValidDrop: function(target, e, id) {
+        this.callParent();
+        // focus the view that the node was dropped onto so that keynav will be enabled.
+        target.el.focus();
+    },
+    
     onItemMouseDown: function(view, record, item, index, e) {
         if (!this.isPreventDrag(e, record, item, index)) {
+            // Since handleMouseDown prevents the default behavior of the event, which
+            // is to focus the view, we focus the view now.  This ensures that the view
+            // remains focused if the drag is cancelled, or if no drag occurs.
+            this.view.focus();
             this.handleMouseDown(e);
 
             // If we want to allow dragging of multi-selections, then veto the following handlers (which, in the absence of ctrlKey, would deselect)

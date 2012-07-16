@@ -53,7 +53,7 @@ Ext.define('Ext.ux.form.ItemSelector', {
         me.bindStore(me.store);
     },
 
-    createList: function(){
+    createList: function(title){
         var me = this;
 
         return Ext.create('Ext.ux.form.MultiSelect', {
@@ -61,6 +61,7 @@ Ext.define('Ext.ux.form.ItemSelector', {
             flex: 1,
             dragGroup: me.ddGroup,
             dropGroup: me.ddGroup,
+            title: title,
             store: {
                 model: me.store.model,
                 data: []
@@ -80,10 +81,11 @@ Ext.define('Ext.ux.form.ItemSelector', {
     setupItems: function() {
         var me = this;
 
-        me.fromField = me.createList();
-        me.toField = me.createList();
+        me.fromField = me.createList(me.fromTitle);
+        me.toField = me.createList(me.toTitle);
 
         return {
+            border: false,
             layout: {
                 type: 'hbox',
                 align: 'stretch'

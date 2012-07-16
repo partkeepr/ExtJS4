@@ -125,6 +125,18 @@ Ext.define('Ext.view.BoundList', {
         me.callParent();
     },
 
+    beforeRender: function() {
+        var me = this;
+
+        me.callParent(arguments);
+
+        // If there's a Menu among our ancestors, then add the menu class.
+        // This is so that the MenuManager does not see a mousedown in this Component as a document mousedown, outside the Menu
+        if (me.up('menu')) {
+            me.addCls(Ext.baseCSSPrefix + 'menu');
+        }
+    },
+
     /**
      * @private
      * Boundlist-specific implementation of the getBubbleTarget used by {@link Ext.AbstractComponent#up} method.

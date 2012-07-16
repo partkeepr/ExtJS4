@@ -109,12 +109,21 @@ Ext.define('Ext.ux.RowExpander', {
 
     init: function(grid) {
         this.callParent(arguments);
-
+        this.grid = grid;
         // Columns have to be added in init (after columns has been used to create the
         // headerCt). Otherwise, shared column configs get corrupted, e.g., if put in the
         // prototype.
-        grid.headerCt.insert(0, this.getHeaderConfig());
+        this.addExpander();
         grid.on('render', this.bindView, this, {single: true});
+        grid.on('reconfigure', this.onReconfigure, this);
+    },
+    
+    onReconfigure: function(){
+        this.addExpander();
+    },
+    
+    addExpander: function(){
+        this.grid.headerCt.insert(0, this.getHeaderConfig());
     },
 
     getHeaderId: function() {

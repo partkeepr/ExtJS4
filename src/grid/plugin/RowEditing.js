@@ -116,11 +116,7 @@ Ext.define('Ext.grid.plugin.RowEditing', {
         var me = this,
             editor = me.getEditor();
 
-        if (me.editing && editor.isDirty()) {
-            return false;
-        }
-
-        if ((me.callParent(arguments) !== false) && (editor.beforeEdit() !== false)) {
+        if ((editor.beforeEdit() !== false) && (me.callParent(arguments) !== false)) {
             editor.startEdit(me.context.record, me.context.column);
             return true;
         }

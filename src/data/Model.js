@@ -819,6 +819,9 @@ Ext.define('Ext.data.Model', {
      */
     constructor: function(data, id, raw, convertedData) {
         // id, raw and convertedData not documented intentionally, meant to be used internally.
+        // TODO: find where "raw" is used and remove it. The first parameter, "data" is raw, unconverted data. "raw" is redundant.
+        // The "convertedData" parameter is a converted object hash with all properties corresponding to defined Fields
+        // and all values of the defined type. It is used directly as this record's data property.
         data = data || {};
 
         var me = this,
@@ -842,7 +845,7 @@ Ext.define('Ext.data.Model', {
         /**
          * @property {Object} raw The raw data used to create this model if created via a reader.
          */
-        me.raw = raw;
+        me.raw = raw || data; // If created using data in constructor, use data
 
         if (!me.data) {
             me.data = {};
@@ -876,7 +879,10 @@ Ext.define('Ext.data.Model', {
                 for (; i < length; i++) {
                     field = fields[i];
                     name  = field.name;
-                    value = data[i];
+
+                    // Use the original ordinal position at which the Model inserted the field into its collection.
+                    // Fields are sorted to place fields with a *convert* function last.
+                    value = data[field.originalIndex];
 
                     if (value === undefined) {
                         value = field.defaultValue;
@@ -1299,7 +1305,9 @@ Ext.define('Ext.data.Model', {
     copy : function(newId) {
         var me = this;
 
-        return new me.self(Ext.apply({}, me[me.persistenceProperty]), newId);
+        // Use raw data as the data param.
+        // Pass a copy iof our converted data in to be used as the new record's convertedData
+        return new me.self(me.raw, newId, null, Ext.apply({}, me[me.persistenceProperty]));
     },
 
     /**

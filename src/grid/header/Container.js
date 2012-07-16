@@ -264,7 +264,9 @@ Ext.define('Ext.grid.header.Container', {
     // We cannot refresh the View on every add because this method is called
     // when the HeaderDropZone moves Headers around, that will also refresh the view
     onAdd: function(c) {
-        var me = this;
+        var me = this,
+            headerCt = me.isHeader ? me.getOwnerHeaderCt() : me;
+
         if (!c.headerId) {
             c.headerId = c.initialConfig.id || Ext.id(null, 'header-');
         }
@@ -289,16 +291,33 @@ Ext.define('Ext.grid.header.Container', {
         }
         //</debug>
         me.callParent(arguments);
-        me.purgeCache();
+
+        // Upon add of any column we need to purge the *HeaderContainer's* cache of leaf view columns.
+        if (headerCt) {
+            headerCt.purgeCache();
+        }
     },
 
     // Invalidate column cache on remove
     // We cannot refresh the View on every remove because this method is called
     // when the HeaderDropZone moves Headers around, that will also refresh the view
     onRemove: function(c) {
-        var me = this;
+        var me = this,
+            headerCt = me.isHeader ? me.getOwnerHeaderCt() : me;
+
         me.callParent(arguments);
-        me.purgeCache();
+        
+        //<debug warn>
+        if (!me._usedIDs) {
+            me._usedIDs = {};
+        }
+        delete me._usedIDs[c.headerId];
+        //</debug>
+
+        // Upon removal of any column we need to purge the *HeaderContainer's* cache of leaf view columns.
+        if (headerCt) {
+            me.purgeCache();
+        }
     },
 
     // @private
@@ -315,7 +334,9 @@ Ext.define('Ext.grid.header.Container', {
             ret = config;
         } else {
             ret = this.callParent(arguments);
-            if (!('width' in ret) && !ret.flex) {
+            
+            // Apply default width unless it's a group header (in which case it must be left to shrinkwrap), or it's flexed
+            if (!config.isGroupHeader && !('width' in ret) && !ret.flex) {
                 ret.width = this.defaultWidth;
             }
         }
@@ -388,7 +409,7 @@ Ext.define('Ext.grid.header.Container', {
             len = columns.length,
             menu = me.getMenu(),
             item;
-            
+
         for (; i < len; ++i) {
             item = columns[i];
             if (item.hideable) {
@@ -399,9 +420,11 @@ Ext.define('Ext.grid.header.Container', {
                         ++count;
                     }
                 }
+            } else if (!item.hidden && !item.menuDisabled) {
+                ++count;
             }
         }
-        
+
         return {
             items: items,
             checkedCount: count    
@@ -566,7 +589,7 @@ Ext.define('Ext.grid.header.Container', {
 
         // An automatically expiring lock
         this.tempLock();
-        this.onHeaderMoved(this.move(fromIdx, toIdx), fromIdx, toIdx);
+        this.onHeaderMoved(this.move(fromIdx, toIdx), 1, fromIdx, toIdx);
     },
 
     purgeCache: function() {

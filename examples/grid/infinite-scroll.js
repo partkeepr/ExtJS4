@@ -65,7 +65,7 @@ Ext.onReady(function(){
                     i, len = headers.length;
                 
                 for (i = 0; i < len; i++) {
-                    headers[i].sortable = sortable;
+                    headers[i].sortable = (headers[i].sortable !== undefined) ? headers[i].sortable : sortable;
                 }
             },
 

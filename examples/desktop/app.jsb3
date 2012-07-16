@@ -200,6 +200,10 @@
                     "name": "ResultSet.js"
                 },
                 {
+                    "path": "../../../platform/src/",
+                    "name": "AbstractPlugin.js"
+                },
+                {
                     "path": "../../../platform/src/state/",
                     "name": "Provider.js"
                 },

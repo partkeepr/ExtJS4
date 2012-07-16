@@ -54,6 +54,24 @@
  * MemoryProxy} docs for an example).
  *
  * Additional data can also be loaded locally using {@link #method-add}.
+ * 
+ * ## Dynamic Loading
+ *
+ * Stores can be dynamically updated by calling the {@link #method-load} method:
+ *
+ *     store.load({
+ *         params: {
+ *             group: 3,
+ *             type: 'user'
+ *         },
+ *         callback: function(records, operation, success) {
+ *             // do something after the load finishes
+ *         },
+ *         scope: this
+ *     });
+ *
+ * Here a bunch of arbitrary parameters is passed along with the load request and a callback function is set
+ * up to do something after the loading is over.
  *
  * ## Loading Nested Data
  *
@@ -119,8 +137,8 @@
  *      });
  *
  * The new Store will keep the configured sorters and filters in the MixedCollection instances mentioned above. By
- * default, sorting and filtering are both performed locally by the Store - see {@link #remoteSort} and {@link
- * #remoteFilter} to allow the server to perform these operations instead.
+ * default, sorting and filtering are both performed locally by the Store - see {@link #remoteSort} and
+ * {@link #remoteFilter} to allow the server to perform these operations instead.
  *
  * Filtering and sorting after the Store has been instantiated is also easy. Calling {@link #filter} adds another filter
  * to the Store and automatically filters the dataset (calling {@link #filter} with no arguments simply re-applies all
@@ -459,13 +477,17 @@ Ext.define('Ext.data.Store', {
 
         if (me.buffered) {
 
-            // Create our page map.
-            // Whenever it gets cleared, it means we re no longer interested in 
-            // any outstanding page prefetches, so cancel tham all
+            /**
+             * @property {Ext.data.Store.PageMap} pageMap
+             * Internal PageMap instance.
+             * @private
+             */
             me.pageMap = new me.PageMap({
                 pageSize: me.pageSize,
                 maxSize: me.purgePageCount,
                 listeners: {
+                    // Whenever PageMap gets cleared, it means we re no longer interested in 
+                    // any outstanding page prefetches, so cancel tham all
                     clear: me.cancelAllPrefetches,
                     scope: me
                 }
@@ -1173,6 +1195,10 @@ Ext.define('Ext.data.Store', {
         // If buffered, we have to clear the page cache and then
         // cache the page range surrounding store's loaded range.
         if (me.buffered) {
+
+            // So that prefetchPage does not consider the store to be fully loaded if the local count is equal to the total count
+            delete me.totalCount;
+
             waitForReload = function() {
                 if (me.rangeCached(startIdx, endIdx)) {
                     me.loading = false;
@@ -1267,7 +1293,7 @@ Ext.define('Ext.data.Store', {
      *     // Clear the filter collection without updating the UI
      *     store.clearFilter(true);
      *
-     * see (@link #clearFilter}.
+     * see {@link #clearFilter}.
      *
      * Alternatively, if filters are configured with an `id`, then existing filters store may be *replaced* by new
      * filters having the same `id`.
@@ -1321,7 +1347,7 @@ Ext.define('Ext.data.Store', {
         }
 
         if (me.remoteFilter) {
-            // adding a filter will almost always change the total count
+            // So that prefetchPage does not consider the store to be fully loaded if the local count is equal to the total count
             delete me.totalCount;
             
             // For a buffered Store, we have to clear the prefetch cache because the dataset will change upon filtering.
@@ -1379,8 +1405,9 @@ Ext.define('Ext.data.Store', {
                 return;
             }
 
-            // clearing a filter will almost always change the total count
+            // So that prefetchPage does not consider the store to be fully loaded if the local count is equal to the total count
             delete me.totalCount;
+
             // For a buffered Store, we have to clear the prefetch cache because the dataset will change upon filtering.
             // Then we must prefetch the new page 1, and when that arrives, reload the visible part of the Store
             // via the guaranteedrange event
@@ -1700,6 +1727,9 @@ Ext.define('Ext.data.Store', {
             };
 
         if (me.fireEvent('beforeload', me, options) !== false) {
+
+            // So that prefetchPage does not consider the store to be fully loaded if the local count is equal to the total count
+            delete me.totalCount;
 
             me.loading = true;
 
@@ -2696,7 +2726,12 @@ Ext.define('Ext.data.Store', {
     // They will be able to run and render fine, and be bound to a generated Store later.
     Ext.regStore('ext-empty-store', {fields: [], proxy: 'memory'});
 
-//  Private class for use by only Store when configured buffered: true
+    /**
+     * @class Ext.data.Store.PageMap
+     * @extends Ext.util.LruCache
+     * Private class for use by only Store when configured `buffered: true`.
+     * @private
+     */
     this.prototype.PageMap = new Ext.Class({
         extend: 'Ext.util.LruCache',
 

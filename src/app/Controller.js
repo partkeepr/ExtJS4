@@ -229,6 +229,14 @@ Ext.define('Ext.app.Controller', {
      * 
      * This will add method `getList` to the controller which will internally use
      * Ext.ComponentQuery to reference the grid component on page.
+     *
+     * The following fields can be used in ref definition:
+     *
+     * - `ref` - name of the reference.
+     * - `selector` - Ext.ComponentQuery selector to access the component.
+     * - `autoCreate` - True to create the component automatically if not found on page.
+     * - `forceCreate` - Forces the creation of the component every time reference is accessed
+     *   (when `get<REFNAME>` is called).
      */
 
     onClassExtended: function(cls, data, hooks) {
@@ -349,6 +357,8 @@ Ext.define('Ext.app.Controller', {
             i = 0,
             length = refs.length,
             info, ref, fn;
+        
+        me.references = me.references || [];
 
         for (; i < length; i++) {
             info = refs[i];
@@ -358,11 +368,14 @@ Ext.define('Ext.app.Controller', {
             if (!me[fn]) {
                 me[fn] = Ext.Function.pass(me.getRef, [ref, info], me);
             }
-            me.references = me.references || [];
             me.references.push(ref.toLowerCase());
         }
     },
 
+    /**
+     * Registers a {@link #refs reference}.
+     * @param {Object} ref
+     */
     addRef: function(ref) {
         return this.ref([ref]);
     },
@@ -396,6 +409,10 @@ Ext.define('Ext.app.Controller', {
         return cached;
     },
 
+    /**
+     * Returns true if a {@link #refs reference} is registered.
+     * @return {Boolean}
+     */
     hasRef: function(ref) {
         return this.references && this.references.indexOf(ref.toLowerCase()) !== -1;
     },

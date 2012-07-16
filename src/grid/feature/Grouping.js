@@ -17,7 +17,7 @@
  *
  * This feature adds extra options to the grid column menu to provide the user with functionality to modify the grouping.
  * This can be disabled by setting the {@link #enableGroupingMenu} option. The option to disallow grouping from being turned off
- * by thew user is {@link #enableNoGroups}.
+ * by the user is {@link #enableNoGroups}.
  * 
  * ## Controlling Group Text
  *
@@ -405,8 +405,8 @@ Ext.define('Ext.grid.feature.Grouping', {
 
     injectGroupingMenu: function() {
         var me       = this,
-            view     = me.view,
-            headerCt = view.headerCt;
+            headerCt = me.view.headerCt;
+
         headerCt.showMenuBy = me.showMenuBy;
         headerCt.getMenuItems = me.getMenuItems();
     },
@@ -425,11 +425,15 @@ Ext.define('Ext.grid.feature.Grouping', {
             groupByText        = me.groupByText,
             disabled           = me.disabled || !me.getGroupField(),
             showGroupsText     = me.showGroupsText,
-            enableNoGroups     = me.enableNoGroups;
+            enableNoGroups     = me.enableNoGroups,
+            getMenuItems       = me.view.headerCt.getMenuItems;
 
         // runs in the scope of headerCt
         return function() {
-            var o = Ext.grid.header.Container.prototype.getMenuItems.call(this);
+
+            // We cannot use the method from HeaderContainer's prototype here
+            // because other plugins or features may already have injected an implementation
+            var o = getMenuItems.call(this);
             o.push('-', {
                 iconCls: Ext.baseCSSPrefix + 'group-by-icon',
                 itemId: 'groupMenuItem',

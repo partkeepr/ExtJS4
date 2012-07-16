@@ -626,9 +626,20 @@ Ext.define('Ext.AbstractComponent', {
      */
 
     /**
-     * @cfg {Number/String} border
-     * Specifies the border for this component. The border can be a single numeric value to apply to all sides or it can
+     * @cfg {Number/String/Boolean} border
+     * Specifies the border size for this component. The border can be a single numeric value to apply to all sides or it can
      * be a CSS style specification for each style, for example: '10 5 3 10'.
+     *
+     * For components that have no border by default, setting this won't make the border appear by itself.
+     * You also need to specify border color and style:
+     *
+     *     border: 5,
+     *     style: {
+     *         borderColor: 'red',
+     *         borderStyle: 'solid'
+     *     }
+     * 
+     * To turn off the border, use `border: false`.
      */
 
     /**
@@ -761,7 +772,41 @@ Ext.define('Ext.AbstractComponent', {
 
     /**
      * @cfg {Ext.ComponentLoader/Object} loader
-     * A configuration object or an instance of a {@link Ext.ComponentLoader} to load remote content for this Component.
+     * A configuration object or an instance of a {@link Ext.ComponentLoader} to load remote content
+     * for this Component.
+     *
+     *     Ext.create('Ext.Component', {
+     *         loader: {
+     *             url: 'content.html',
+     *             autoLoad: true
+     *         },
+     *         renderTo: Ext.getBody()
+     *     });
+     */
+
+    /**
+     * @cfg {Ext.ComponentLoader/Object/String/Boolean} autoLoad
+     * An alias for {@link #loader} config which also allows to specify just a string which will be
+     * used as the url that's automatically loaded:
+     *
+     *     Ext.create('Ext.Component', {
+     *         autoLoad: 'content.html',
+     *         renderTo: Ext.getBody()
+     *     });
+     *
+     * The above is the same as:
+     *
+     *     Ext.create('Ext.Component', {
+     *         loader: {
+     *             url: 'content.html',
+     *             autoLoad: true
+     *         },
+     *         renderTo: Ext.getBody()
+     *     });
+     *
+     * Don't use it together with {@link #loader} config.
+     *
+     * @deprecated 4.1.1 Use {@link #loader} config instead.
      */
 
     /**
@@ -1048,8 +1093,7 @@ Ext.define('Ext.AbstractComponent', {
         me.renderSelectors = me.renderSelectors || {};
 
         if (me.plugins) {
-            me.plugins = [].concat(me.plugins);
-            me.constructPlugins();
+            me.plugins = me.constructPlugins();
         }
 
         // we need this before we call initComponent
@@ -1071,7 +1115,6 @@ Ext.define('Ext.AbstractComponent', {
 
         // Move this into Observable?
         if (me.plugins) {
-            me.plugins = [].concat(me.plugins);
             for (i = 0, len = me.plugins.length; i < len; i++) {
                 me.plugins[i] = me.initPlugin(me.plugins[i]);
             }
@@ -1086,7 +1129,9 @@ Ext.define('Ext.AbstractComponent', {
             // implications to afterRender so we cannot do that.
         }
 
-        if (me.autoShow) {
+        // Auto show only works unilaterally on *uncontained* Components.
+        // If contained, then it is the Container's responsibility to do the showing at next layout time.
+        if (me.autoShow && !me.isContained) {
             me.show();
         }
 
@@ -1104,7 +1149,7 @@ Ext.define('Ext.AbstractComponent', {
     initComponent: function () {
         // This is called again here to allow derived classes to add plugin configs to the
         // plugins array before calling down to this, the base initComponent.
-        this.constructPlugins();
+        this.plugins = this.constructPlugins();
 
         // this will properly (ignore or) constrain the configured width/height to their
         // min/max values for consistency.
@@ -1255,10 +1300,13 @@ Ext.define('Ext.AbstractComponent', {
     },
 
     constructPlugin: function(plugin) {
+        
+        // If a config object with a ptype
         if (plugin.ptype && typeof plugin.init != 'function') {
             plugin.cmp = this;
             plugin = Ext.PluginManager.create(plugin);
         }
+        // Just a ptype
         else if (typeof plugin == 'string') {
             plugin = Ext.PluginManager.create({
                 ptype: plugin,
@@ -1269,19 +1317,28 @@ Ext.define('Ext.AbstractComponent', {
     },
 
     /**
-     * Ensures that the plugins array contains fully constructed plugin instances. This converts any configs into their
+     * @private
+     * Returns an array of fully constructed plugin instances. This converts any configs into their
      * appropriate instances.
+     *
+     * It does not mutate the plugins array. It creates a new array.
+     *
+     * This is borrowed by {@link Ext.grid.Lockable Lockable} which clones and distributes Plugins
+     * to both child grids of a locking grid, so must keep to that contract.
      */
     constructPlugins: function() {
         var me = this,
-            plugins = me.plugins,
+            plugins,
+            result = [],
             i, len;
 
-        if (plugins) {
+        if (me.plugins) {
+            plugins = Ext.isArray(me.plugins) ? me.plugins : [ me.plugins ];
             for (i = 0, len = plugins.length; i < len; i++) {
                 // this just returns already-constructed plugin instances...
-                plugins[i] = me.constructPlugin(plugins[i]);
+                result[i] = me.constructPlugin(plugins[i]);
             }
+            return result;
         }
     },
 
@@ -1308,16 +1365,16 @@ Ext.define('Ext.AbstractComponent', {
      */
     registerFloatingItem: function(cmp) {
         var me = this;
-        if (!me.floatingItems) {
-            me.floatingItems = new Ext.ZIndexManager(me);
+        if (!me.floatingDescendants) {
+            me.floatingDescendants = new Ext.ZIndexManager(me);
         }
-        me.floatingItems.register(cmp);
+        me.floatingDescendants.register(cmp);
     },
 
     unregisterFloatingItem: function(cmp) {
         var me = this;
-        if (me.floatingItems) {
-            me.floatingItems.unregister(cmp);
+        if (me.floatingDescendants) {
+            me.floatingDescendants.unregister(cmp);
         }
     },
 
@@ -2978,9 +3035,23 @@ Ext.define('Ext.AbstractComponent', {
      * @protected
      */
     afterComponentLayout: function(width, height, oldWidth, oldHeight) {
-        var me = this;
+        var me = this,
+            floaters, len, i, floater;
+
         if (++me.componentLayoutCounter === 1) {
             me.afterFirstLayout(width, height);
+        }
+
+        // Contained autoShow items must be shown upon next layout of the Container
+        if (me.floatingItems) {
+            floaters = me.floatingItems.items;
+            len = floaters.length;
+            for (i = 0; i < len; i++) {
+                floater = floaters[i];
+                if (!floater.rendered && floater.autoShow) {
+                    floater.show();
+                }
+            }
         }
         if (me.hasListeners.resize && (width !== oldWidth || height !== oldHeight)) {
             me.fireEvent('resize', me, width, height, oldWidth, oldHeight);
@@ -3018,26 +3089,29 @@ Ext.define('Ext.AbstractComponent', {
             // Convert position WRT RTL
             pos = me.convertPosition(pos);
 
-            if (animate) {
-                me.stopAnimation();
-                me.animate(Ext.apply({
-                    duration: 1000,
-                    listeners: {
-                        afteranimate: Ext.Function.bind(me.afterSetPosition, me, [pos.left, pos.top])
-                    },
-                    to: pos
-                }, animate));
-            } else {
-                // Must use Element's methods to set element position because, if it is a Layer (floater), it may need to sync a shadow
-                // We must also only set the properties which are defined because Element.setLeftTop autos any undefined coordinates
-                if (pos.left !== undefined && pos.top !== undefined) {
-                    me.el.setLeftTop(pos.left, pos.top);
-                } else if (pos.left !== undefined) {
-                    me.el.setLeft(pos.left);
-                } else if (pos.top !==undefined) {
-                    me.el.setTop(pos.top);
+            // Proceed only if the new position is different from the current one.
+            if (pos.left !== me.el.getLeft() || pos.top !== me.el.getTop()) {
+                if (animate) {
+                    me.stopAnimation();
+                    me.animate(Ext.apply({
+                        duration: 1000,
+                        listeners: {
+                            afteranimate: Ext.Function.bind(me.afterSetPosition, me, [pos.left, pos.top])
+                        },
+                        to: pos
+                    }, animate));
+                } else {
+                    // Must use Element's methods to set element position because, if it is a Layer (floater), it may need to sync a shadow
+                    // We must also only set the properties which are defined because Element.setLeftTop autos any undefined coordinates
+                    if (pos.left !== undefined && pos.top !== undefined) {
+                        me.el.setLeftTop(pos.left, pos.top);
+                    } else if (pos.left !== undefined) {
+                        me.el.setLeft(pos.left);
+                    } else if (pos.top !==undefined) {
+                        me.el.setTop(pos.top);
+                    }
+                    me.afterSetPosition(pos.left, pos.top);
                 }
-                me.afterSetPosition(pos.left, pos.top);
             }
         }
         return me;
@@ -3249,7 +3323,7 @@ Ext.define('Ext.AbstractComponent', {
         Ext.destroy(
             me.componentLayout,
             me.loadMask,
-            me.floatingItems
+            me.floatingDescendants
         );
     },
 

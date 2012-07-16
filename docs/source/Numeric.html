@@ -125,7 +125,7 @@ Ext.define('Ext.chart.axis.Numeric', {
 
     roundToDecimal: function(v, dec) {
         var val = Math.pow(10, dec || 0);
-        return Math.floor(v * val) / val;
+        return Math.round(v * val) / val;
     },
 
 <span id='Ext-chart-axis-Numeric-property-minimum'>    /**
@@ -208,7 +208,8 @@ Ext.define('Ext.chart.axis.Numeric', {
                 data.push(record);
             }
         }
-        me.chart.substore = Ext.create('Ext.data.Store', { model: store.model, data: data });
+        me.chart.substore = Ext.create('Ext.data.Store', { model: store.model });
+        me.chart.substore.loadData(data); // data records must be loaded (not passed as config above because it's not json)
     },
 <span id='Ext-chart-axis-Numeric-property-position'>    /**
 </span>     * Indicates the position of the axis relative to the chart
